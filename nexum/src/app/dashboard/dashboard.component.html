@@ -1,0 +1,141 @@
+<section class="flex-1 p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+  <!-- Welcome Section -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-light text-slate-800 mb-2 tracking-tight">{{ welcomeMessage() }}</h1>
+    <p class="text-slate-600 text-sm">{{ sidebarHint() }}</p>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    @for (card of cards; track card.title) {
+      <div class="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200/50 hover:shadow-lg transition-all duration-300 hover:border-slate-300/50">
+        
+        <!-- Card Header -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center">
+            @switch (card.icon) {
+              @case ('Home') {
+                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+              }
+              @case ('BarChart3') {
+                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              }
+              @case ('Users') {
+                <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+              }
+            }
+          </div>
+          
+          @if (card.trend) {
+            <div class="flex items-center gap-1">
+              @switch (card.trend) {
+                @case ('up') {
+                  <div class="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
+                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                    <span class="text-xs font-medium text-green-600">+12%</span>
+                  </div>
+                }
+                @case ('down') {
+                  <div class="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-full">
+                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                    </svg>
+                    <span class="text-xs font-medium text-red-600">-5%</span>
+                  </div>
+                }
+                @case ('neutral') {
+                  <div class="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"></path>
+                    </svg>
+                    <span class="text-xs font-medium text-gray-600">0%</span>
+                  </div>
+                }
+              }
+            </div>
+          }
+        </div>
+        
+        <!-- Value -->
+        @if (card.value) {
+          <div class="text-2xl font-light text-slate-900 mb-1">{{ card.value }}</div>
+        }
+        
+        <!-- Title and Description -->
+        <h3 class="text-sm font-medium text-slate-700 mb-1">{{ card.title }}</h3>
+        <p class="text-xs text-slate-500">{{ card.content }}</p>
+      </div>
+    }
+  </div>
+
+  <!-- Additional Content Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Recent Activity -->
+    <div class="lg:col-span-2 bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200/50">
+      <h2 class="text-lg font-medium text-slate-800 mb-4">Actividad Reciente</h2>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3 p-3 bg-slate-50/50 rounded-lg">
+          <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-slate-700">Nuevo usuario registrado</p>
+            <p class="text-xs text-slate-500">Hace 2 minutos</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-slate-50/50 rounded-lg">
+          <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-slate-700">Actualización del sistema completada</p>
+            <p class="text-xs text-slate-500">Hace 15 minutos</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-slate-50/50 rounded-lg">
+          <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-slate-700">Reporte generado exitosamente</p>
+            <p class="text-xs text-slate-500">Hace 1 hora</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200/50">
+      <h2 class="text-lg font-medium text-slate-800 mb-4">Acciones Rápidas</h2>
+      <div class="space-y-2">
+        <button class="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100/50 transition-colors">
+          <div class="flex items-center gap-3">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span class="text-sm font-medium text-slate-700">Crear Nuevo</span>
+          </div>
+        </button>
+        <button class="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100/50 transition-colors">
+          <div class="flex items-center gap-3">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <span class="text-sm font-medium text-slate-700">Generar Reporte</span>
+          </div>
+        </button>
+        <button class="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100/50 transition-colors">
+          <div class="flex items-center gap-3">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span class="text-sm font-medium text-slate-700">Configuración</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>

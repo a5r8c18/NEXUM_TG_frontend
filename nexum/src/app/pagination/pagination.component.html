@@ -1,0 +1,52 @@
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/80 backdrop-blur-sm rounded-lg border border-slate-200/50 p-4">
+  <!-- Información de items -->
+  <div class="text-sm text-slate-600">
+    Mostrando 
+    <span class="font-medium text-slate-900">{{ startItem }}</span> 
+    a 
+    <span class="font-medium text-slate-900">{{ endItem }}</span> 
+    de 
+    <span class="font-medium text-slate-900">{{ totalItems }}</span> 
+    resultados
+  </div>
+
+  <!-- Controles de paginación -->
+  <div class="flex items-center gap-2">
+    <!-- Botón anterior -->
+    <button class="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            [disabled]="currentPage === 1"
+            (click)="onPrevious()">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+    </button>
+
+    <!-- Números de página -->
+    <div class="flex items-center gap-1">
+      @for (page of pages; track page) {
+        @if (page === -1) {
+          <!-- Ellipsis -->
+          <span class="px-3 py-2 text-slate-400">...</span>
+        } @else {
+          <!-- Número de página -->
+          <button class="px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                  [class]="page === currentPage 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50'"
+                  (click)="onPageChange(page)">
+            {{ page }}
+          </button>
+        }
+      }
+    </div>
+
+    <!-- Botón siguiente -->
+    <button class="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            [disabled]="currentPage === totalPages"
+            (click)="onNext()">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+      </svg>
+    </button>
+  </div>
+</div>

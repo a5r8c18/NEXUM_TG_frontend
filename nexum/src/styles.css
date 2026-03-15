@@ -1,0 +1,18 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import "tailwindcss";
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .main-content.ml-64 {
+    margin-left: 0 !important;
+  }
+  
+  .main-content.ml-16 {
+    margin-left: 0 !important;
+  }
+}

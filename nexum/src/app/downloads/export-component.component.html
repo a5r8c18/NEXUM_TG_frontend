@@ -1,0 +1,50 @@
+<div class="flex items-center gap-3">
+  <!-- Exportar a PDF -->
+  <button class="group relative w-10 h-10 bg-red-600 text-white rounded-lg transition-all duration-200 hover:bg-red-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center justify-center"
+          [disabled]="!hasData || isLoading()"
+          (click)="exportToPDF()"
+          title="Exportar a PDF">
+    
+    <!-- Loading overlay -->
+    @if (isLoading()) {
+      <div class="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center">
+        <div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+      </div>
+    }
+    
+    <!-- Icono PDF -->
+    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+  </button>
+
+  <!-- Exportar a Excel -->
+  <button class="group relative w-10 h-10 bg-green-600 text-white rounded-lg transition-all duration-200 hover:bg-green-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center justify-center"
+          [disabled]="!hasData || isLoading()"
+          (click)="exportToExcel()"
+          title="Exportar a Excel">
+    
+    <!-- Loading overlay -->
+    @if (isLoading()) {
+      <div class="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center">
+        <div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+      </div>
+    }
+    
+    <!-- Icono Excel -->
+    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+      <path d="M4 2v20h16V8l-6-6H4z"/>
+      <path d="M14 2v6h6"/>
+      <rect x="8" y="12" width="8" height="2"/>
+      <rect x="8" y="16" width="8" height="2"/>
+      <rect x="8" y="8" width="2" height="2"/>
+      <rect x="12" y="8" width="2" height="2"/>
+      <rect x="16" y="8" width="2" height="2"/>
+    </svg>
+  </button>
+
+</div>

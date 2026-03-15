@@ -1,0 +1,93 @@
+<div class="bg-white/90 backdrop-blur-sm rounded-xl border border-slate-200/50 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-6">
+    <h3 class="text-lg font-semibold text-slate-800">Filtros</h3>
+    @if (hasActiveFilters()) {
+      <button class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+              (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Filtro por Nombre -->
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-slate-700">Nombre</label>
+      <input type="text"
+             class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+             placeholder="Buscar por nombre..."
+             [value]="name()"
+             (input)="name.set($any($event.target).value); onFilterChange()">
+    </div>
+
+    <!-- Filtro por Código -->
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-slate-700">Código</label>
+      <input type="text"
+             class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+             placeholder="Buscar por código..."
+             [value]="code()"
+             (input)="code.set($any($event.target).value); onFilterChange()">
+    </div>
+
+    <!-- Filtro por Fecha de Inicio -->
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-slate-700">Fecha Inicio</label>
+      <input type="date"
+             class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+             [value]="startDate()"
+             (input)="startDate.set($any($event.target).value); onFilterChange()">
+    </div>
+
+    <!-- Filtro por Fecha Fin -->
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-slate-700">Fecha Fin</label>
+      <input type="date"
+             class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+             [value]="endDate()"
+             (input)="endDate.set($any($event.target).value); onFilterChange()">
+    </div>
+
+    <!-- Filtro por Fecha de Vencimiento -->
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-slate-700">Fecha Vencimiento</label>
+      <input type="date"
+             class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+             [value]="expirationDate()"
+             (input)="expirationDate.set($any($event.target).value); onFilterChange()">
+    </div>
+  </div>
+
+  <!-- Resumen de filtros activos -->
+  @if (hasActiveFilters()) {
+    <div class="mt-4 pt-4 border-t border-slate-200">
+      <div class="flex flex-wrap gap-2">
+        @if (startDate()) {
+          <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+            Inicio: {{ startDate() }}
+          </span>
+        }
+        @if (endDate()) {
+          <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+            Fin: {{ endDate() }}
+          </span>
+        }
+        @if (name()) {
+          <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+            Nombre: {{ name() }}
+          </span>
+        }
+        @if (code()) {
+          <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+            Código: {{ code() }}
+          </span>
+        }
+        @if (expirationDate()) {
+          <span class="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+            Vencimiento: {{ expirationDate() }}
+          </span>
+        }
+      </div>
+    </div>
+  }
+</div>

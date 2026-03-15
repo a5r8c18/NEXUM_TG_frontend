@@ -1,0 +1,163 @@
+<aside class="bg-gradient-to-b from-slate-900 to-slate-800 text-white transition-all duration-300 ease-in-out flex flex-col overflow-hidden shadow-2xl fixed h-screen z-10 border-r border-slate-700"
+     [class.w-64]="!isCollapsed()"
+     [class.w-16]="isCollapsed()">
+  
+  <!-- Header del Sidebar -->
+  <div class="flex items-center justify-between p-6 border-b border-slate-700/50">
+    <h3 class="font-semibold text-base tracking-wide transition-all duration-200"
+        [class.opacity-0]="isCollapsed()"
+        [class.hidden]="isCollapsed()">
+      NEXUM
+    </h3>
+    <button class="bg-slate-700/50 border border-slate-600 text-white p-2 rounded-lg hover:bg-slate-600/50 transition-all duration-200 shrink-0"
+            (click)="toggleSidebar()">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Menú de Navegación -->
+  <nav class="flex-1 p-4">
+    <ul class="space-y-2">
+      @for (item of navItems; track item.label) {
+        <li>
+          @if (item.hasSubmenu) {
+            <!-- Menú con submenú -->
+            <div>
+              <div class="w-full flex items-center gap-3 p-3 text-slate-300 rounded-lg transition-all duration-200 hover:bg-slate-700/50 hover:text-white group">
+                
+                <!-- Icono principal y Label (navegación) -->
+                <a class="flex items-center gap-3 flex-1 text-inherit hover:text-inherit"
+                   [href]="item.route || '#'">
+                  @switch (item.icon) {
+                    @case ('Package') {
+                      <svg class="w-5 h-5 text-center shrink-0 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                      </svg>
+                    }
+                  }
+                  
+                  <!-- Label -->
+                  <span class="text-sm font-medium transition-all duration-200 overflow-hidden text-left"
+                        [class.opacity-0]="isCollapsed()"
+                        [class.hidden]="isCollapsed()">
+                    {{ item.label }}
+                  </span>
+                </a>
+                
+                <!-- Chevron (toggle submenú) -->
+                <button class="shrink-0 p-1 text-slate-400 hover:text-white transition-colors"
+                        [class.opacity-0]="isCollapsed()"
+                        [class.hidden]="isCollapsed()"
+                        (click)="toggleSubmenu(item); $event.preventDefault()">
+                  <svg class="w-4 h-4 transition-transform duration-200"
+                       [class.rotate-180]="item.isExpanded"
+                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+              </div>
+              
+              <!-- Submenú -->
+              @if (item.isExpanded && !isCollapsed()) {
+                <ul class="ml-4 mt-2 space-y-1">
+                  @for (subItem of item.submenu; track subItem.label) {
+                    <li>
+                      <a class="flex items-center gap-3 p-2 text-slate-400 rounded-lg transition-all duration-200 hover:bg-slate-700/30 hover:text-white text-sm"
+                         [href]="subItem.route || '#'">
+                        
+                        <!-- Iconos del submenú -->
+                        @switch (subItem.icon) {
+                          @case ('ArrowDown') {
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                            </svg>
+                          }
+                          @case ('ArrowRightLeft') {
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                            </svg>
+                          }
+                          @case ('FileText') {
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                          }
+                          @case ('Warehouse') {
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                          }
+                        }
+                        
+                        <span class="text-xs">{{ subItem.label }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          } @else {
+            <!-- Menú sin submenú -->
+            <a class="flex items-center gap-3 p-3 text-slate-300 rounded-lg transition-all duration-200 hover:bg-slate-700/50 hover:text-white group"
+               [href]="item.route || '#'">
+              
+              <!-- Iconos -->
+              @switch (item.icon) {
+                @case ('Home') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                  </svg>
+                }
+                @case ('Package') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  </svg>
+                }
+                @case ('Receipt') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-green-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                  </svg>
+                }
+                @case ('Building') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                  </svg>
+                }
+                @case ('Calculator') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
+                }
+                @case ('Users') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                  </svg>
+                }
+                @case ('Settings') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                }
+                @case ('Mail') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                }
+              }
+              
+              <span class="text-sm font-medium transition-all duration-200 overflow-hidden"
+                    [class.opacity-0]="isCollapsed()"
+                    [class.hidden]="isCollapsed()">
+                {{ item.label }}
+              </span>
+            </a>
+          }
+        </li>
+      }
+    </ul>
+  </nav>
+  
+  </aside>

@@ -1,0 +1,20 @@
+<div class="dashboard h-screen bg-slate-50 flex">
+  <!-- Sidebar -->
+  <app-sidebar />
+  
+  <!-- Main Content -->
+  <main class="main-content flex-1 flex flex-col bg-slate-50 overflow-hidden transition-all duration-300 ease-in-out"
+        [class.ml-64]="!sidebarCollapsed()"
+        [class.ml-16]="sidebarCollapsed()">
+    <!-- Header -->
+    <app-header />
+    
+    <!-- Dynamic Content -->
+    <div class="flex-1 overflow-y-auto">
+      <router-outlet></router-outlet>
+    </div>
+    
+    <!-- Footer Fixed -->
+    <app-footer />
+  </main>
+</div>
