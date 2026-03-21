@@ -1,0 +1,89 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-6">
+  <div class="w-full max-w-2xl">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
+        <h1 class="text-2xl font-bold text-white">Seleccionar Tenant</h1>
+        <p class="text-blue-100 text-sm mt-1">Elige la organización con la que vas a trabajar</p>
+      </div>
+
+      <!-- Content -->
+      <div class="p-8">
+        @if (isLoading()) {
+          <div class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }
+
+        @if (hasError()) {
+          <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+            <svg class="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h3 class="text-lg font-semibold text-red-800 mb-2">Error al cargar los tenants</h3>
+            <p class="text-red-600 text-sm">No se pudieron cargar las organizaciones disponibles</p>
+          </div>
+        }
+
+        @if (!isLoading() && !hasError()) {
+          <div class="space-y-4">
+            @for (tenant of tenants(); track tenant.id) {
+              <div class="border border-slate-200 rounded-xl p-6 cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50 hover:shadow-md"
+                   [class.bg-blue-50]="isActiveTenant(tenant)"
+                   [class.border-blue-300]="isActiveTenant(tenant)"
+                   [class.shadow-md]="isActiveTenant(tenant)"
+                   (click)="selectTenant(tenant)">
+                
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                      <div class="p-2 bg-blue-100 rounded-lg">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 class="font-semibold text-slate-900 text-lg">{{ tenant.name }}</h3>
+                        @if (tenant.domain) {
+                          <p class="text-sm text-slate-500">{{ tenant.domain }}</p>
+                        }
+                      </div>
+                    </div>
+                    
+                    @if (tenant.settings) {
+                      <div class="flex gap-4 mt-3 text-sm text-slate-400">
+                        <span>{{ tenant.settings.maxCompanies }} compañías</span>
+                        <span>{{ tenant.settings.maxUsers }} usuarios</span>
+                      </div>
+                    }
+                  </div>
+                  
+                  @if (isActiveTenant(tenant)) {
+                    <div class="ml-4">
+                      <div class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Activo
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (tenants().length === 0) {
+              <div class="text-center py-12">
+                <svg class="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <h3 class="text-lg font-semibold text-slate-600 mb-2">No hay tenants disponibles</h3>
+                <p class="text-slate-400">No tienes organizaciones asignadas</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

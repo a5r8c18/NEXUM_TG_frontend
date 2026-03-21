@@ -139,4 +139,27 @@ export class AuthService {
   isDevelopment(): boolean {
     return this.isDevMode();
   }
+
+  // Método para obtener el tenant del usuario actual
+  getCurrentUserTenant(): { type: string; name: string } | null {
+    // En modo desarrollo, simular tenant según el email
+    if (this.isDevMode()) {
+      const email = this.currentUser()?.email;
+      if (email?.includes('multi') || email?.includes('admin')) {
+        return {
+          type: 'MULTI_COMPANY',
+          name: 'Tenant Multi-Empresa Demo'
+        };
+      } else {
+        return {
+          type: 'SINGLE_COMPANY',
+          name: 'Tenant Empresa Individual Demo'
+        };
+      }
+    }
+    
+    // En producción, obtener del backend o del payload del JWT
+    const user = this.currentUser();
+    return user?.tenant || null;
+  }
 }

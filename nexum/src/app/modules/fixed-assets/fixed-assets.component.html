@@ -1,0 +1,296 @@
+<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+         [class.bg-green-50]="toast()!.type === 'success'"
+         [class.text-green-800]="toast()!.type === 'success'"
+         [class.border-green-200]="toast()!.type === 'success'"
+         [class.bg-red-50]="toast()!.type === 'error'"
+         [class.text-red-800]="toast()!.type === 'error'"
+         [class.border-red-200]="toast()!.type === 'error'">
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-purple-100 rounded-xl">
+        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-slate-800">Activos Fijos</h2>
+        <p class="text-xs text-slate-500">Gestión y depreciación de activos de la empresa</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a routerLink="/inventory/entry"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        Registrar Entrada
+      </a>
+      <a routerLink="/inventory"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+        Ver Inventario
+      </a>
+      <button (click)="openCreate()"
+              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 4v16m8-8H4"/>
+        </svg>
+        Nuevo Activo
+      </button>
+    </div>
+  </div>
+
+  <!-- Estado error -->
+  @if (hasError()) {
+    <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6 text-red-700 text-sm">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>Error al cargar los activos fijos</span>
+      <button (click)="loadAll()" class="ml-auto font-medium underline">Reintentar</button>
+    </div>
+  }
+
+  <!-- Tarjetas resumen -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total activos</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ assets().length }}</p>
+    </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Valor adquisición</p>
+      <p class="text-2xl font-bold text-blue-700 mt-1">${{ totalAcquisitionValue() | number:'1.2-2' }}</p>
+    </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Valor neto contable</p>
+      <p class="text-2xl font-bold text-green-700 mt-1">${{ totalCurrentValue() | number:'1.2-2' }}</p>
+      <p class="text-xs text-slate-400 mt-1">Depreciado: ${{ totalDepreciated() | number:'1.2-2' }}</p>
+    </div>
+  </div>
+
+  <!-- Export buttons -->
+  <div class="flex justify-end gap-3 mb-6">
+    <button (click)="exportToExcel()"
+            class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-xl hover:bg-green-700 transition-colors shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-1m3-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v7m3-2h6"/>
+      </svg>
+      Exportar Excel
+    </button>
+    <button (click)="exportToPdf()"
+            class="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+      </svg>
+      Exportar PDF
+    </button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-20">
+        <div class="flex flex-col items-center gap-3 text-slate-500">
+          <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          <span class="text-sm">Cargando activos...</span>
+        </div>
+      </div>
+    } @else if (assets().length === 0) {
+      <div class="flex flex-col items-center justify-center py-20 text-slate-400">
+        <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+        <p class="text-lg font-medium">No hay activos fijos registrados</p>
+        <p class="text-sm mt-1">Haz clic en "Nuevo Activo" para agregar uno</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600">Código</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600">Nombre</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600">Grupo</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600">Subgrupo</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600">Tasa</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600">V. Adquisición</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600">Dep. Mensual</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600">V. Actual</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600">Estado</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (asset of assets(); track asset.id) {
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ asset.asset_code }}</td>
+                <td class="px-4 py-3">
+                  <p class="font-medium text-slate-900">{{ asset.name }}</p>
+                  @if (asset.location) {
+                    <p class="text-xs text-slate-400">{{ asset.location }}</p>
+                  }
+                </td>
+                <td class="px-4 py-3 text-slate-600 text-xs">{{ getGroupName(asset.group_number) }}</td>
+                <td class="px-4 py-3 text-slate-600 text-xs">{{ asset.subgroup }}</td>
+                <td class="px-4 py-3 text-right font-semibold text-amber-700">{{ getDepreciationRate(asset) }}</td>
+                <td class="px-4 py-3 text-right text-slate-700">{{ asset.acquisition_value | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-right text-blue-600 font-medium">{{ getMonthlyDepreciation(asset) }}</td>
+                <td class="px-4 py-3 text-right font-semibold"
+                    [class.text-green-700]="calculateCurrentValue(asset) > 0"
+                    [class.text-slate-400]="calculateCurrentValue(asset) === 0">
+                  {{ calculateCurrentValue(asset) | number:'1.2-2' }}
+                </td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
+                        [class]="getStatusClass(asset.status)">
+                    {{ getStatusLabel(asset.status) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center justify-center gap-1">
+                    <button (click)="openEdit(asset)" title="Editar"
+                            class="p-1.5 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                    </button>
+                    <button (click)="deleteAsset(asset)" title="Eliminar"
+                            class="p-1.5 hover:bg-red-100 rounded-lg text-red-600 transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+</div>
+
+<!-- Modal Formulario -->
+<app-modal
+  [isOpen]="showForm()"
+  [title]="editingAsset ? 'Editar Activo Fijo' : 'Nuevo Activo Fijo'"
+  confirmText="Guardar"
+  iconEmoji="🏢"
+  iconBgClass="bg-blue-50"
+  confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+  maxWidthClass="max-w-2xl"
+  (closeEvent)="showForm.set(false)"
+  (confirmEvent)="onSubmit()">
+  <form [formGroup]="form" class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Código *</label>
+        <input formControlName="asset_code" [readOnly]="!!editingAsset"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.bg-slate-50]="!!editingAsset" placeholder="AF-001">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre *</label>
+        <input formControlName="name"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Descripción del activo">
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Descripción</label>
+        <textarea formControlName="description" rows="2"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Detalles adicionales..."></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Grupo de depreciación *</label>
+        <select formControlName="group_number"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.bg-slate-50]="!!editingAsset">
+          <option value="">Seleccionar grupo...</option>
+          @for (g of catalog(); track g.group_number) {
+            <option [value]="g.group_number">Grupo {{ g.group_number }} — {{ g.group_name }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Subgrupo *</label>
+        <select formControlName="subgroup"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.bg-slate-50]="!!editingAsset || !selectedGroup()">
+          <option value="">{{ selectedGroup() ? 'Seleccionar subgrupo...' : 'Primero seleccione un grupo' }}</option>
+          @if (selectedGroup()) {
+            @for (sg of selectedGroup()!.subgroups; track $index) {
+              <option [value]="sg.name">{{ sg.name }} ({{ sg.rate }}%)</option>
+            }
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Detalle del subgrupo</label>
+        <input formControlName="subgroup_detail" [readOnly]="!!editingAsset"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.bg-slate-50]="!!editingAsset">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Valor de adquisición *</label>
+        <input formControlName="acquisition_value" type="number" min="0.01" step="0.01"
+              [readOnly]="!!editingAsset"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.bg-slate-50]="!!editingAsset">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de adquisición *</label>
+        <input formControlName="acquisition_date" type="date" [readOnly]="!!editingAsset"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              [class.bg-slate-50]="!!editingAsset">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Ubicación</label>
+        <input formControlName="location"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Almacén, oficina, etc.">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Responsable</label>
+        <input formControlName="responsible_person"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nombre del responsable">
+      </div>
+    </div>
+  </form>
+</app-modal>

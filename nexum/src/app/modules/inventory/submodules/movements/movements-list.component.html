@@ -1,0 +1,379 @@
+<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+         [class.bg-green-50]="toast()!.type === 'success'"
+         [class.text-green-800]="toast()!.type === 'success'"
+         [class.border-green-200]="toast()!.type === 'success'"
+         [class.bg-red-50]="toast()!.type === 'error'"
+         [class.text-red-800]="toast()!.type === 'error'"
+         [class.border-red-200]="toast()!.type === 'error'">
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-green-100 rounded-xl">
+        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-slate-800">Movimientos</h2>
+        <p class="text-xs text-slate-500">Entradas, salidas y devoluciones</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a routerLink="/inventory/entry"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        Registrar Entrada
+      </a>
+      <a routerLink="/inventory"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+        Ver Inventario
+      </a>
+      <button (click)="openDirectEntry()"
+              class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-xl hover:bg-green-700 transition-colors shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Entrada Directa
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros inline -->
+  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4 mb-6">
+    <div class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[160px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Producto</label>
+        <input type="text"
+               [value]="searchTerm()"
+               (input)="searchTerm.set($any($event.target).value)"
+               placeholder="Buscar por nombre o código..."
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="min-w-[150px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Fecha desde</label>
+        <input type="date"
+               [value]="fromDate()"
+               (input)="fromDate.set($any($event.target).value)"
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="min-w-[150px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Fecha hasta</label>
+        <input type="date"
+               [value]="toDate()"
+               (input)="toDate.set($any($event.target).value)"
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="flex gap-2">
+        <button (click)="applyFilters()"
+                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          Aplicar
+        </button>
+        <button (click)="clearFilters()"
+                class="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
+          Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado: cargando -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3 text-slate-500">
+        <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">Cargando movimientos...</span>
+      </div>
+    </div>
+  }
+
+  <!-- Estado: error -->
+  @if (hasError() && !isLoading()) {
+    <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6 text-red-700 text-sm">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>No se pudo conectar con el servidor.</span>
+      <button (click)="loadMovements()" class="ml-auto font-medium underline">Reintentar</button>
+    </div>
+  }
+
+  <!-- Tabla -->
+  @if (!isLoading()) {
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Tipo</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Producto</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Cantidad</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Comentario</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (m of pagedMovements; track $index) {
+              <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-5 py-4 whitespace-nowrap">
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full border {{ typeClass(m.type) }}">
+                    {{ translateType(m.type) }}
+                  </span>
+                </td>
+                <td class="px-5 py-4">
+                  <p class="text-sm font-medium text-slate-900">{{ m.product.productName }}</p>
+                  <p class="text-xs text-slate-500 font-mono">{{ m.product.productCode }}</p>
+                </td>
+                <td class="px-5 py-4 whitespace-nowrap text-center">
+                  <span class="text-sm font-semibold text-slate-700">{{ m.quantity }}</span>
+                </td>
+                <td class="px-5 py-4 whitespace-nowrap">
+                  <span class="text-sm text-slate-600">{{ formatDate(m.createdAt) }}</span>
+                </td>
+                <td class="px-5 py-4">
+                  <span class="text-sm text-slate-500">{{ translateComment(m.reason || m.label) }}</span>
+                </td>
+                <td class="px-5 py-4 whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-2">
+                    @if (isEntry(m) && m.product.stock > 0) {
+                      <button (click)="openExit(m)"
+                              title="Registrar salida"
+                              class="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-50 text-red-700 text-xs font-medium rounded-lg border border-red-200 hover:bg-red-100 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                        </svg>
+                        Salida
+                      </button>
+                      @if (m.purchaseId) {
+                        <button (click)="openReturnConfirm(m)"
+                                title="Registrar devolución"
+                                class="flex items-center gap-1.5 px-2.5 py-1.5 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-lg border border-yellow-200 hover:bg-yellow-100 transition-colors">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                          </svg>
+                          Devolver
+                        </button>
+                      }
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+            @empty {
+              <tr>
+                <td colspan="6" class="px-5 py-16 text-center">
+                  <div class="flex flex-col items-center gap-2 text-slate-400">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    <p class="text-sm font-medium">No hay movimientos registrados</p>
+                    <p class="text-xs">Registra la primera entrada usando el botón superior</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    @if (paginationConfig.totalPages > 1) {
+      <div class="mt-6">
+        <app-pagination [config]="paginationConfig" (pageChange)="onPageChange($event)" />
+      </div>
+    }
+  }
+
+</div>
+
+<!-- ─── Modal: Entrada Directa ─────────────────────────────────────────────── -->
+<app-modal
+  [isOpen]="isDirectEntryOpen()"
+  title="Registrar Entrada Directa"
+  confirmText="Registrar Entrada"
+  iconEmoji="📦"
+  iconBgClass="bg-green-50"
+  confirmButtonClass="bg-green-600 hover:bg-green-700"
+  maxWidthClass="max-w-lg"
+  (closeEvent)="closeDirectEntry()"
+  (confirmEvent)="confirmDirectEntry()">
+  <div class="space-y-4">
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Código <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="directEntry.productCode"
+               placeholder="Ej: PROD-001"
+               class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Nombre <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="directEntry.productName"
+               placeholder="Ej: Laptop Dell"
+               class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+      </div>
+    </div>
+    <div class="space-y-1">
+      <label class="text-sm font-semibold text-slate-700">Descripción</label>
+      <textarea [(ngModel)]="directEntry.productDescription" rows="2"
+                placeholder="Descripción opcional del producto..."
+                class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"></textarea>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Cantidad <span class="text-red-500">*</span></label>
+        <input type="number" [(ngModel)]="directEntry.quantity" min="1"
+               class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Comentario</label>
+        <input type="text" [(ngModel)]="directEntry.label"
+               placeholder="Comentario adicional..."
+               class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+      </div>
+    </div>
+    <p class="text-xs text-slate-400">Campos marcados con <span class="text-red-500">*</span> son obligatorios</p>
+  </div>
+</app-modal>
+
+<!-- ─── Modal: Confirmar Devolución ───────────────────────────────────────── -->
+<app-modal
+  [isOpen]="isConfirmReturnOpen()"
+  title="Confirmar Devolución"
+  confirmText="Continuar"
+  iconEmoji="⚠️"
+  iconBgClass="bg-yellow-50"
+  confirmButtonClass="bg-yellow-500 hover:bg-yellow-600"
+  maxWidthClass="max-w-md"
+  (closeEvent)="closeConfirmReturn()"
+  (confirmEvent)="continueToReturnComment()">
+  <div class="space-y-3">
+    <p class="text-sm text-slate-700">¿Estás seguro de que deseas devolver esta compra?</p>
+    <div class="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
+      <p class="text-xs text-slate-600">
+        <span class="font-semibold text-yellow-800">⚠️ Advertencia:</span>
+        Esta acción devolverá todos los productos de la compra y la cancelará completamente.
+      </p>
+    </div>
+  </div>
+</app-modal>
+
+<!-- ─── Modal: Motivo de Devolución ───────────────────────────────────────── -->
+<app-modal
+  [isOpen]="isReturnOpen()"
+  title="Motivo de Devolución"
+  confirmText="Registrar Devolución"
+  iconEmoji="📝"
+  iconBgClass="bg-blue-50"
+  confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+  maxWidthClass="max-w-md"
+  (closeEvent)="closeReturn()"
+  (confirmEvent)="confirmReturn()">
+  <div class="space-y-2">
+    <label class="text-sm font-semibold text-slate-700">
+      Motivo de la devolución <span class="text-red-500">*</span>
+    </label>
+    <textarea [(ngModel)]="returnComment" rows="4"
+              placeholder="Describa el motivo de la devolución..."
+              class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"></textarea>
+    <p class="text-xs text-slate-400">Proporcione detalles específicos sobre la razón.</p>
+  </div>
+</app-modal>
+
+<!-- ─── Modal: Registrar Salida ────────────────────────────────────────────── -->
+<app-modal
+  [isOpen]="isExitOpen()"
+  title="Registrar Salida"
+  confirmText="Registrar Salida"
+  iconEmoji="📤"
+  iconBgClass="bg-red-50"
+  confirmButtonClass="bg-red-600 hover:bg-red-700"
+  maxWidthClass="max-w-2xl"
+  (closeEvent)="closeExit()"
+  (confirmEvent)="confirmExit()">
+  <div class="space-y-4">
+    <!-- Info producto -->
+    <div class="flex gap-6 p-3 bg-slate-50 rounded-lg border border-slate-200">
+      <p class="text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">Producto:</span>
+        {{ selectedForExit?.product?.productName }}
+      </p>
+      <p class="text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">Código:</span>
+        <span class="font-mono">{{ selectedForExit?.product?.productCode }}</span>
+      </p>
+      <p class="text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">Stock actual:</span>
+        {{ selectedForExit?.product?.stock }}
+      </p>
+    </div>
+    <!-- Fila 1 -->
+    <div class="grid grid-cols-4 gap-3">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Entidad <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="exitData.entity"
+               placeholder="Hospital Central"
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Almacén <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="exitData.warehouse"
+               placeholder="Almacén Principal"
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Cantidad <span class="text-red-500">*</span></label>
+        <input type="number" [(ngModel)]="exitData.quantity" min="1"
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">U/M</label>
+        <input type="text" [(ngModel)]="exitData.unit"
+               placeholder="UN, KG"
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
+      </div>
+    </div>
+    <!-- Fila 2 -->
+    <div class="grid grid-cols-4 gap-3">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Costo Unit. (entrada)</label>
+        <div class="px-3 py-2 bg-slate-100 border-2 border-slate-200 rounded-lg text-sm text-slate-700 font-medium">
+          ${{ exitData.unitPrice | number: '1.2-2' }}
+        </div>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Importe</label>
+        <div class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm font-semibold text-blue-800">
+          ${{ (exitData.quantity * exitData.unitPrice) | number: '1.2-2' }}
+        </div>
+      </div>
+      <div class="col-span-2 space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Comentario (Opcional)</label>
+        <input type="text" [(ngModel)]="exitData.reason"
+               placeholder="Motivo de la salida..."
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
+      </div>
+    </div>
+  </div>
+</app-modal>

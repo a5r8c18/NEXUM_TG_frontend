@@ -1,0 +1,309 @@
+<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+         [class.bg-green-50]="toast()!.type === 'success'"
+         [class.text-green-800]="toast()!.type === 'success'"
+         [class.border-green-200]="toast()!.type === 'success'"
+         [class.bg-red-50]="toast()!.type === 'error'"
+         [class.text-red-800]="toast()!.type === 'error'"
+         [class.border-red-200]="toast()!.type === 'error'">
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-green-100 rounded-xl">
+        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-slate-800">Registrar Entrada (Compra)</h2>
+        <p class="text-xs text-slate-500">Ingrese los datos de la compra y sus productos</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a routerLink="/inventory"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+        Ver Inventario
+      </a>
+      <a routerLink="/inventory/movements"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        Movimientos
+      </a>
+    </div>
+  </div>
+
+  <form [formGroup]="purchaseForm" (ngSubmit)="onSubmit()">
+
+    <!-- Datos principales de la compra -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-6 mb-6">
+      <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Datos de la Compra</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- Entidad -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">
+            Entidad <span class="text-red-500">*</span>
+          </label>
+          <input formControlName="entity" type="text"
+                 placeholder="Hospital Central"
+                 class="w-full px-3 py-2.5 bg-slate-50 border-2 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                 [class.border-slate-200]="!fieldInvalid('entity')"
+                 [class.border-red-400]="fieldInvalid('entity')"
+                 [class.bg-red-50]="fieldInvalid('entity')"/>
+          @if (fieldInvalid('entity')) {
+            <p class="text-xs text-red-600">La entidad es requerida</p>
+          }
+        </div>
+
+        <!-- Almacén -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">
+            Almacén <span class="text-red-500">*</span>
+          </label>
+          <input formControlName="warehouse" type="text"
+                 placeholder="Almacén Principal"
+                 class="w-full px-3 py-2.5 bg-slate-50 border-2 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                 [class.border-slate-200]="!fieldInvalid('warehouse')"
+                 [class.border-red-400]="fieldInvalid('warehouse')"
+                 [class.bg-red-50]="fieldInvalid('warehouse')"/>
+          @if (fieldInvalid('warehouse')) {
+            <p class="text-xs text-red-600">El almacén es requerido</p>
+          }
+        </div>
+
+        <!-- Proveedor -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">
+            Proveedor <span class="text-red-500">*</span>
+          </label>
+          <input formControlName="supplier" type="text"
+                 placeholder="Empresa S.A."
+                 class="w-full px-3 py-2.5 bg-slate-50 border-2 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                 [class.border-slate-200]="!fieldInvalid('supplier')"
+                 [class.border-red-400]="fieldInvalid('supplier')"
+                 [class.bg-red-50]="fieldInvalid('supplier')"/>
+          @if (fieldInvalid('supplier')) {
+            <p class="text-xs text-red-600">El proveedor es requerido</p>
+          }
+        </div>
+
+        <!-- Factura / Contrato -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-slate-700">
+            Factura / Contrato <span class="text-red-500">*</span>
+          </label>
+          <input formControlName="document" type="text"
+                 placeholder="FAC-0001"
+                 class="w-full px-3 py-2.5 bg-slate-50 border-2 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                 [class.border-slate-200]="!fieldInvalid('document')"
+                 [class.border-red-400]="fieldInvalid('document')"
+                 [class.bg-red-50]="fieldInvalid('document')"/>
+          @if (fieldInvalid('document')) {
+            <p class="text-xs text-red-600">La factura/contrato es requerida</p>
+          }
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tabla de Productos -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden mb-6">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+          Productos
+          <span class="ml-2 bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">
+            {{ products.length }}
+          </span>
+        </h3>
+        <button type="button" (click)="addProduct()"
+                class="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Agregar Producto
+        </button>
+      </div>
+
+      <div class="overflow-x-auto" formArrayName="products">
+        <table class="w-full">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider w-[110px]">Código</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Descripción</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider w-[90px]">Unidad</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider w-[110px]">Monto ($)</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider w-[100px]">Cantidad</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider w-[110px]">P. Unit. ($)</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider w-[140px]">F. Vencimiento</th>
+              <th class="px-4 py-3 w-10"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (productGroup of products.controls; track $index; let i = $index) {
+              <tr [formGroupName]="i" class="hover:bg-slate-50/50 transition-colors">
+
+                <!-- Código -->
+                <td class="px-4 py-3">
+                  <input formControlName="code" type="text" placeholder="PROD-001"
+                         class="w-full px-2.5 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                         [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'code')"
+                         [class.border-red-400]="productFieldInvalid($any(productGroup), 'code')"
+                         [class.bg-red-50]="productFieldInvalid($any(productGroup), 'code')"/>
+                  @if (productFieldInvalid($any(productGroup), 'code')) {
+                    <p class="text-xs text-red-500 mt-0.5">Requerido</p>
+                  }
+                </td>
+
+                <!-- Descripción -->
+                <td class="px-4 py-3">
+                  <input formControlName="description" type="text" placeholder="Nombre del producto"
+                         class="w-full px-2.5 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                         [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'description')"
+                         [class.border-red-400]="productFieldInvalid($any(productGroup), 'description')"
+                         [class.bg-red-50]="productFieldInvalid($any(productGroup), 'description')"/>
+                  @if (productFieldInvalid($any(productGroup), 'description')) {
+                    <p class="text-xs text-red-500 mt-0.5">Requerido</p>
+                  }
+                </td>
+
+                <!-- Unidad -->
+                <td class="px-4 py-3">
+                  <input formControlName="unit" type="text" placeholder="UN"
+                         class="w-full px-2.5 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                         [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'unit')"
+                         [class.border-red-400]="productFieldInvalid($any(productGroup), 'unit')"
+                         [class.bg-red-50]="productFieldInvalid($any(productGroup), 'unit')"/>
+                  @if (productFieldInvalid($any(productGroup), 'unit')) {
+                    <p class="text-xs text-red-500 mt-0.5">Requerido</p>
+                  }
+                </td>
+
+                <!-- Monto -->
+                <td class="px-4 py-3">
+                  <input formControlName="amount" type="number" min="0.01" step="0.01" placeholder="0.00"
+                         class="w-full px-2.5 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                         [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'amount')"
+                         [class.border-red-400]="productFieldInvalid($any(productGroup), 'amount')"
+                         [class.bg-red-50]="productFieldInvalid($any(productGroup), 'amount')"/>
+                  @if (productFieldInvalid($any(productGroup), 'amount')) {
+                    <p class="text-xs text-red-500 mt-0.5">Mayor a 0</p>
+                  }
+                </td>
+
+                <!-- Cantidad -->
+                <td class="px-4 py-3">
+                  <input formControlName="quantity" type="number" min="1" placeholder="1"
+                         class="w-full px-2.5 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                         [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'quantity')"
+                         [class.border-red-400]="productFieldInvalid($any(productGroup), 'quantity')"
+                         [class.bg-red-50]="productFieldInvalid($any(productGroup), 'quantity')"/>
+                  @if (productFieldInvalid($any(productGroup), 'quantity')) {
+                    <p class="text-xs text-red-500 mt-0.5">Mayor a 0</p>
+                  }
+                </td>
+
+                <!-- Precio Unitario (calculado, readonly) -->
+                <td class="px-4 py-3">
+                  <div class="w-full px-2.5 py-2 bg-slate-100 border-2 border-slate-200 rounded-lg text-sm font-semibold text-slate-700 text-center">
+                    {{ getUnitPrice(i) | number:'1.2-2' }}
+                  </div>
+                </td>
+
+                <!-- Fecha Vencimiento -->
+                <td class="px-4 py-3">
+                  <input formControlName="expirationDate" type="date"
+                         class="w-full px-2.5 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                         [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'expirationDate')"
+                         [class.border-red-400]="productFieldInvalid($any(productGroup), 'expirationDate')"/>
+                  @if (productFieldInvalid($any(productGroup), 'expirationDate')) {
+                    <p class="text-xs text-red-500 mt-0.5">Fecha inválida</p>
+                  }
+                </td>
+
+                <!-- Eliminar -->
+                <td class="px-4 py-3 text-center">
+                  @if (products.length > 1) {
+                    <button type="button" (click)="removeProduct(i)"
+                            class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar producto">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  }
+                </td>
+
+              </tr>
+            }
+
+            @empty {
+              <tr>
+                <td colspan="8" class="px-6 py-8 text-center text-sm text-slate-400">
+                  No hay productos. Haz clic en "Agregar Producto" para comenzar.
+                </td>
+              </tr>
+            }
+
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totales -->
+      <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
+        <p class="text-xs text-slate-500">
+          <span class="text-red-500">*</span> Campos obligatorios. El Precio Unit. se calcula automáticamente (Monto ÷ Cantidad).
+        </p>
+        <div class="flex items-center gap-6">
+          <span class="text-sm text-slate-600">
+            Productos: <strong class="text-slate-800">{{ products.length }}</strong>
+          </span>
+          <span class="text-sm text-slate-600">
+            Monto Total:
+            <strong class="text-lg text-green-700">${{ getTotalAmount() | number:'1.2-2' }}</strong>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="flex justify-end gap-3">
+      <button type="button" (click)="purchaseForm.reset(); products.clear(); addProduct()"
+              class="px-6 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        Limpiar
+      </button>
+      <button type="submit"
+              [disabled]="isSubmitting()"
+              class="flex items-center gap-2 px-8 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md">
+        @if (isSubmitting()) {
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Guardando...
+        } @else {
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Guardar Compra
+        }
+      </button>
+    </div>
+
+  </form>
+</div>

@@ -1,4 +1,15 @@
 <div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+  <!-- Botón Volver -->
+  <button 
+    (click)="goBack()"
+    class="absolute top-6 left-6 text-white/60 hover:text-white transition-colors duration-200 flex items-center space-x-2"
+  >
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+    </svg>
+    <span>Volver</span>
+  </button>
+
   <div class="w-full max-w-md">
     <!-- Logo y Título -->
     <div class="text-center mb-8">

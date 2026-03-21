@@ -1,7 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SidebarService } from './shared/sidebar.service';
-import { AuthService } from './shared/auth.service';
+import { SidebarService } from './core/services/sidebar.service';
+import { AuthService } from './core/services/auth.service';
 
 @Component({
   selector: 'app-root',

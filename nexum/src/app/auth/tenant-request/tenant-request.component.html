@@ -1,0 +1,316 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+  <!-- Botón Volver -->
+  <button 
+    (click)="goBack()"
+    class="absolute top-6 left-6 text-white/60 hover:text-white transition-colors duration-200 flex items-center space-x-2"
+  >
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+    </svg>
+    <span>Volver</span>
+  </button>
+
+  @if (!isSubmitted()) {
+    <div class="w-full max-w-4xl">
+      <!-- Logo y Título -->
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <h1 class="text-3xl font-light text-white mb-2">Solicitud de Acceso</h1>
+        <p class="text-slate-400 text-sm">Solicita tu acceso al sistema NEXUM</p>
+      </div>
+
+      <!-- Formulario -->
+      <div class="bg-white/10 backdrop-blur-md rounded-2xl border border-slate-700 p-8">
+        <!-- Mensaje de Error -->
+        @if (errorMessage()) {
+          <div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg mb-6">
+            <p class="text-sm">{{ errorMessage() }}</p>
+          </div>
+        }
+
+        <form class="space-y-8" (ngSubmit)="onSubmit()">
+          <!-- Paso 1: Información Personal -->
+          <div>
+            <h2 class="text-xl font-medium text-white mb-4">Información Personal</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Nombre</label>
+                <input 
+                  type="text" 
+                  [ngModel]="firstName()" 
+                  (ngModelChange)="firstName.set($event); onFieldChange()"
+                  name="firstName"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Tu nombre"
+                  required
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Apellido</label>
+                <input 
+                  type="text" 
+                  [ngModel]="lastName()" 
+                  (ngModelChange)="lastName.set($event); onFieldChange()"
+                  name="lastName"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Tu apellido"
+                  required
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                <input 
+                  type="email" 
+                  [ngModel]="email()" 
+                  (ngModelChange)="email.set($event); onFieldChange()"
+                  name="email"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="tu@email.com"
+                  required
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Teléfono</label>
+                <input 
+                  type="tel" 
+                  [ngModel]="phone()" 
+                  (ngModelChange)="phone.set($event); onFieldChange()"
+                  name="phone"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="+1234567890"
+                  required
+                >
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Cargo/Posición</label>
+                <input 
+                  type="text" 
+                  [ngModel]="position()" 
+                  (ngModelChange)="position.set($event); onFieldChange()"
+                  name="position"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Gerente, Dueño, Contador, etc."
+                  required
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 2: Información de la Empresa -->
+          <div>
+            <h2 class="text-xl font-medium text-white mb-4">Información de la Empresa</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Nombre de la Empresa</label>
+                <input 
+                  type="text" 
+                  [ngModel]="companyName()" 
+                  (ngModelChange)="companyName.set($event); onFieldChange()"
+                  name="companyName"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nombre de tu empresa"
+                  required
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Industria/Sector</label>
+                <input 
+                  type="text" 
+                  [ngModel]="industry()" 
+                  (ngModelChange)="industry.set($event); onFieldChange()"
+                  name="industry"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Retail, Consultoría, Manufactura, etc."
+                  required
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">País</label>
+                <input 
+                  type="text" 
+                  [ngModel]="country()" 
+                  (ngModelChange)="country.set($event); onFieldChange()"
+                  name="country"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="México, Argentina, etc."
+                  required
+                >
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Website (opcional)</label>
+                <input 
+                  type="url" 
+                  [ngModel]="website()" 
+                  (ngModelChange)="website.set($event); onFieldChange()"
+                  name="website"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://tuempresa.com"
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 3: Tipo de Tenant -->
+          <div>
+            <h2 class="text-xl font-medium text-white mb-4">¿Qué tipo de acceso necesitas?</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+              @for (type of tenantTypes(); track type.id) {
+                <div 
+                  class="border border-slate-600 rounded-xl p-6 cursor-pointer transition-all duration-200
+                         {{selectedTenantType()?.id === type.id ? 'border-blue-500 bg-blue-500/10' : 'hover:border-slate-500'}}"
+                  (click)="selectTenantType(type)"
+                >
+                  <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-gradient-to-br {{type.id === 'MULTI_COMPANY' ? 'from-purple-400 to-purple-600' : 'from-green-400 to-green-600'}} rounded-xl flex items-center justify-center mr-4">
+                      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        @if (type.id === 'MULTI_COMPANY') {
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        } @else {
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A9.001 9.001 0 1112.75 3.001M12 15v-6m0 0h3m-3 0H9"></path>
+                        }
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="text-lg font-medium text-white">{{ type.name }}</h3>
+                      <p class="text-slate-400 text-sm">{{ type.description }}</p>
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <p class="text-white/80 text-sm font-medium">Ideal para:</p>
+                    <ul class="text-slate-400 text-sm space-y-1">
+                      @for (item of type.idealFor; track item) {
+                        <li class="flex items-center">
+                          <svg class="w-4 h-4 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                          {{ item }}
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                </div>
+              }
+            </div>
+            @if (selectedTenantType()) {
+              <div class="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p class="text-blue-400 text-sm">
+                  Has seleccionado: <strong>{{ selectedTenantType()?.name }}</strong>
+                  @if (selectedTenantType()?.canManageCompanies) {
+                    - Podrás gestionar múltiples empresas
+                  } @else {
+                    - Acceso simplificado para tu empresa
+                  }
+                </p>
+              </div>
+            }
+          </div>
+
+          <!-- Paso 4: Justificación -->
+          <div>
+            <h2 class="text-xl font-medium text-white mb-4">¿Para qué necesitas el sistema?</h2>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Caso de uso principal</label>
+                <textarea 
+                  [ngModel]="useCase()" 
+                  (ngModelChange)="useCase.set($event); onFieldChange()"
+                  name="useCase"
+                  rows="3"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Describe brevemente qué procesos quieres gestionar con NEXUM..."
+                  required
+                ></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Mensaje adicional</label>
+                <textarea 
+                  [ngModel]="message()" 
+                  (ngModelChange)="message.set($event); onFieldChange()"
+                  name="message"
+                  rows="4"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Cuéntanos más sobre tus necesidades, expectativas o cualquier información adicional que consideres relevante..."
+                  required
+                ></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">¿Cómo nos conociste? (opcional)</label>
+                <input 
+                  type="text" 
+                  [ngModel]="referralSource()" 
+                  (ngModelChange)="referralSource.set($event); onFieldChange()"
+                  name="referralSource"
+                  class="w-full px-4 py-3 bg-white/5 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Google, recomendación, redes sociales, etc."
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Botón de Envío -->
+          <div class="flex justify-center">
+            <button 
+              type="submit"
+              [disabled]="!isFormValid || isLoading()"
+              class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-4 rounded-xl 
+                     hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 
+                     shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed
+                     flex items-center space-x-2"
+            >
+              @if (isLoading()) {
+                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Enviando solicitud...</span>
+              } @else {
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                </svg>
+                <span>Enviar Solicitud</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  } @else {
+    <!-- Mensaje de Éxito -->
+    <div class="w-full max-w-md text-center">
+      <div class="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+      <h2 class="text-3xl font-light text-white mb-4">¡Solicitud Enviada!</h2>
+      <p class="text-slate-300 mb-8">{{ successMessage() }}</p>
+      <div class="bg-white/10 backdrop-blur-md rounded-2xl border border-slate-700 p-6">
+        <h3 class="text-lg font-medium text-white mb-4">¿Qué pasa ahora?</h3>
+        <ol class="text-left text-slate-300 space-y-3">
+          <li class="flex items-start">
+            <span class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs mr-3 mt-0.5">1</span>
+            <span>Revisaremos tu solicitud detalladamente</span>
+          </li>
+          <li class="flex items-start">
+            <span class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs mr-3 mt-0.5">2</span>
+            <span>Recibirás una respuesta por email en 24-48 horas</span>
+          </li>
+          <li class="flex items-start">
+            <span class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs mr-3 mt-0.5">3</span>
+            <span>Si es aprobada, recibirás tus credenciales de acceso</span>
+          </li>
+        </ol>
+        <button 
+          (click)="goBack()"
+          class="w-full mt-6 bg-white/10 border border-white/20 text-white px-6 py-3 rounded-lg hover:bg-white/20 transition-all duration-200"
+        >
+          Volver al Inicio
+        </button>
+      </div>
+    </div>
+  }
+</div>

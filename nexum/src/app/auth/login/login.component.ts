@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '../../shared/auth.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -22,6 +22,10 @@ export class LoginComponent {
 
   constructor() {}
 
+  goBack() {
+    this.router.navigate(['/']);
+  }
+
   async onLogin(): Promise<void> {
     if (!this.email() || !this.password()) {
       this.errorMessage.set('Por favor ingrese email y contraseña');
@@ -35,8 +39,17 @@ export class LoginComponent {
       const success = await this.authService.login(this.email(), this.password());
       
       if (success) {
-        // Redirigir al dashboard después del login exitoso
-        this.router.navigate(['/dashboard']);
+        // El usuario ya tiene un tenant asignado desde su solicitud aprobada
+        // Verificar si necesita seleccionar empresa o ir directo al dashboard
+        const userTenant = this.authService.getCurrentUserTenant();
+        
+        if (userTenant?.type === 'MULTI_COMPANY') {
+          // Para MULTI_COMPANY, ir a selección de empresa
+          this.router.navigate(['/company-selection']);
+        } else {
+          // Para SINGLE_COMPANY, ir directo al dashboard (la empresa se asigna automáticamente)
+          this.router.navigate(['/dashboard']);
+        }
       } else {
         this.errorMessage.set('Credenciales incorrectas. Intente nuevamente.');
       }

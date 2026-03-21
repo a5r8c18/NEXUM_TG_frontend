@@ -1,0 +1,298 @@
+<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+         [class.bg-green-50]="toast()!.type === 'success'"
+         [class.text-green-800]="toast()!.type === 'success'"
+         [class.border-green-200]="toast()!.type === 'success'"
+         [class.bg-red-50]="toast()!.type === 'error'"
+         [class.text-red-800]="toast()!.type === 'error'"
+         [class.border-red-200]="toast()!.type === 'error'">
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-orange-100 rounded-xl">
+        <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-slate-800">Reportes</h2>
+        <p class="text-xs text-slate-500">Informes de recepción y entrega</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a routerLink="/inventory/entry"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        Registrar Entrada
+      </a>
+      <a routerLink="/inventory"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+        Ver Inventario
+      </a>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 mb-6 overflow-hidden">
+    <div class="flex border-b border-slate-200">
+      <button type="button"
+              (click)="switchTab('reception')"
+              [class.bg-white]="activeTab() === 'reception'"
+              [class.border-b-2]="activeTab() === 'reception'"
+              [class.border-blue-500]="activeTab() === 'reception'"
+              [class.text-blue-600]="activeTab() === 'reception'"
+              [class.text-slate-600]="activeTab() !== 'reception'"
+              class="flex-1 px-6 py-3 text-sm font-medium transition-colors">
+        Informes de Recepción
+      </button>
+      <button type="button"
+              (click)="switchTab('delivery')"
+              [class.bg-white]="activeTab() === 'delivery'"
+              [class.border-b-2]="activeTab() === 'delivery'"
+              [class.border-blue-500]="activeTab() === 'delivery'"
+              [class.text-blue-600]="activeTab() === 'delivery'"
+              [class.text-slate-600]="activeTab() !== 'delivery'"
+              class="flex-1 px-6 py-3 text-sm font-medium transition-colors">
+        Vales de Entrega
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4 mb-6">
+    <div class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[160px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Producto/Documento</label>
+        <input type="text"
+               [value]="searchTerm()"
+               (input)="searchTerm.set($any($event.target).value)"
+               placeholder="Buscar..."
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="min-w-[150px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Fecha desde</label>
+        <input type="date"
+               [value]="fromDate()"
+               (input)="fromDate.set($any($event.target).value)"
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="min-w-[150px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Fecha hasta</label>
+        <input type="date"
+               [value]="toDate()"
+               (input)="toDate.set($any($event.target).value)"
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="flex gap-2">
+        <button (click)="applyFilters()"
+                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          Aplicar
+        </button>
+        <button (click)="clearFilters()"
+                class="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
+          Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado cargando -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3 text-slate-500">
+        <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">Cargando reportes...</span>
+      </div>
+    </div>
+  }
+
+  <!-- Estado error -->
+  @if (hasError() && !isLoading()) {
+    <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6 text-red-700 text-sm">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>No se pudo conectar con el servidor.</span>
+      <button (click)="loadReports()" class="ml-auto font-medium underline">Reintentar</button>
+    </div>
+  }
+
+  <!-- Tabla -->
+  @if (!isLoading()) {
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Documento</th>
+              @if (activeTab() === 'reception') {
+                <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Proveedor</th>
+              }
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Entidad</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Almacén</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Total</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (item of pagedReports; track $index) {
+              <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-5 py-4">
+                  <span class="text-sm font-medium text-slate-900">{{ item?.document }}</span>
+                </td>
+                @if (activeTab() === 'reception') {
+                  <td class="px-5 py-4">
+                    <span class="text-sm text-slate-700">{{ isReception(item) ? item.supplier : '-' }}</span>
+                  </td>
+                }
+                <td class="px-5 py-4">
+                  <span class="text-sm text-slate-700">{{ item?.entity }}</span>
+                </td>
+                <td class="px-5 py-4">
+                  <span class="text-sm text-slate-700">{{ item?.warehouse }}</span>
+                </td>
+                <td class="px-5 py-4">
+                  <span class="text-sm font-semibold text-green-700">
+                    ${{ (item?.details?.totalAmount || 0) | number:'1.2-2' }}
+                  </span>
+                </td>
+                <td class="px-5 py-4">
+                  <span class="text-sm text-slate-600">{{ formatDate(item.created_at) }}</span>
+                </td>
+                <td class="px-5 py-4 whitespace-nowrap">
+                  <button (click)="openDetails(item)"
+                          class="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors">
+                    Ver
+                  </button>
+                </td>
+              </tr>
+            }
+            @empty {
+              <tr>
+                <td [attr.colspan]="activeTab() === 'reception' ? 7 : 6" class="px-5 py-16 text-center">
+                  <div class="flex flex-col items-center gap-2 text-slate-400">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    <p class="text-sm font-medium">No hay reportes disponibles</p>
+                    <p class="text-xs">Pruebe con otros filtros</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (paginationConfig.totalPages > 1) {
+        <div class="mt-6">
+          <app-pagination [config]="paginationConfig" (pageChange)="onPageChange($event)" />
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- Modal: Detalles del reporte -->
+<app-modal
+  [isOpen]="!!selectedReport()"
+  title="Detalles del Reporte"
+  confirmText="Cerrar"
+  iconEmoji="📄"
+  iconBgClass="bg-blue-50"
+  confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+  maxWidthClass="max-w-3xl"
+  (closeEvent)="closeDetails()"
+  (confirmEvent)="closeDetails()">
+  @if (selectedReport(); as report) {
+    <div class="space-y-4">
+      <!-- Cabecera -->
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <span class="font-semibold text-slate-700">Documento:</span>
+          <span class="ml-2 text-slate-600">{{ report.document }}</span>
+        </div>
+        @if (isReception(report)) {
+          <div>
+            <span class="font-semibold text-slate-700">Proveedor:</span>
+            <span class="ml-2 text-slate-600">{{ report.supplier }}</span>
+          </div>
+        }
+        <div>
+          <span class="font-semibold text-slate-700">Entidad:</span>
+          <span class="ml-2 text-slate-600">{{ report.entity }}</span>
+        </div>
+        <div>
+          <span class="font-semibold text-slate-700">Almacén:</span>
+          <span class="ml-2 text-slate-600">{{ report.warehouse }}</span>
+        </div>
+        <div>
+          <span class="font-semibold text-slate-700">Fecha:</span>
+          <span class="ml-2 text-slate-600">{{ formatDate(report.created_at) }}</span>
+        </div>
+        <div>
+          <span class="font-semibold text-slate-700">Total:</span>
+          <span class="ml-2 text-green-700 font-semibold">
+            ${{ (report.details.totalAmount || 0) | number:'1.2-2' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Tabla de productos -->
+      <div class="border border-slate-200 rounded-lg overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Código</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Descripción</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Unidad</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase">Cantidad</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase">P. Unit.</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase">Importe</th>
+              @if (isReception(report)) {
+                <th class="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Vencimiento</th>
+              }
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (product of report.details.products; track product.code) {
+              <tr>
+                <td class="px-4 py-2 text-sm text-slate-700 font-mono">{{ product.code }}</td>
+                <td class="px-4 py-2 text-sm text-slate-700">{{ product.description }}</td>
+                <td class="px-4 py-2 text-sm text-slate-700">{{ product.unit }}</td>
+                <td class="px-4 py-2 text-sm text-slate-700 text-right">{{ product.quantity }}</td>
+                <td class="px-4 py-2 text-sm text-slate-700 text-right">${{ product.unitPrice | number:'1.2-2' }}</td>
+                <td class="px-4 py-2 text-sm text-slate-700 text-right font-semibold">${{ product.amount | number:'1.2-2' }}</td>
+                @if (isReception(report) && hasExpirationDate(product)) {
+                  <td class="px-4 py-2 text-sm text-slate-700">{{ product.expirationDate ?? '-' }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</app-modal>

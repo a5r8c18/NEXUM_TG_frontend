@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '../../shared/auth.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-signup',
@@ -121,6 +121,10 @@ export class SignupComponent {
     const target = event.target as HTMLInputElement;
     this.acceptTerms.set(target.checked);
     this.errorMessage.set('');
+  }
+
+  goBack() {
+    this.router.navigate(['/']);
   }
 
   goToLogin(): void {

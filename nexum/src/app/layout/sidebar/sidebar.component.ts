@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { SidebarService } from '../../shared/sidebar.service';
+import { RouterLink } from '@angular/router';
+import { SidebarService } from '../../core/services/sidebar.service';
 
 interface NavItem {
   icon: string;
@@ -13,7 +14,7 @@ interface NavItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [],
+  imports: [RouterLink],
   templateUrl: './sidebar.component.html'
 })
 export class SidebarComponent {
@@ -35,8 +36,17 @@ export class SidebarComponent {
         { icon: 'Warehouse', label: 'Almacenes', route: '/inventory/warehouses' }
       ]
     },
-    { icon: 'Receipt', label: 'Facturación', route: '/billing' },
-    { icon: 'Building', label: 'Activos Fijos', route: '/assets' },
+    { 
+      icon: 'Receipt', 
+      label: 'Facturación', 
+      route: '/billing/invoices',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: [
+        { icon: 'FileText', label: 'Facturas', route: '/billing/invoices' }
+      ]
+    },
+    { icon: 'Building', label: 'Activos Fijos', route: '/billing/fixed-assets' },
     { icon: 'Calculator', label: 'Contabilidad', route: '/accounting' },
     { icon: 'Users', label: 'Recursos Humanos', route: '/hr' },
     { icon: 'Settings', label: 'Configuración', route: '/settings' },

@@ -29,11 +29,16 @@
                 
                 <!-- Icono principal y Label (navegación) -->
                 <a class="flex items-center gap-3 flex-1 text-inherit hover:text-inherit"
-                   [href]="item.route || '#'">
+                   [routerLink]="item.route || '#'">
                   @switch (item.icon) {
                     @case ('Package') {
                       <svg class="w-5 h-5 text-center shrink-0 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                      </svg>
+                    }
+                    @case ('Receipt') {
+                      <svg class="w-5 h-5 text-center shrink-0 group-hover:text-green-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                       </svg>
                     }
                   }
@@ -65,7 +70,7 @@
                   @for (subItem of item.submenu; track subItem.label) {
                     <li>
                       <a class="flex items-center gap-3 p-2 text-slate-400 rounded-lg transition-all duration-200 hover:bg-slate-700/30 hover:text-white text-sm"
-                         [href]="subItem.route || '#'">
+                         [routerLink]="subItem.route || '#'">
                         
                         <!-- Iconos del submenú -->
                         @switch (subItem.icon) {
@@ -101,7 +106,7 @@
           } @else {
             <!-- Menú sin submenú -->
             <a class="flex items-center gap-3 p-3 text-slate-300 rounded-lg transition-all duration-200 hover:bg-slate-700/50 hover:text-white group"
-               [href]="item.route || '#'">
+               [routerLink]="item.route || '#'">
               
               <!-- Iconos -->
               @switch (item.icon) {
