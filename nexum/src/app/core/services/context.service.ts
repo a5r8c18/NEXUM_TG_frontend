@@ -4,6 +4,12 @@ import { Tenant } from '../models/tenant.model';
 import { Company } from '../models/company.model';
 import { Warehouse } from '../models/warehouse.model';
 
+const STORAGE_KEYS = {
+  TENANT: 'nexum_current_tenant',
+  COMPANY: 'nexum_current_company',
+  WAREHOUSE: 'nexum_current_warehouse'
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,6 +23,10 @@ export class ContextService {
   private currentTenantSubject = new BehaviorSubject<Tenant | null>(null);
   private currentCompanySubject = new BehaviorSubject<Company | null>(null);
   private currentWarehouseSubject = new BehaviorSubject<Warehouse | null>(null);
+
+  constructor() {
+    this.restoreFromStorage();
+  }
 
   // Getters para signals
   get currentTenant() {
@@ -48,6 +58,7 @@ export class ContextService {
   setCurrentTenant(tenant: Tenant | null): void {
     this.currentTenantSignal.set(tenant);
     this.currentTenantSubject.next(tenant);
+    this.persistToStorage(STORAGE_KEYS.TENANT, tenant);
     // Limpiar company y warehouse cuando cambia el tenant
     this.setCurrentCompany(null);
     this.setCurrentWarehouse(null);
@@ -56,13 +67,17 @@ export class ContextService {
   setCurrentCompany(company: Company | null): void {
     this.currentCompanySignal.set(company);
     this.currentCompanySubject.next(company);
+    this.persistToStorage(STORAGE_KEYS.COMPANY, company);
     // Limpiar warehouse cuando cambia la company
-    this.setCurrentWarehouse(null);
+    if (company === null) {
+      this.setCurrentWarehouse(null);
+    }
   }
 
   setCurrentWarehouse(warehouse: Warehouse | null): void {
     this.currentWarehouseSignal.set(warehouse);
     this.currentWarehouseSubject.next(warehouse);
+    this.persistToStorage(STORAGE_KEYS.WAREHOUSE, warehouse);
   }
 
   // Métodos de utilidad
@@ -99,8 +114,50 @@ export class ContextService {
 
   // Limpiar todo el contexto
   clearContext(): void {
-    this.setCurrentTenant(null);
-    this.setCurrentCompany(null);
-    this.setCurrentWarehouse(null);
+    this.currentTenantSignal.set(null);
+    this.currentTenantSubject.next(null);
+    this.currentCompanySignal.set(null);
+    this.currentCompanySubject.next(null);
+    this.currentWarehouseSignal.set(null);
+    this.currentWarehouseSubject.next(null);
+    localStorage.removeItem(STORAGE_KEYS.TENANT);
+    localStorage.removeItem(STORAGE_KEYS.COMPANY);
+    localStorage.removeItem(STORAGE_KEYS.WAREHOUSE);
+  }
+
+  // Persistencia en localStorage
+  private persistToStorage(key: string, value: unknown): void {
+    if (value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    } else {
+      localStorage.removeItem(key);
+    }
+  }
+
+  private restoreFromStorage(): void {
+    try {
+      const tenant = localStorage.getItem(STORAGE_KEYS.TENANT);
+      if (tenant) {
+        const parsed = JSON.parse(tenant) as Tenant;
+        this.currentTenantSignal.set(parsed);
+        this.currentTenantSubject.next(parsed);
+      }
+
+      const company = localStorage.getItem(STORAGE_KEYS.COMPANY);
+      if (company) {
+        const parsed = JSON.parse(company) as Company;
+        this.currentCompanySignal.set(parsed);
+        this.currentCompanySubject.next(parsed);
+      }
+
+      const warehouse = localStorage.getItem(STORAGE_KEYS.WAREHOUSE);
+      if (warehouse) {
+        const parsed = JSON.parse(warehouse) as Warehouse;
+        this.currentWarehouseSignal.set(parsed);
+        this.currentWarehouseSubject.next(parsed);
+      }
+    } catch {
+      this.clearContext();
+    }
   }
 }

@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, Params } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { WarehouseService } from '../../../core/services/warehouse.service';
-import { NotificationService } from '../../../core/services/notification.service';
-import { ContextService } from '../../../core/services/context.service';
-import { Warehouse, CreateWarehouseRequest, UpdateWarehouseRequest } from '../../../core/models/warehouse.model';
+import { WarehouseService } from '../../../../../core/services/warehouse.service';
+import { NotificationService } from '../../../../../core/services/notification.service';
+import { ContextService } from '../../../../../core/services/context.service';
+import { Warehouse, CreateWarehouseRequest, UpdateWarehouseRequest } from '../../../../../core/models/warehouse.model';
 
 @Component({
   selector: 'app-warehouse-form',
@@ -114,7 +114,7 @@ export class WarehouseFormComponent implements OnInit, OnDestroy {
     this.warehouseService.createWarehouse(data).subscribe({
       next: () => {
         this.showToast('Almacén creado exitosamente', 'success');
-        this.router.navigate(['/settings/warehouses']);
+        this.router.navigate(['/inventory/warehouses']);
       },
       error: () => {
         this.isLoading.set(false);
@@ -131,7 +131,7 @@ export class WarehouseFormComponent implements OnInit, OnDestroy {
     this.warehouseService.updateWarehouse(id, data).subscribe({
       next: () => {
         this.showToast('Almacén actualizado exitosamente', 'success');
-        this.router.navigate(['/settings/warehouses']);
+        this.router.navigate(['/inventory/warehouses']);
       },
       error: () => {
         this.isLoading.set(false);
@@ -142,7 +142,7 @@ export class WarehouseFormComponent implements OnInit, OnDestroy {
   }
 
   onCancel(): void {
-    this.router.navigate(['/settings/warehouses']);
+    this.router.navigate(['/inventory/warehouses']);
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {

@@ -17,17 +17,21 @@ import { RouterModule } from '@angular/router';
         path: 'users',
         loadComponent: () => import('./users/users.component').then(m => m.UsersComponent)
       },
-      {
-        path: 'warehouses',
-        loadComponent: () => import('./warehouses/warehouse-list/warehouse-list.component').then(m => m.WarehouseListComponent)
+      // Configuración de Empresas (solo para multi-empresa)
+      { 
+        path: 'companies', 
+        loadComponent: () => import('./companies/company-list/company-list.component').then(m => m.CompanyListComponent),
+        // canActivate: [multiCompanyGuard] // TODO: Implementar guard
       },
-      {
-        path: 'warehouses/new',
-        loadComponent: () => import('./warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent)
+      { 
+        path: 'companies/new', 
+        loadComponent: () => import('./companies/company-form/company-form.component').then(m => m.CompanyFormComponent),
+        // canActivate: [multiCompanyGuard] // TODO: Implementar guard
       },
-      {
-        path: 'warehouses/:id/edit',
-        loadComponent: () => import('./warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent)
+      { 
+        path: 'companies/:id/edit', 
+        loadComponent: () => import('./companies/company-form/company-form.component').then(m => m.CompanyFormComponent),
+        // canActivate: [multiCompanyGuard] // TODO: Implementar guard
       }
     ])
   ]

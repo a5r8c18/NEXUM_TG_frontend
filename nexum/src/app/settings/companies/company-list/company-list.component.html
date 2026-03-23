@@ -16,34 +16,32 @@
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-3">
-      <div class="p-2 bg-orange-100 rounded-xl">
-        <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="p-2 bg-blue-100 rounded-xl">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
         </svg>
       </div>
       <div>
-        <h2 class="text-xl font-semibold text-slate-800">Configuración de Almacenes</h2>
-        <p class="text-xs text-slate-500">Gestiona los almacenes físicos de la empresa</p>
+        <h2 class="text-xl font-semibold text-slate-800">Configuración de Empresas</h2>
+        <p class="text-xs text-slate-500">Gestiona las empresas del sistema multi-tenant</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
-      @if (currentCompanyId) {
-        <a routerLink="/settings/companies"
-           class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-          </svg>
-          Ver Empresas
-        </a>
-      }
+      <a routerLink="/settings/warehouses"
+         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+        Ver Almacenes
+      </a>
       <button (click)="openCreate()"
-              class="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-xl hover:bg-orange-700 transition-colors shadow-sm">
+              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Nuevo Almacén
+        Nueva Empresa
       </button>
     </div>
   </div>
@@ -55,8 +53,8 @@
         <input type="text"
                [value]="searchTerm()"
                (input)="searchTerm.set($any($event.target).value)"
-               placeholder="Buscar por nombre, código o dirección..."
-               class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"/>
+               placeholder="Buscar por nombre, RUC, teléfono o email..."
+               class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
       </div>
     </div>
   </div>
@@ -65,11 +63,11 @@
   @if (isLoading()) {
     <div class="flex items-center justify-center py-20">
       <div class="flex flex-col items-center gap-3 text-slate-500">
-        <svg class="w-8 h-8 animate-spin text-orange-500" fill="none" viewBox="0 0 24 24">
+        <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
-        <span class="text-sm">Cargando almacenes...</span>
+        <span class="text-sm">Cargando empresas...</span>
       </div>
     </div>
   }
@@ -82,40 +80,27 @@
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
       <span>No se pudo conectar con el servidor.</span>
-      <button (click)="loadWarehouses()" class="ml-auto font-medium underline">Reintentar</button>
+      <button (click)="loadCompanies()" class="ml-auto font-medium underline">Reintentar</button>
     </div>
   }
 
   <!-- Grid de tarjetas -->
   @if (!isLoading()) {
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-      @for (w of pagedWarehouses; track $index) {
+      @for (c of pagedCompanies; track $index) {
         <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5 hover:shadow-lg transition-all">
           <div class="flex items-start justify-between mb-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center">
-              <span class="text-lg font-bold text-orange-600">{{ w.name.charAt(0).toUpperCase() }}</span>
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+              <span class="text-lg font-bold text-blue-600">{{ c.name.charAt(0).toUpperCase() }}</span>
             </div>
             <div class="flex items-center gap-1">
-              <button (click)="toggleWarehouseStatus(w)"
-                      class="p-1.5 rounded-lg transition-colors"
-                      [class.text-slate-400]="!w.isActive"
-                      [class.text-green-600]="w.isActive"
-                      [class.hover:text-green-700]="w.isActive"
-                      [class.hover:text-orange-600]="!w.isActive"
-                      [class.hover:bg-green-50]="w.isActive"
-                      [class.hover:bg-orange-50]="!w.isActive">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-              </button>
-              <button (click)="openEdit(w)"
-                      class="p-1.5 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
+              <button (click)="openEdit(c)"
+                      class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
               </button>
-              <button (click)="deleteWarehouse(w)"
+              <button (click)="deleteCompany(c)"
                       class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -123,21 +108,18 @@
               </button>
             </div>
           </div>
-          <h3 class="font-semibold text-slate-800 mb-1 truncate">{{ w.name }}</h3>
+          <h3 class="font-semibold text-slate-800 mb-1 truncate">{{ c.name }}</h3>
           <div class="space-y-1 text-xs text-slate-500">
-            <p class="truncate">Código: {{ w.code }}</p>
-            @if (w.address) {
-              <p class="truncate">{{ w.address }}</p>
+            @if (c.tax_id) {
+              <p class="truncate">RUC: {{ c.tax_id }}</p>
             }
-            <div class="flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full"
-                    [class.bg-green-500]="w.isActive"
-                    [class.bg-red-500]="!w.isActive"></span>
-              <span [class.text-green-600]="w.isActive" [class.text-red-600]="!w.isActive">
-                {{ w.isActive ? 'Activo' : 'Inactivo' }}
-              </span>
-            </div>
-            <p class="text-slate-400">Creado: {{ formatDate(w.createdAt) }}</p>
+            @if (c.phone) {
+              <p class="truncate">{{ c.phone }}</p>
+            }
+            @if (c.email) {
+              <p class="truncate">{{ c.email }}</p>
+            }
+            <p class="text-slate-400">Creada: {{ formatDate(c.created_at) }}</p>
           </div>
         </div>
       }
@@ -149,7 +131,7 @@
     }
 
     <!-- Estado vacío -->
-    @if (filteredWarehouses.length === 0 && !isLoading()) {
+    @if (filteredCompanies.length === 0 && !isLoading()) {
       <div class="text-center py-20">
         <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,21 +139,21 @@
                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
           </svg>
         </div>
-        <h3 class="text-lg font-medium text-slate-700 mb-2">No se encontraron almacenes</h3>
+        <h3 class="text-lg font-medium text-slate-700 mb-2">No se encontraron empresas</h3>
         <p class="text-sm text-slate-500 mb-4">
           @if (searchTerm()) {
             No hay resultados para "{{ searchTerm() }}"
           } @else {
-            No hay almacenes registrados
+            No hay empresas registradas
           }
         </p>
         @if (!searchTerm()) {
           <button (click)="openCreate()"
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-xl hover:bg-orange-700 transition-colors">
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            Crear Primer Almacén
+            Crear Primera Empresa
           </button>
         }
       </div>
@@ -182,33 +164,43 @@
   @if (isCreateOpen()) {
     <app-modal [isOpen]="isCreateOpen()" (close)="closeCreate()">
       <div class="p-6">
-        <h3 class="text-lg font-semibold text-slate-800 mb-4">Crear Nuevo Almacén</h3>
-        <form class="space-y-4" (ngSubmit)="createWarehouse()">
+        <h3 class="text-lg font-semibold text-slate-800 mb-4">Crear Nueva Empresa</h3>
+        <form class="space-y-4" (ngSubmit)="createCompany()">
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
             <input type="text"
                    [(ngModel)]="formData().name"
                    name="name"
                    required
-                   placeholder="Ej: Almacén Principal"
-                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"/>
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Código *</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">RUC</label>
             <input type="text"
-                   [(ngModel)]="formData().code"
-                   name="code"
-                   required
-                   placeholder="Ej: ALM001"
-                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"/>
+                   [(ngModel)]="formData().tax_id"
+                   name="tax_id"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
-            <textarea [(ngModel)]="formData().address"
-                      name="address"
-                      rows="3"
-                      placeholder="Dirección completa del almacén"
-                      class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"></textarea>
+            <input type="text"
+                   [(ngModel)]="formData().address"
+                   name="address"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+            <input type="text"
+                   [(ngModel)]="formData().phone"
+                   name="phone"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <input type="email"
+                   [(ngModel)]="formData().email"
+                   name="email"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
           </div>
           <div class="flex gap-3 pt-4">
             <button type="button"
@@ -217,8 +209,8 @@
               Cancelar
             </button>
             <button type="submit"
-                    class="flex-1 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors">
-              Crear Almacén
+                    class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+              Crear Empresa
             </button>
           </div>
         </form>
@@ -230,33 +222,43 @@
   @if (isEditOpen()) {
     <app-modal [isOpen]="isEditOpen()" (close)="closeEdit()">
       <div class="p-6">
-        <h3 class="text-lg font-semibold text-slate-800 mb-4">Editar Almacén</h3>
-        <form class="space-y-4" (ngSubmit)="updateWarehouse()">
+        <h3 class="text-lg font-semibold text-slate-800 mb-4">Editar Empresa</h3>
+        <form class="space-y-4" (ngSubmit)="updateCompany()">
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
             <input type="text"
                    [(ngModel)]="formData().name"
                    name="name"
                    required
-                   placeholder="Ej: Almacén Principal"
-                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"/>
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Código *</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">RUC</label>
             <input type="text"
-                   [(ngModel)]="formData().code"
-                   name="code"
-                   required
-                   placeholder="Ej: ALM001"
-                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"/>
+                   [(ngModel)]="formData().tax_id"
+                   name="tax_id"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
-            <textarea [(ngModel)]="formData().address"
-                      name="address"
-                      rows="3"
-                      placeholder="Dirección completa del almacén"
-                      class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"></textarea>
+            <input type="text"
+                   [(ngModel)]="formData().address"
+                   name="address"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+            <input type="text"
+                   [(ngModel)]="formData().phone"
+                   name="phone"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <input type="email"
+                   [(ngModel)]="formData().email"
+                   name="email"
+                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
           </div>
           <div class="flex gap-3 pt-4">
             <button type="button"
@@ -265,8 +267,8 @@
               Cancelar
             </button>
             <button type="submit"
-                    class="flex-1 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors">
-              Actualizar Almacén
+                    class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+              Actualizar Empresa
             </button>
           </div>
         </form>

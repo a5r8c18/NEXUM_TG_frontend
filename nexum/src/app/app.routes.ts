@@ -46,6 +46,10 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/tenant-request/tenant-request.component').then(m => m.TenantRequestComponent)
   },
   {
+    path: 'register',
+    loadComponent: () => import('./auth/sign-up/signup.component').then(m => m.SignupComponent)
+  },
+  {
     path: 'company-selection',
     loadComponent: () => import('./shared/components/context-selector/company-selector/company-selector.component').then(m => m.CompanySelectorComponent),
     canActivate: [authGuard]
@@ -77,7 +81,32 @@ export const routes: Routes = [
       },
       {
         path: 'inventory/warehouses',
-        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouses.component').then(m => m.WarehousesComponent),
+        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-list/warehouse-list.component').then(m => m.WarehouseListComponent),
+        canActivate: [permissionsGuard]
+      },
+      {
+        path: 'inventory/warehouses/new',
+        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent),
+        canActivate: [permissionsGuard]
+      },
+      {
+        path: 'inventory/warehouses/:id/edit',
+        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent),
+        canActivate: [permissionsGuard]
+      },
+      {
+        path: 'inventory/stock-limits',
+        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-list/stock-limits-list.component').then(m => m.StockLimitsListComponent),
+        canActivate: [permissionsGuard]
+      },
+      {
+        path: 'inventory/stock-limits/new',
+        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-form/stock-limits-form.component').then(m => m.StockLimitsFormComponent),
+        canActivate: [permissionsGuard]
+      },
+      {
+        path: 'inventory/stock-limits/:id/edit',
+        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-form/stock-limits-form.component').then(m => m.StockLimitsFormComponent),
         canActivate: [permissionsGuard]
       },
       {

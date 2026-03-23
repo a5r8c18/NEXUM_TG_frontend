@@ -26,6 +26,10 @@ export class LoginComponent {
     this.router.navigate(['/']);
   }
 
+  goToSignup() {
+    this.router.navigate(['/signup']);
+  }
+
   async onLogin(): Promise<void> {
     if (!this.email() || !this.password()) {
       this.errorMessage.set('Por favor ingrese email y contraseña');

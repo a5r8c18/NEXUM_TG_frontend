@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MovementsService } from '../../../../core/services/movements.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
@@ -13,7 +12,7 @@ import { MovementItem, MovementFilters, DirectEntryDto, ExitDto } from '../../..
 @Component({
   selector: 'app-movements-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ModalComponent, PaginationComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
   templateUrl: './movements-list.component.html',
 })
 export class MovementsListComponent implements OnInit, OnDestroy {

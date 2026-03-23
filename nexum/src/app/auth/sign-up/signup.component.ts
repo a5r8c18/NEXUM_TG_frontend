@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -22,10 +22,45 @@ export class SignupComponent {
   errorMessage = signal('');
   successMessage = signal('');
 
+  // Token-based registration
+  registrationToken = signal('');
+  tokenValid = signal<boolean | null>(null);
+  tokenChecking = signal(false);
+  tenantType = signal('');
+
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
-  constructor() {}
+  constructor() {
+    // Check for token in query params
+    this.route.queryParams.subscribe(params => {
+      const token = params['token'];
+      if (token) {
+        this.registrationToken.set(token);
+        this.validateToken(token);
+      } else {
+        // No token: allow open registration (for demo)
+        this.tokenValid.set(true);
+      }
+    });
+  }
+
+  async validateToken(token: string): Promise<void> {
+    this.tokenChecking.set(true);
+    try {
+      const result = await this.authService.validateRegistrationToken(token);
+      this.tokenValid.set(result.valid);
+      if (result.valid && result.email) {
+        this.email.set(result.email);
+        this.tenantType.set(result.tenantType || '');
+      }
+    } catch {
+      this.tokenValid.set(false);
+    } finally {
+      this.tokenChecking.set(false);
+    }
+  }
 
   async onSignup(): Promise<void> {
     // Limpiar mensajes anteriores

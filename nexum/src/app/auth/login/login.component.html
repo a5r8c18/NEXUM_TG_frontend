@@ -127,16 +127,16 @@
       </form>
 
       <!-- Enlaces adicionales -->
-      <div class="mt-6 text-center space-y-2">
-        <a href="#" class="text-sm text-blue-400 hover:text-blue-300 transition-colors">
-          ¿Olvidaste tu contraseña?
-        </a>
+      <div class="mt-6 text-center space-y-3">
         <div class="text-sm text-slate-400">
-          ¿No tienes cuenta? 
-          <a href="#" class="text-blue-400 hover:text-blue-300 transition-colors ml-1">
-            Regístrate
-          </a>
+          ¿No tienes cuenta?
+          <button (click)="goToSignup()" class="text-blue-400 hover:text-blue-300 transition-colors ml-1 font-medium">
+            Solicitar Acceso
+          </button>
         </div>
+        <p class="text-xs text-slate-500">
+          Usa <span class="text-slate-400 font-mono">admin&#64;test.com</span> para Multi-Empresa o <span class="text-slate-400 font-mono">user&#64;test.com</span> para Empresa Individual
+        </p>
       </div>
     </div>
 

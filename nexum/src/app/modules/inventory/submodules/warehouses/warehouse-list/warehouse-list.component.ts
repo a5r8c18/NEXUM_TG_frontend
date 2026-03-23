@@ -1,19 +1,18 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { WarehouseService } from '../../../core/services/warehouse.service';
-import { NotificationService } from '../../../core/services/notification.service';
-import { ContextService } from '../../../core/services/context.service';
-import { Warehouse, CreateWarehouseRequest } from '../../../core/models/warehouse.model';
-import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
-import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { WarehouseService } from '../../../../../core/services/warehouse.service';
+import { NotificationService } from '../../../../../core/services/notification.service';
+import { ContextService } from '../../../../../core/services/context.service';
+import { Warehouse, CreateWarehouseRequest } from '../../../../../core/models/warehouse.model';
+import { PaginationComponent, PaginationConfig } from '../../../../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-warehouse-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
   templateUrl: './warehouse-list.component.html'
 })
 export class WarehouseListComponent implements OnInit, OnDestroy {

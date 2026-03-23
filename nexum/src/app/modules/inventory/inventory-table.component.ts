@@ -1,5 +1,4 @@
 import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { DateFilterComponent, FilterValues } from '../../shared/components/filter/date-filter.component';
 import { PaginationComponent, PaginationConfig } from '../../shared/components/pagination/pagination.component';
@@ -11,7 +10,7 @@ import { InventoryItem, InventoryFilters } from '../../models/inventory.models';
 @Component({
   selector: 'app-inventory-table',
   standalone: true,
-  imports: [DateFilterComponent, PaginationComponent, ExportComponentComponent, RouterLink],
+  imports: [DateFilterComponent, PaginationComponent, ExportComponentComponent],
   templateUrl: './inventory-table.component.html'
 })
 export class InventoryTableComponent implements OnInit, OnDestroy {

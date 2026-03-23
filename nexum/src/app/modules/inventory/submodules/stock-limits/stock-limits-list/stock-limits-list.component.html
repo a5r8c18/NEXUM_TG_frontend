@@ -1,0 +1,327 @@
+<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+         [class.bg-green-50]="toast()!.type === 'success'"
+         [class.text-green-800]="toast()!.type === 'success'"
+         [class.border-green-200]="toast()!.type === 'success'"
+         [class.bg-red-50]="toast()!.type === 'error'"
+         [class.text-red-800]="toast()!.type === 'error'"
+         [class.border-red-200]="toast()!.type === 'error'">
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-blue-100 rounded-xl">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-slate-800">Límites de Stock</h2>
+        <p class="text-xs text-slate-500">Gestiona los umbrales de stock para productos</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+            <button (click)="openCreate()"
+              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nuevo Límite
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Buscar</label>
+        <input type="text"
+               [value]="searchTerm()"
+               (input)="searchTerm.set($any($event.target).value)"
+               placeholder="Buscar por producto o almacén..."
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Almacén</label>
+        <select [value]="warehouseFilter()"
+                (change)="warehouseFilter.set($any($event.target).value); onWarehouseFilterChange()"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">Todos los almacenes</option>
+          <option value="wh1">Almacén Principal</option>
+          <option value="wh2">Almacén Secundario</option>
+          <option value="wh3">Almacén Temporal</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+        <select [value]="statusFilter()"
+                (change)="statusFilter.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="all">Todos</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advertencias de Stock -->
+  @if (warnings().length > 0) {
+    <div class="mb-6">
+      <h3 class="text-sm font-medium text-slate-700 mb-3">⚠️ Advertencias de Stock</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        @for (warning of warnings(); track warning.productId) {
+          <div class="p-3 rounded-lg border"
+               [class.bg-red-50]="warning.urgency === 'critical'"
+               [class.bg-orange-50]="warning.urgency === 'high'"
+               [class.bg-yellow-50]="warning.urgency === 'medium'"
+               [class.bg-blue-50]="warning.urgency === 'low'"
+               [class.border-red-200]="warning.urgency === 'critical'"
+               [class.border-orange-200]="warning.urgency === 'high'"
+               [class.border-yellow-200]="warning.urgency === 'medium'"
+               [class.border-blue-200]="warning.urgency === 'low'">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium"
+                    [class.text-red-700]="warning.urgency === 'critical'"
+                    [class.text-orange-700]="warning.urgency === 'high'"
+                    [class.text-yellow-700]="warning.urgency === 'medium'"
+                    [class.text-blue-700]="warning.urgency === 'low'">
+                {{ warning.productName }}
+              </span>
+              <span class="text-xs text-slate-500">{{ warning.warehouseName }}</span>
+            </div>
+            <p class="text-xs mt-1">{{ warning.message }}</p>
+            <p class="text-xs text-slate-500">Stock actual: {{ warning.currentStock }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Estado cargando -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3 text-slate-500">
+        <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">Cargando límites de stock...</span>
+      </div>
+    </div>
+  }
+
+  <!-- Estado error -->
+  @if (hasError() && !isLoading()) {
+    <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6 text-red-700 text-sm">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>No se pudo conectar con el servidor.</span>
+      <button (click)="loadStockLimits()" class="ml-auto font-medium underline">Reintentar</button>
+    </div>
+  }
+
+  <!-- Grid de tarjetas -->
+  @if (!isLoading()) {
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+      @for (limit of pagedStockLimits(); track limit.id) {
+        <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5 hover:shadow-lg transition-all">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+              <span class="text-lg font-bold text-blue-600">{{ limit.productName.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button (click)="toggleStockLimitStatus(limit)"
+                      class="p-1.5 rounded-lg transition-colors"
+                      [class.text-slate-400]="!limit.isActive"
+                      [class.text-green-600]="limit.isActive"
+                      [class.hover:text-green-700]="limit.isActive"
+                      [class.hover:text-orange-600]="!limit.isActive"
+                      [class.hover:bg-green-50]="limit.isActive"
+                      [class.hover:bg-orange-50]="!limit.isActive">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </button>
+              <button (click)="openEdit(limit)"
+                      class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </button>
+              <button (click)="deleteStockLimit(limit)"
+                      class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <h3 class="font-semibold text-slate-800 mb-1 truncate">{{ limit.productName }}</h3>
+          <p class="text-xs text-slate-500 mb-2 truncate">{{ limit.productCode }}</p>
+          <div class="space-y-1 text-xs text-slate-500">
+            <p class="truncate">Almacén: {{ limit.warehouseName }}</p>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-600">Stock actual:</span>
+              <span class="font-medium">{{ limit.currentStock }}</span>
+              <span class="px-2 py-0.5 rounded text-xs"
+                    [class.bg-green-100]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Óptimo'"
+                    [class.bg-orange-100]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Stock bajo'"
+                    [class.bg-red-100]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Sin stock'"
+                    [class.bg-blue-100]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Sobrestock'"
+                    [class.text-green-700]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Óptimo'"
+                    [class.text-orange-700]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Stock bajo'"
+                    [class.text-red-700]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Sin stock'"
+                    [class.text-blue-700]="getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status === 'Sobrestock'">
+                {{ getStockStatus(limit.currentStock, limit.minStock, limit.maxStock).status }}
+              </span>
+            </div>
+            <p class="text-slate-400">Min: {{ limit.minStock }} | Max: {{ limit.maxStock }}</p>
+            <p class="text-slate-400">Reorden: {{ limit.reorderPoint }}</p>
+            <div class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full"
+                    [class.bg-green-500]="limit.isActive"
+                    [class.bg-red-500]="!limit.isActive"></span>
+              <span [class.text-green-600]="limit.isActive" [class.text-red-600]="!limit.isActive">
+                {{ limit.isActive ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+            <p class="text-slate-400">Creado: {{ formatDate(limit.createdAt) }}</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Paginación -->
+    @if (paginationConfig().totalPages > 1) {
+      <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)"></app-pagination>
+    }
+
+    <!-- Estado vacío -->
+    @if (filteredStockLimits.length === 0 && !isLoading()) {
+      <div class="text-center py-20">
+        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-slate-700 mb-2">No se encontraron límites de stock</h3>
+        <p class="text-sm text-slate-500 mb-4">
+          @if (searchTerm()) {
+            No hay resultados para "{{ searchTerm() }}"
+          } @else {
+            No hay límites de stock configurados
+          }
+        </p>
+              </div>
+    }
+  }
+
+  <!-- Modal Crear -->
+  @if (isCreateOpen()) {
+    <app-modal [isOpen]="isCreateOpen()" (closeEvent)="closeCreate()" (confirmEvent)="createStockLimit()" title="Crear Nuevo Límite de Stock" confirmText="Crear Límite" confirmButtonClass="bg-blue-600 hover:bg-blue-700">
+      <div class="p-6">
+        <h3 class="text-lg font-semibold text-slate-800 mb-4">Crear Nuevo Límite de Stock</h3>
+        <form class="space-y-4" (ngSubmit)="createStockLimit()">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Producto *</label>
+            <select [(ngModel)]="formData().productId" name="productId" required
+                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700">
+              <option value="">Seleccionar producto...</option>
+              @for (product of availableProducts(); track product.id) {
+                <option [value]="product.id">{{ product.name }} ({{ product.code }})</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Almacén *</label>
+            <select [(ngModel)]="formData().warehouseId" name="warehouseId" required
+                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700">
+              <option value="">Seleccionar almacén...</option>
+              @for (warehouse of availableWarehouses(); track warehouse.id) {
+                <option [value]="warehouse.id">{{ warehouse.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Stock Mínimo *</label>
+              <input type="number" [(ngModel)]="formData().minStock" name="minStock" min="0" required
+                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Stock Máximo *</label>
+              <input type="number" [(ngModel)]="formData().maxStock" name="maxStock" min="0" required
+                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Punto de Reorden *</label>
+              <input type="number" [(ngModel)]="formData().reorderPoint" name="reorderPoint" min="0" required
+                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700"/>
+            </div>
+          </div>
+                  </form>
+      </div>
+    </app-modal>
+  }
+
+  <!-- Modal Editar -->
+  @if (isEditOpen()) {
+    <app-modal [isOpen]="isEditOpen()" (closeEvent)="closeEdit()" (confirmEvent)="updateStockLimit()" title="Editar Límite de Stock" confirmText="Actualizar Límite" confirmButtonClass="bg-blue-600 hover:bg-blue-700">
+      <div class="p-6">
+        <h3 class="text-lg font-semibold text-slate-800 mb-4">Editar Límite de Stock</h3>
+        <form class="space-y-4" (ngSubmit)="updateStockLimit()">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Producto</label>
+            <select [(ngModel)]="formData().productId" name="productId" disabled
+                    class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-600">
+              <option value="">Seleccionar producto...</option>
+              @for (product of availableProducts(); track product.id) {
+                <option [value]="product.id">{{ product.name }} ({{ product.code }})</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Almacén</label>
+            <select [(ngModel)]="formData().warehouseId" name="warehouseId" disabled
+                    class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-600">
+              <option value="">Seleccionar almacén...</option>
+              @for (warehouse of availableWarehouses(); track warehouse.id) {
+                <option [value]="warehouse.id">{{ warehouse.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Stock Mínimo *</label>
+              <input type="number" [(ngModel)]="formData().minStock" name="minStock" min="0" required
+                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Stock Máximo *</label>
+              <input type="number" [(ngModel)]="formData().maxStock" name="maxStock" min="0" required
+                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Punto de Reorden *</label>
+              <input type="number" [(ngModel)]="formData().reorderPoint" name="reorderPoint" min="0" required
+                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-700"/>
+            </div>
+          </div>
+                  </form>
+      </div>
+    </app-modal>
+  }
+</div>

@@ -9,7 +9,6 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { PurchasesService } from '../../../../core/services/purchases.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { CreatePurchasePayload } from '../../../../models/purchase.models';
@@ -17,7 +16,7 @@ import { CreatePurchasePayload } from '../../../../models/purchase.models';
 @Component({
   selector: 'app-entry',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule, RouterLink],
+  imports: [ReactiveFormsModule, CommonModule],
   templateUrl: './entry.component.html',
 })
 export class EntryComponent {

@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { InvoicesService, Invoice, InvoiceFilters } from '../../core/services/invoices.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { signal, computed } from '@angular/core';
@@ -10,7 +10,7 @@ import { signal, computed } from '@angular/core';
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
   templateUrl: './invoices.component.html'
 })
 export class InvoicesComponent implements OnInit, OnDestroy {
@@ -28,6 +28,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   pageSize = 10;
   searchTerm = signal('');
   statusFilter = signal('');
+  isCreateOpen = signal(false);
 
   // Computed
   filteredInvoices = computed(() => {
@@ -189,7 +190,22 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
-  private showToast(message: string, type: 'success' | 'error'): void {
+  // Modal methods
+  openCreate(): void {
+    this.isCreateOpen.set(true);
+  }
+
+  closeCreate(): void {
+    this.isCreateOpen.set(false);
+  }
+
+  createInvoice(): void {
+    // TODO: Implement create invoice logic
+    this.showToast('Funcionalidad de crear factura en desarrollo', 'info');
+    this.closeCreate();
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info'): void {
     this.toast.set({ message, type });
     setTimeout(() => this.toast.set(null), 4000);
   }
