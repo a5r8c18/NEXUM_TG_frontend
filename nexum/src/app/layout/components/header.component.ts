@@ -15,6 +15,41 @@ export class HeaderComponent {
   private router = inject(Router);
 
   showUserMenu = signal(false);
+  showNotifications = signal(false);
+  notifications = signal([
+    {
+      id: 1,
+      title: 'Nueva factura creada',
+      message: 'Factura #00123 ha sido generada',
+      time: 'Hace 5 minutos',
+      read: false,
+      type: 'info'
+    },
+    {
+      id: 2,
+      title: 'Stock bajo',
+      message: 'Producto "Laptop Dell" tiene menos de 5 unidades',
+      time: 'Hace 15 minutos',
+      read: false,
+      type: 'warning'
+    },
+    {
+      id: 3,
+      title: 'Pago recibido',
+      message: 'Cliente ABC ha pagado factura #00120',
+      time: 'Hace 1 hora',
+      read: true,
+      type: 'success'
+    },
+    {
+      id: 4,
+      title: 'Mantenimiento programado',
+      message: 'Sistema en mantenimiento mañana a las 2:00 AM',
+      time: 'Hace 2 horas',
+      read: true,
+      type: 'info'
+    }
+  ]);
 
   get pageTitle(): string {
     const company = this.contextService.currentCompany();
@@ -49,12 +84,52 @@ export class HeaderComponent {
 
   get userInitials(): string {
     const user = this.authService.currentUser();
-    if (!user) return 'U';
+    if (!user || !user.firstName || !user.lastName) return 'U';
     return (user.firstName.charAt(0) + user.lastName.charAt(0)).toUpperCase();
   }
 
   toggleUserMenu(): void {
     this.showUserMenu.set(!this.showUserMenu());
+    // Cerrar notificaciones al abrir menú de usuario
+    if (this.showUserMenu()) {
+      this.showNotifications.set(false);
+    }
+  }
+
+  toggleNotifications(): void {
+    this.showNotifications.set(!this.showNotifications());
+    // Cerrar menú de usuario al abrir notificaciones
+    if (this.showNotifications()) {
+      this.showUserMenu.set(false);
+    }
+  }
+
+  deleteNotification(id: number): void {
+    const currentNotifications = this.notifications();
+    const updatedNotifications = currentNotifications.filter(n => n.id !== id);
+    this.notifications.set(updatedNotifications);
+  }
+
+  markAsRead(id: number): void {
+    const currentNotifications = this.notifications();
+    const updatedNotifications = currentNotifications.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    );
+    this.notifications.set(updatedNotifications);
+  }
+
+  markAllAsRead(): void {
+    const currentNotifications = this.notifications();
+    const updatedNotifications = currentNotifications.map(n => ({ ...n, read: true }));
+    this.notifications.set(updatedNotifications);
+  }
+
+  clearAllNotifications(): void {
+    this.notifications.set([]);
+  }
+
+  get unreadCount(): number {
+    return this.notifications().filter(n => !n.read).length;
   }
 
   switchCompany(): void {
@@ -71,8 +146,17 @@ export class HeaderComponent {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event): void {
     const target = event.target as HTMLElement;
-    if (!target.closest('.user-menu-container')) {
+    const userMenuContainer = target.closest('.user-menu-container');
+    const notificationsContainer = target.closest('.notifications-container');
+    
+    // Cerrar menú de usuario si el clic no está dentro de él
+    if (!userMenuContainer && this.showUserMenu()) {
       this.showUserMenu.set(false);
+    }
+    
+    // Cerrar notificaciones si el clic no está dentro de ellas
+    if (!notificationsContainer && this.showNotifications()) {
+      this.showNotifications.set(false);
     }
   }
 }

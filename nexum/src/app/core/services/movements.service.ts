@@ -12,8 +12,9 @@ export class MovementsService {
 
   constructor(private http: HttpClient) {}
 
-  getMovements(filters?: MovementFilters): Observable<MovementItem[]> {
+  getMovements(filters?: MovementFilters, companyId?: number): Observable<MovementItem[]> {
     let params = new HttpParams().set('relations', 'true');
+    if (companyId) params = params.set('companyId', companyId.toString());
     if (filters) {
       if (filters.fromDate) params = params.set('start_date', filters.fromDate);
       if (filters.toDate) params = params.set('end_date', filters.toDate);
@@ -22,24 +23,27 @@ export class MovementsService {
     return this.http.get<MovementItem[]>(this.apiUrl, { params });
   }
 
-  registerDirectEntry(data: DirectEntryDto): Observable<any> {
-    return this.http.post(`${this.apiUrl}/direct-entry`, data);
+  registerDirectEntry(data: DirectEntryDto, companyId?: number): Observable<any> {
+    const payload = companyId ? { ...data, companyId } : data;
+    return this.http.post(`${this.apiUrl}/direct-entry`, payload);
   }
 
-  registerExit(data: ExitDto): Observable<any> {
-    return this.http.post(`${this.apiUrl}/exit`, {
+  registerExit(data: ExitDto, companyId?: number): Observable<any> {
+    const payload = companyId ? { ...data, companyId } : {
       product_code: data.productCode,
       quantity: data.quantity,
       reason: data.reason,
       entity: data.entity,
       warehouse: data.warehouse,
-    });
+    };
+    return this.http.post(`${this.apiUrl}/exit`, payload);
   }
 
-  createReturn(purchaseId: string, reason: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/return`, {
+  createReturn(purchaseId: string, reason: string, companyId?: number): Observable<any> {
+    const payload = companyId ? { product_code: '', quantity: 0, purchase_id: purchaseId, reason, companyId } : {
       purchase_id: purchaseId,
       reason,
-    });
+    };
+    return this.http.post(`${this.apiUrl}/return`, payload);
   }
 }

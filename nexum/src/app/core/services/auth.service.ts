@@ -1,5 +1,8 @@
 import { Injectable, signal, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface NexumUser {
   id: string;
@@ -11,6 +14,7 @@ export interface NexumUser {
   tenantName: string;
   tenantType: 'MULTI_COMPANY' | 'SINGLE_COMPANY';
   avatarUrl?: string;
+  currentCompanyId?: number;
 }
 
 @Injectable({
@@ -19,12 +23,16 @@ export interface NexumUser {
 export class AuthService {
   private isAuthenticatedSignal = signal(false);
   private currentUserSignal = signal<NexumUser | null>(null);
+  private currentCompanyIdSignal = signal<number>(1);
   private isDevMode = signal(false);
 
   isAuthenticated = this.isAuthenticatedSignal.asReadonly();
   currentUser = this.currentUserSignal.asReadonly();
+  currentCompanyId = this.currentCompanyIdSignal.asReadonly();
 
   private router = inject(Router);
+  private http = inject(HttpClient);
+  private apiUrl = environment.apiUrl;
 
   constructor() {
     this.isDevMode.set(
@@ -34,34 +42,32 @@ export class AuthService {
     this.checkAuthStatus();
   }
 
-  login(email: string, password: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      // TODO: Reemplazar con llamada real a POST /auth/login
-      const delay = this.isDevMode() ? 500 : 1000;
+  async login(email: string, password: string): Promise<boolean> {
+    if (!email || !password) return false;
 
-      setTimeout(() => {
-        if (!email || !password) {
-          resolve(false);
-          return;
-        }
+    try {
+      const response = await firstValueFrom(
+        this.http.post<{ user: any; token: string }>(`${this.apiUrl}/auth/login`, { email, password })
+      );
 
-        // Simular respuesta del backend con tenant info
-        const isMulti = email.includes('multi') || email.includes('admin') || email.includes('dev');
+      if (response && response.token) {
         const user: NexumUser = {
-          id: 'user-' + Date.now(),
-          email,
-          firstName: this.isDevMode() ? 'Developer' : 'Usuario',
-          lastName: this.isDevMode() ? 'User' : 'NEXUM',
-          role: 'admin',
-          tenantId: isMulti ? 'tenant-multi-1' : 'tenant-single-1',
-          tenantName: isMulti ? 'Grupo Empresarial Demo' : 'Mi Empresa Demo',
-          tenantType: isMulti ? 'MULTI_COMPANY' : 'SINGLE_COMPANY'
+          id: response.user.id,
+          email: response.user.email,
+          firstName: response.user.firstName,
+          lastName: response.user.lastName,
+          role: response.user.role || 'admin',
+          tenantId: response.user.tenantId || 'tenant-1',
+          tenantName: response.user.tenantName || 'Empresa Demo',
+          tenantType: response.user.tenantType || 'MULTI_COMPANY'
         };
-
-        this.setSession(user, 'simulated-jwt-token-' + Date.now());
-        resolve(true);
-      }, delay);
-    });
+        this.setSession(user, response.token);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   // Método para desarrollo: saltar autenticación
@@ -75,42 +81,34 @@ export class AuthService {
         role: 'superadmin',
         tenantId: 'tenant-dev',
         tenantName: 'Tenant Desarrollo',
-        tenantType: 'MULTI_COMPANY'
+        tenantType: 'MULTI_COMPANY',
+        currentCompanyId: 1
       };
       this.setSession(user, 'dev-jwt-token');
     }
   }
 
-  signup(userData: { firstName: string; lastName: string; email: string; password: string; token?: string }): Promise<boolean> {
-    return new Promise((resolve) => {
-      // TODO: Reemplazar con llamada real a POST /auth/register
-      setTimeout(() => {
-        if (userData.email && userData.password) {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      }, 1000);
-    });
+  async signup(userData: { firstName: string; lastName: string; email: string; password: string; token?: string }): Promise<boolean> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<{ user: any; token: string }>(`${this.apiUrl}/auth/register`, userData)
+      );
+      return !!(response?.user && response?.token);
+    } catch {
+      return false;
+    }
   }
 
   // Validar token de registro (solicitud aprobada)
-  validateRegistrationToken(token: string): Promise<{ valid: boolean; email?: string; tenantType?: string }> {
-    return new Promise((resolve) => {
-      // TODO: Reemplazar con llamada real a GET /auth/validate-token/:token
-      setTimeout(() => {
-        // Simulación: tokens que empiezan con "approved-" son válidos
-        if (token && token.startsWith('approved-')) {
-          resolve({
-            valid: true,
-            email: 'usuario@empresa.com',
-            tenantType: 'MULTI_COMPANY'
-          });
-        } else {
-          resolve({ valid: false });
-        }
-      }, 500);
-    });
+  async validateRegistrationToken(token: string): Promise<{ valid: boolean; email?: string; tenantType?: string }> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ valid: boolean; email?: string; tenantType?: string }>(`${this.apiUrl}/auth/validate-token/${token}`)
+      );
+      return response;
+    } catch {
+      return { valid: false };
+    }
   }
 
   logout(): void {
@@ -149,6 +147,20 @@ export class AuthService {
       name: user.tenantName,
       id: user.tenantId
     };
+  }
+
+  setCurrentCompanyId(companyId: number): void {
+    this.currentCompanyIdSignal.set(companyId);
+    const user = this.currentUser();
+    if (user) {
+      user.currentCompanyId = companyId;
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    }
+  }
+
+  getCurrentCompanyId(): number {
+    const user = this.currentUser();
+    return user?.currentCompanyId || this.currentCompanyIdSignal();
   }
 
   getFullName(): string {

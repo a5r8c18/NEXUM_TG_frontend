@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { 
   FixedAsset, 
   CreateFixedAssetDto, 
@@ -14,7 +15,7 @@ import {
   providedIn: 'root'
 })
 export class FixedAssetsService {
-  private readonly apiUrl = 'http://localhost:3001/fixed-assets';
+  private readonly apiUrl = `${environment.apiUrl}/fixed-assets`;
 
   constructor(private http: HttpClient) {}
 

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { Invoice, InvoiceItem, CreateInvoiceDto, InvoiceFilters } from '../../models/invoice.models';
 
 export type { Invoice, InvoiceItem, CreateInvoiceDto, InvoiceFilters };
@@ -10,7 +11,7 @@ export type { Invoice, InvoiceItem, CreateInvoiceDto, InvoiceFilters };
   providedIn: 'root'
 })
 export class InvoicesService {
-  private readonly apiUrl = 'http://localhost:3001/invoices';
+  private readonly apiUrl = `${environment.apiUrl}/invoices`;
 
   constructor(private http: HttpClient) {}
 

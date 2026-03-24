@@ -15,16 +15,110 @@
 
   <div class="flex items-center gap-3">
     <!-- Notifications -->
-    <button class="relative p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 7.973 6 9v4.159c0 .538.214 1.055.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-      </svg>
-      <div class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></div>
-    </button>
+    <div class="relative notifications-container">
+      <button (click)="toggleNotifications(); $event.stopPropagation()" class="relative p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 7.973 6 9v4.159c0 .538.214 1.055.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg>
+        @if (unreadCount > 0) {
+          <div class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+            {{ unreadCount }}
+          </div>
+        }
+      </button>
+
+      <!-- Notifications Dropdown -->
+      @if (showNotifications()) {
+        <div class="absolute right-0 top-full mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl shadow-black/30 overflow-hidden z-50">
+          <!-- Header -->
+          <div class="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-white">Notificaciones</h3>
+            <div class="flex items-center gap-2">
+              @if (unreadCount > 0) {
+                <button (click)="markAllAsRead()" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                  Marcar todas como leídas
+                </button>
+              }
+              <button (click)="clearAllNotifications()" class="text-xs text-red-400 hover:text-red-300 transition-colors">
+                Limpiar todas
+              </button>
+            </div>
+          </div>
+
+          <!-- Notifications List -->
+          <div class="max-h-96 overflow-y-auto">
+            @if (notifications().length === 0) {
+              <div class="p-8 text-center text-slate-400">
+                <svg class="w-12 h-12 mx-auto mb-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 7.973 6 9v4.159c0 .538.214 1.055.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                <p class="text-sm">No tienes notificaciones</p>
+              </div>
+            } @else {
+              @for (notification of notifications(); track notification.id) {
+                <div class="px-4 py-3 border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors relative group"
+                     [class.bg-blue-500/10]="!notification.read"
+                     (click)="markAsRead(notification.id)">
+                  <div class="flex items-start gap-3">
+                    <!-- Icon -->
+                    <div class="mt-1">
+                      @if (notification.type === 'success') {
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                      } @else if (notification.type === 'warning') {
+                        <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      } @else if (notification.type === 'error') {
+                        <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                      } @else {
+                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      }
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                          <p class="text-sm font-medium text-white" [class.font-normal]="notification.read">
+                            {{ notification.title }}
+                          </p>
+                          <p class="text-xs text-slate-400 mt-1" [class.text-slate-500]="notification.read">
+                            {{ notification.message }}
+                          </p>
+                          <p class="text-xs text-slate-500 mt-2">{{ notification.time }}</p>
+                        </div>
+                        
+                        <!-- Delete Button -->
+                        <button (click)="deleteNotification(notification.id); $event.stopPropagation()" 
+                                class="ml-2 p-1 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Unread indicator -->
+                  @if (!notification.read) {
+                    <div class="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <!-- Footer -->
+          <div class="px-4 py-2 border-t border-slate-700">
+            <button class="w-full text-center text-xs text-blue-400 hover:text-blue-300 transition-colors py-2">
+              Ver todas las notificaciones
+            </button>
+          </div>
+        </div>
+      }
+    </div>
 
     <!-- User Menu -->
     <div class="relative user-menu-container">
-      <button (click)="toggleUserMenu()" class="flex items-center gap-2 hover:bg-slate-700/50 rounded-lg p-1.5 pr-3 transition-colors">
+      <button (click)="toggleUserMenu(); $event.stopPropagation()" class="flex items-center gap-2 hover:bg-slate-700/50 rounded-lg p-1.5 pr-3 transition-colors">
         <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
           <span class="text-xs font-bold text-white">{{ userInitials }}</span>
         </div>

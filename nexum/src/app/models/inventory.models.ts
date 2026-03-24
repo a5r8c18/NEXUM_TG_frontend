@@ -16,6 +16,10 @@ export interface InventoryFilters {
   toDate?: string;
   product?: string;
   expirationDate?: string;
+  entity?: string;
+  warehouse?: string;
+  minStock?: number;
+  maxStock?: number;
 }
 
 // ========== MOVEMENTS ==========
