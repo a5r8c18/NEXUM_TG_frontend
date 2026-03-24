@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TenantRequestService } from '../../core/services/tenant-request.service';
 import { TenantRequest, TenantType } from '../../core/models/tenant-request.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-tenant-request',
@@ -45,50 +46,93 @@ export class TenantRequestComponent {
   // Tipos de tenant disponibles
   tenantTypes = signal(this.tenantRequestService.getTenantTypes());
   
-  constructor() {}
+  constructor() {
+    console.log('🔥 TENANT REQUEST COMPONENT - Constructor ejecutado!');
+    console.log('🔍 TENANT REQUEST - Componente de solicitud de acceso cargado');
+  }
   
   goBack() {
     this.router.navigate(['/']);
   }
   
   selectTenantType(type: TenantType) {
+    console.group('🔍 TENANT REQUEST - Tipo de tenant seleccionado');
+    console.log('🏗️ Tipo seleccionado:', type);
+    console.log('🆔 ID:', type.id);
+    console.log('📝 Nombre:', type.name);
+    console.log('📄 Descripción:', type.description);
+    console.groupEnd();
+    
     this.selectedTenantType.set(type);
     this.errorMessage.set('');
   }
   
   async onSubmit(): Promise<void> {
+    console.log('🔥 TENANT REQUEST - Método onSubmit ejecutado!');
+    
     // Validaciones
     if (!this.validateForm()) {
+      console.log('❌ TENANT REQUEST - Validación fallida');
       return;
     }
     
     this.isLoading.set(true);
     this.errorMessage.set('');
     
+    // Log datos del formulario
+    const request: Omit<TenantRequest, 'status' | 'requestedAt' | 'reviewedAt' | 'reviewedBy' | 'adminNotes' | 'rejectionReason'> = {
+      firstName: this.firstName(),
+      lastName: this.lastName(),
+      email: this.email(),
+      phone: this.phone(),
+      position: this.position(),
+      companyName: this.companyName(),
+      industry: this.industry(),
+      country: this.country(),
+      website: this.website() || undefined,
+      tenantType: this.selectedTenantType()!.id,
+      useCase: this.useCase(),
+      message: this.message(),
+      referralSource: this.referralSource() || undefined
+    };
+    
+    console.group('🔍 TENANT REQUEST - Datos enviados al backend');
+    console.log('📤 Payload:', request);
+    console.log('👤 Persona:', `${request.firstName} ${request.lastName}`);
+    console.log('📧 Email:', request.email);
+    console.log('📞 Teléfono:', request.phone);
+    console.log('🏢 Empresa:', request.companyName);
+    console.log('🏭 Industria:', request.industry);
+    console.log('🌍 País:', request.country);
+    console.log('🏗️ Tenant Type:', request.tenantType);
+    console.log('📝 Caso de uso:', request.useCase);
+    console.log('💬 Mensaje:', request.message);
+    console.groupEnd();
+    
     try {
-      const request: Omit<TenantRequest, 'status' | 'requestedAt' | 'reviewedAt' | 'reviewedBy' | 'adminNotes' | 'rejectionReason'> = {
-        firstName: this.firstName(),
-        lastName: this.lastName(),
-        email: this.email(),
-        phone: this.phone(),
-        position: this.position(),
-        companyName: this.companyName(),
-        industry: this.industry(),
-        country: this.country(),
-        website: this.website() || undefined,
-        tenantType: this.selectedTenantType()!.id,
-        useCase: this.useCase(),
-        message: this.message(),
-        referralSource: this.referralSource() || undefined
-      };
+      const result = await firstValueFrom(this.tenantRequestService.createRequest(request));
       
-      const result = await this.tenantRequestService.createRequest(request);
+      console.group('🔍 TENANT REQUEST - Respuesta REAL del backend');
+      console.log('✅ Solicitud guardada en PostgreSQL:', result);
+      console.log('📊 Resultado:', result ? 'SOLICITUD CREADA EN BD' : 'FALLÓ GUARDADO');
+      console.log('🆔 Request ID:', result?.email);
+      console.log('📊 Status:', result?.status);
+      console.log('📅 Fecha creación:', result?.requestedAt);
+      console.groupEnd();
       
       if (result) {
         this.isSubmitted.set(true);
         this.successMessage.set('¡Solicitud enviada exitosamente! Te contactaremos pronto.');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.group('🔍 TENANT REQUEST - Error del backend');
+      console.error('❌ Error en solicitud:', error);
+      console.log('📄 Tipo de error:', error?.constructor?.name);
+      console.log('📝 Mensaje:', error?.message || 'Sin mensaje');
+      console.log('🔍 Status:', error?.status || 'N/A');
+      console.log('📦 Error response:', error?.error || 'N/A');
+      console.groupEnd();
+      
       this.errorMessage.set('Error al enviar la solicitud. Intente nuevamente.');
     } finally {
       this.isLoading.set(false);

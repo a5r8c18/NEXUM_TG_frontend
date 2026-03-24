@@ -89,24 +89,75 @@ export class AuthService {
   }
 
   async signup(userData: { firstName: string; lastName: string; email: string; password: string; token?: string }): Promise<boolean> {
+    console.log('🔥 AUTH SERVICE - Método signup llamado!');
+    console.group('🌐 AUTH SERVICE - Enviando petición de registro');
+    console.log('📡 URL:', `${this.apiUrl}/auth/register`);
+    console.log('📤 Payload:', userData);
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.groupEnd();
+    
     try {
       const response = await firstValueFrom(
         this.http.post<{ user: any; token: string }>(`${this.apiUrl}/auth/register`, userData)
       );
+      
+      console.group('🌐 AUTH SERVICE - Respuesta del backend');
+      console.log('✅ Status: 200 OK');
+      console.log('📦 Response:', response);
+      console.log('👤 Usuario creado:', response?.user);
+      console.log('🔐 Token generado:', !!response?.token);
+      console.log('🆔 User ID:', response?.user?.id);
+      console.log('📧 User Email:', response?.user?.email);
+      console.groupEnd();
+      
       return !!(response?.user && response?.token);
-    } catch {
+    } catch (error: any) {
+      console.group('🌐 AUTH SERVICE - Error en petición HTTP');
+      console.error('❌ Error completo:', error);
+      console.log('📄 Tipo de error:', error?.constructor?.name);
+      console.log('📝 Mensaje:', error?.message || 'Sin mensaje');
+      console.log('🔍 Status HTTP:', error?.status || 'N/A');
+      console.log('📦 Error response body:', error?.error || 'N/A');
+      console.log('🌐 URL:', `${this.apiUrl}/auth/register`);
+      console.log('📤 Payload enviado:', userData);
+      console.groupEnd();
+      
       return false;
     }
   }
 
   // Validar token de registro (solicitud aprobada)
   async validateRegistrationToken(token: string): Promise<{ valid: boolean; email?: string; tenantType?: string }> {
+    console.group('🌐 AUTH SERVICE - Validando token');
+    console.log('📡 URL:', `${this.apiUrl}/auth/validate-token/${token}`);
+    console.log('🆔 Token:', token);
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.groupEnd();
+    
     try {
       const response = await firstValueFrom(
         this.http.get<{ valid: boolean; email?: string; tenantType?: string }>(`${this.apiUrl}/auth/validate-token/${token}`)
       );
+      
+      console.group('🌐 AUTH SERVICE - Respuesta validación token');
+      console.log('✅ Status: 200 OK');
+      console.log('📦 Response:', response);
+      console.log('✅ Válido:', response?.valid);
+      console.log('📧 Email:', response?.email);
+      console.log('🏢 Tenant Type:', response?.tenantType);
+      console.groupEnd();
+      
       return response;
-    } catch {
+    } catch (error: any) {
+      console.group('🌐 AUTH SERVICE - Error validando token');
+      console.error('❌ Error completo:', error);
+      console.log('📄 Tipo de error:', error?.constructor?.name);
+      console.log('📝 Mensaje:', error?.message || 'Sin mensaje');
+      console.log('🔍 Status HTTP:', error?.status || 'N/A');
+      console.log('📦 Error response body:', error?.error || 'N/A');
+      console.log('🌐 URL:', `${this.apiUrl}/auth/validate-token/${token}`);
+      console.groupEnd();
+      
       return { valid: false };
     }
   }

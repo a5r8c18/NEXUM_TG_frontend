@@ -30,6 +30,8 @@ export class TenantRequestService {
   
   // Crear nueva solicitud
   createRequest(request: Omit<TenantRequest, 'status' | 'requestedAt' | 'reviewedAt' | 'reviewedBy' | 'adminNotes' | 'rejectionReason'>): Observable<TenantRequest> {
+    console.log('🔥 TENANT REQUEST SERVICE - Método createRequest llamado!');
+    
     this.isLoading.set(true);
     
     const newRequest: TenantRequest = {
@@ -38,13 +40,39 @@ export class TenantRequestService {
       requestedAt: new Date()
     };
     
-    // TODO: Implementar llamada real a API
-    // return this.http.post<TenantRequest>(this.apiUrl, newRequest);
+    console.group('🌐 TENANT REQUEST SERVICE - Enviando petición REAL al backend');
+    console.log('📡 URL:', this.apiUrl);
+    console.log('📤 Payload:', newRequest);
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.log('🔥 CONECTANDO CON BACKEND REAL - PostgreSQL');
+    console.groupEnd();
     
-    // Simulación para desarrollo
-    return of(newRequest).pipe(
-      delay(1500)
-    );
+    // Usar fetch API temporalmente para evitar problemas con HttpClient
+    return new Observable<TenantRequest>(observer => {
+      fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newRequest)
+      })
+      .then(response => {
+        console.log('🌐 TENANT REQUEST SERVICE - Respuesta HTTP:', response.status);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('✅ TENANT REQUEST SERVICE - Datos guardados en PostgreSQL:', data);
+        observer.next(data);
+        observer.complete();
+      })
+      .catch(error => {
+        console.error('❌ TENANT REQUEST SERVICE - Error en petición:', error);
+        observer.error(error);
+      });
+    });
   }
   
   // Aprobar solicitud
