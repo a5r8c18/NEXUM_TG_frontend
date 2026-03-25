@@ -28,14 +28,6 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <a routerLink="/settings/warehouses"
-         class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-        </svg>
-        Ver Almacenes
-      </a>
       <button (click)="openCreate()"
               class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,55 +76,112 @@
     </div>
   }
 
-  <!-- Grid de tarjetas -->
+  <!-- Tabla -->
   @if (!isLoading()) {
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-      @for (c of pagedCompanies; track $index) {
-        <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5 hover:shadow-lg transition-all">
-          <div class="flex items-start justify-between mb-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
-              <span class="text-lg font-bold text-blue-600">{{ c.name.charAt(0).toUpperCase() }}</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <button (click)="openEdit(c)"
-                      class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-              </button>
-              <button (click)="deleteCompany(c)"
-                      class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <h3 class="font-semibold text-slate-800 mb-1 truncate">{{ c.name }}</h3>
-          <div class="space-y-1 text-xs text-slate-500">
-            @if (c.tax_id) {
-              <p class="truncate">RUC: {{ c.tax_id }}</p>
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Empresa</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">RUC</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Contacto</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Dirección</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Estado</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Creada</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (company of pagedCompanies; track company.id) {
+              <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span class="text-sm font-bold text-blue-600">{{ company.name.charAt(0).toUpperCase() }}</span>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-slate-900">{{ company.name }}</div>
+                      <div class="text-xs text-slate-500">ID: {{ company.id }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-5 py-4">
+                  @if (company.tax_id) {
+                    <span class="text-sm font-mono text-slate-700">{{ company.tax_id }}</span>
+                  } @else {
+                    <span class="text-sm text-slate-400">No registrado</span>
+                  }
+                </td>
+                <td class="px-5 py-4">
+                  <div class="space-y-1">
+                    @if (company.phone) {
+                      <div class="text-sm text-slate-600">{{ company.phone }}</div>
+                    }
+                    @if (company.email) {
+                      <div class="text-xs text-slate-500 truncate max-w-[150px]">{{ company.email }}</div>
+                    }
+                    @if (!company.phone && !company.email) {
+                      <span class="text-sm text-slate-400">Sin contacto</span>
+                    }
+                  </div>
+                </td>
+                <td class="px-5 py-4">
+                  @if (company.address) {
+                    <span class="text-sm text-slate-600 truncate max-w-[200px] block" :title="company.address">{{ company.address }}</span>
+                  } @else {
+                    <span class="text-sm text-slate-400">Sin dirección</span>
+                  }
+                </td>
+                <td class="px-5 py-4">
+                  @if (company.is_active) {
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Activa
+                    </span>
+                  } @else {
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      Inactiva
+                    </span>
+                  }
+                </td>
+                <td class="px-5 py-4">
+                  <span class="text-sm text-slate-600">{{ formatDate(company.created_at) }}</span>
+                </td>
+                <td class="px-5 py-4">
+                  <div class="flex items-center justify-center gap-2">
+                    <button (click)="openEdit(company)"
+                            class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar empresa">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                    </button>
+                    <button (click)="deleteCompany(company)"
+                            class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar empresa">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
             }
-            @if (c.phone) {
-              <p class="truncate">{{ c.phone }}</p>
-            }
-            @if (c.email) {
-              <p class="truncate">{{ c.email }}</p>
-            }
-            <p class="text-slate-400">Creada: {{ formatDate(c.created_at) }}</p>
-          </div>
-        </div>
-      }
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Paginación -->
     @if (paginationConfig.totalPages > 1) {
-      <app-pagination [config]="paginationConfig" (pageChange)="onPageChange($event)"></app-pagination>
+      <div class="mt-4">
+        <app-pagination [config]="paginationConfig" (pageChange)="onPageChange($event)"></app-pagination>
+      </div>
     }
 
     <!-- Estado vacío -->
     @if (filteredCompanies.length === 0 && !isLoading()) {
-      <div class="text-center py-20">
+      <div class="text-center py-20 bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 mt-6">
         <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

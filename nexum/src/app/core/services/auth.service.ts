@@ -18,6 +18,7 @@ export interface NexumUser {
   tenantType: 'MULTI_COMPANY' | 'SINGLE_COMPANY';
   avatarUrl?: string;
   currentCompanyId?: number;
+  companyId?: number; // ✅ Añadir companyId para compatibilidad con backend
 }
 
 @Injectable({
@@ -70,7 +71,12 @@ export class AuthService {
         
         // Establecer la empresa en el ContextService
         console.log('🔍 AUTH SERVICE - Usuario tiene companyId:', response.user.companyId);
-        await this.setCompanyContext(response.user.companyId || 1);
+        if (response.user.companyId) {
+          await this.setCompanyContext(response.user.companyId);
+        } else {
+          console.warn('⚠️ AUTH SERVICE - Usuario no tiene companyId asignado');
+          // Para usuarios sin empresa, no establecer contexto
+        }
         
         return true;
       }
@@ -269,6 +275,12 @@ export class AuthService {
         const user = JSON.parse(userStr) as NexumUser;
         this.currentUserSignal.set(user);
         this.isAuthenticatedSignal.set(true);
+        
+        // Restaurar el contexto de la empresa si el usuario tiene companyId
+        if (user.companyId) {
+          console.log('🔄 AUTH SERVICE - Restaurando contexto de empresa:', user.companyId);
+          this.setCompanyContext(user.companyId);
+        }
       } catch {
         this.logout();
       }

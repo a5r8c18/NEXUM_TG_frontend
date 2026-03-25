@@ -66,64 +66,52 @@ export const routes: Routes = [
       // Inventory Module
       {
         path: 'inventory',
-        loadComponent: () => import('./modules/inventory/inventory-table.component').then(m => m.InventoryTableComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/inventory-table.component').then(m => m.InventoryTableComponent)
       },
       {
         path: 'inventory/entry',
-        loadComponent: () => import('./modules/inventory/submodules/entry/entry.component').then(m => m.EntryComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/entry/entry.component').then(m => m.EntryComponent)
       },
       {
         path: 'inventory/reports',
-        loadComponent: () => import('./modules/inventory/submodules/reports/reports.component').then(m => m.ReportsComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/reports/reports.component').then(m => m.ReportsComponent)
       },
       {
         path: 'inventory/warehouses',
-        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-list/warehouse-list.component').then(m => m.WarehouseListComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-list/warehouse-list.component').then(m => m.WarehouseListComponent)
       },
       {
         path: 'inventory/warehouses/new',
-        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent)
       },
       {
         path: 'inventory/warehouses/:id/edit',
-        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-form/warehouse-form.component').then(m => m.WarehouseFormComponent)
       },
       {
         path: 'inventory/stock-limits',
-        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-list/stock-limits-list.component').then(m => m.StockLimitsListComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-list/stock-limits-list.component').then(m => m.StockLimitsListComponent)
       },
       {
         path: 'inventory/stock-limits/new',
-        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-form/stock-limits-form.component').then(m => m.StockLimitsFormComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-form/stock-limits-form.component').then(m => m.StockLimitsFormComponent)
       },
       {
         path: 'inventory/stock-limits/:id/edit',
-        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-form/stock-limits-form.component').then(m => m.StockLimitsFormComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/stock-limits/stock-limits-form/stock-limits-form.component').then(m => m.StockLimitsFormComponent)
       },
       {
         path: 'inventory/movements',
-        loadComponent: () => import('./modules/inventory/submodules/movements/movements-list.component').then(m => m.MovementsListComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/inventory/submodules/movements/movements-list.component').then(m => m.MovementsListComponent)
       },
       // Billing Module
       {
         path: 'billing/invoices',
-        loadComponent: () => import('./modules/invoices/invoices.component').then(m => m.InvoicesComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/invoices/invoices.component').then(m => m.InvoicesComponent)
       },
       {
         path: 'billing/fixed-assets',
-        loadComponent: () => import('./modules/fixed-assets/fixed-assets.component').then(m => m.FixedAssetsComponent),
-        canActivate: [permissionsGuard]
+        loadComponent: () => import('./modules/fixed-assets/fixed-assets.component').then(m => m.FixedAssetsComponent)
       },
       // Admin Module (solo superadmin)
       {
@@ -148,7 +136,7 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadChildren: () => import('./settings/settings.module').then(m => m.SettingsModule),
-        canActivate: [authGuard, tenantSelectedGuard, companySelectedGuard, permissionsGuard],
+        canActivate: [authGuard, companySelectedGuard],
         data: { permission: 'settings.access' }
       }
     ]

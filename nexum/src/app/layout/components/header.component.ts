@@ -1,7 +1,10 @@
-import { Component, signal, inject, HostListener } from '@angular/core';
+import { Component, signal, inject, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ContextService } from '../../core/services/context.service';
+import { CompanyService } from '../../core/services/company.service';
+import { Company } from '../../models/company.models';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -9,13 +12,17 @@ import { ContextService } from '../../core/services/context.service';
   imports: [],
   templateUrl: './header.component.html'
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   private authService = inject(AuthService);
   private contextService = inject(ContextService);
   private router = inject(Router);
+  private companyService = inject(CompanyService);
 
   showUserMenu = signal(false);
   showNotifications = signal(false);
+  showCompanyDropdown = signal(false);
+  companies = signal<Company[]>([]);
+  isLoadingCompanies = signal(false);
   notifications = signal([
     {
       id: 1,
@@ -88,6 +95,47 @@ export class HeaderComponent {
     return (user.firstName.charAt(0) + user.lastName.charAt(0)).toUpperCase();
   }
 
+  ngOnInit(): void {
+    if (this.isMultiCompany) {
+      this.loadCompanies();
+    }
+  }
+
+  async loadCompanies(): Promise<void> {
+    if (!this.isMultiCompany) return;
+    
+    this.isLoadingCompanies.set(true);
+    try {
+      const companies = await firstValueFrom(this.companyService.getCompanies());
+      this.companies.set(companies);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+    } finally {
+      this.isLoadingCompanies.set(false);
+    }
+  }
+
+  toggleCompanyDropdown(): void {
+    this.showCompanyDropdown.set(!this.showCompanyDropdown());
+    // Cerrar otros menús al abrir dropdown de empresas
+    if (this.showCompanyDropdown()) {
+      this.showUserMenu.set(false);
+      this.showNotifications.set(false);
+    }
+  }
+
+  selectCompany(company: Company): void {
+    this.contextService.setCurrentCompany(company as any);
+    this.showCompanyDropdown.set(false);
+    // Opcional: Recargar la página para actualizar el contexto
+    window.location.reload();
+  }
+
+  isActiveCompany(company: Company): boolean {
+    const current = this.contextService.currentCompany();
+    return current?.id?.toString() === company.id?.toString();
+  }
+
   toggleUserMenu(): void {
     this.showUserMenu.set(!this.showUserMenu());
     // Cerrar notificaciones al abrir menú de usuario
@@ -148,6 +196,7 @@ export class HeaderComponent {
     const target = event.target as HTMLElement;
     const userMenuContainer = target.closest('.user-menu-container');
     const notificationsContainer = target.closest('.notifications-container');
+    const companyDropdownContainer = target.closest('.company-dropdown-container');
     
     // Cerrar menú de usuario si el clic no está dentro de él
     if (!userMenuContainer && this.showUserMenu()) {
@@ -157,6 +206,11 @@ export class HeaderComponent {
     // Cerrar notificaciones si el clic no está dentro de ellas
     if (!notificationsContainer && this.showNotifications()) {
       this.showNotifications.set(false);
+    }
+    
+    // Cerrar dropdown de empresas si el clic no está dentro de él
+    if (!companyDropdownContainer && this.showCompanyDropdown()) {
+      this.showCompanyDropdown.set(false);
     }
   }
 }

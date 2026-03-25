@@ -13,7 +13,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 @Component({
   selector: 'app-company-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
   templateUrl: './company-list.component.html'
 })
 export class CompanyListComponent implements OnInit, OnDestroy {
@@ -54,6 +54,12 @@ export class CompanyListComponent implements OnInit, OnDestroy {
       this.toast.set(t);
       setTimeout(() => this.toast.set(null), 4000);
     });
+    
+    // Refrescar empresas después de un pequeño delay para asegurar que el login haya actualizado el estado
+    setTimeout(() => {
+      console.log('🔄 COMPANY LIST - Refrescando empresas después de login...');
+      this.loadCompanies();
+    }, 1000);
   }
 
   ngOnDestroy(): void {
