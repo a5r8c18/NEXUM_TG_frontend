@@ -65,9 +65,11 @@ export class ContextService {
   }
 
   setCurrentCompany(company: Company | null): void {
+    console.log('🔍 CONTEXT SERVICE - Estableciendo empresa:', company?.name || 'null');
     this.currentCompanySignal.set(company);
     this.currentCompanySubject.next(company);
     this.persistToStorage(STORAGE_KEYS.COMPANY, company);
+    console.log('✅ CONTEXT SERVICE - Empresa establecida, currentCompanySignal():', this.currentCompanySignal()?.name || 'null');
     // Limpiar warehouse cuando cambia la company
     if (company === null) {
       this.setCurrentWarehouse(null);
@@ -75,9 +77,11 @@ export class ContextService {
   }
 
   setCurrentWarehouse(warehouse: Warehouse | null): void {
+    console.log('🔍 CONTEXT SERVICE - Estableciendo almacén:', warehouse?.name || 'null');
     this.currentWarehouseSignal.set(warehouse);
     this.currentWarehouseSubject.next(warehouse);
     this.persistToStorage(STORAGE_KEYS.WAREHOUSE, warehouse);
+    console.log('✅ CONTEXT SERVICE - Almacén establecido, currentWarehouseSignal():', this.currentWarehouseSignal()?.name || 'null');
   }
 
   // Métodos de utilidad

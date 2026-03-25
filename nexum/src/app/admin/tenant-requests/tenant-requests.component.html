@@ -89,7 +89,7 @@
             <option value="ALL">Todos</option>
             <option value="PENDING">Pendientes</option>
             <option value="APPROVED">Aprobadas</option>
-            <option value="REJECTED">Rechazadas</option>
+            <option value="DENIED">Rechazadas</option>
           </select>
         </div>
         <div>
@@ -212,6 +212,12 @@
                       <span class="ml-4">Revisado: {{ formatDate(request.reviewedAt) }}</span>
                     }
                   </div>
+                  @if (request.adminNotes) {
+                    <div class="mt-4 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
+                      <h4 class="text-sm font-medium text-blue-400 mb-2">Notas del Administrador</h4>
+                      <p class="text-slate-200 text-sm">{{ request.adminNotes }}</p>
+                    </div>
+                  }
                 </div>
               }
             </div>

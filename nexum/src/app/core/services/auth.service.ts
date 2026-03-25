@@ -1,8 +1,11 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { ContextService } from './context.service';
+import { CompanyService } from './company.service';
 
 export interface NexumUser {
   id: string;
@@ -32,6 +35,8 @@ export class AuthService {
 
   private router = inject(Router);
   private http = inject(HttpClient);
+  private contextService = inject(ContextService);
+  private companyService = inject(CompanyService);
   private apiUrl = environment.apiUrl;
 
   constructor() {
@@ -62,6 +67,11 @@ export class AuthService {
           tenantType: response.user.tenantType || 'MULTI_COMPANY'
         };
         this.setSession(user, response.token);
+        
+        // Establecer la empresa en el ContextService
+        console.log('🔍 AUTH SERVICE - Usuario tiene companyId:', response.user.companyId);
+        await this.setCompanyContext(response.user.companyId || 1);
+        
         return true;
       }
       return false;
@@ -127,7 +137,7 @@ export class AuthService {
   }
 
   // Validar token de registro (solicitud aprobada)
-  async validateRegistrationToken(token: string): Promise<{ valid: boolean; email?: string; tenantType?: string }> {
+  async validateRegistrationToken(token: string): Promise<{ valid: boolean; email?: string; firstName?: string; lastName?: string; tenantType?: string }> {
     console.group('🌐 AUTH SERVICE - Validando token');
     console.log('📡 URL:', `${this.apiUrl}/auth/validate-token/${token}`);
     console.log('🆔 Token:', token);
@@ -136,7 +146,7 @@ export class AuthService {
     
     try {
       const response = await firstValueFrom(
-        this.http.get<{ valid: boolean; email?: string; tenantType?: string }>(`${this.apiUrl}/auth/validate-token/${token}`)
+        this.http.get<{ valid: boolean; email?: string; firstName?: string; lastName?: string; tenantType?: string }>(`${this.apiUrl}/auth/validate-token/${token}`)
       );
       
       console.group('🌐 AUTH SERVICE - Respuesta validación token');
@@ -144,6 +154,7 @@ export class AuthService {
       console.log('📦 Response:', response);
       console.log('✅ Válido:', response?.valid);
       console.log('📧 Email:', response?.email);
+      console.log('👤 Nombre:', response?.firstName, response?.lastName);
       console.log('🏢 Tenant Type:', response?.tenantType);
       console.groupEnd();
       
@@ -224,6 +235,29 @@ export class AuthService {
     this.isAuthenticatedSignal.set(true);
     localStorage.setItem('authToken', token);
     localStorage.setItem('currentUser', JSON.stringify(user));
+  }
+
+  private async setCompanyContext(companyId: number): Promise<void> {
+    try {
+      console.log('🔍 AUTH SERVICE - Estableciendo contexto de empresa:', companyId);
+      const company = await firstValueFrom(this.companyService.getCompany(companyId));
+      console.log('✅ AUTH SERVICE - Empresa obtenida:', company.name);
+      
+      this.contextService.setCurrentCompany({
+        id: company.id.toString(),
+        name: company.name,
+        tax_id: company.tax_id || '',
+        address: company.address || '',
+        phone: company.phone || '',
+        email: company.email || '',
+        is_active: company.is_active,
+        created_at: company.created_at
+      } as any);
+      
+      console.log('✅ AUTH SERVICE - Contexto de empresa establecido');
+    } catch (error) {
+      console.error('❌ AUTH SERVICE - Error estableciendo contexto de empresa:', error);
+    }
   }
 
   private checkAuthStatus(): void {

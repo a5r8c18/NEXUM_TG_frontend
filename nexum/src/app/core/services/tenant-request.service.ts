@@ -1,7 +1,14 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, delay } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { TenantRequest, TENANT_TYPES, TenantType } from '../models/tenant-request.model';
+
+export interface ApprovalResponse {
+  message: string;
+  token: string;
+  email: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +16,8 @@ import { TenantRequest, TENANT_TYPES, TenantType } from '../models/tenant-reques
 export class TenantRequestService {
   private http = inject(HttpClient);
   
-  private apiUrl = 'http://localhost:3001/api/tenant-requests';
+  private apiUrl = 'http://localhost:3001/api/tenant-requests'; // Para crear solicitudes
+  private adminApiUrl = 'http://localhost:3001/admin/requests'; // Para operaciones de admin
   
   // Signals para estado local
   private requests = signal<TenantRequest[]>([]);
@@ -19,22 +27,28 @@ export class TenantRequestService {
   getRequests(): Observable<TenantRequest[]> {
     this.isLoading.set(true);
     
-    // TODO: Implementar llamada real a API
-    // return this.http.get<TenantRequest[]>(this.apiUrl);
+    console.log('🔍 TENANT REQUEST SERVICE - Making request to:', this.adminApiUrl);
     
-    // Simulación para desarrollo
-    return of(this.getMockRequests()).pipe(
-      delay(1000)
+    // Usar llamada real a API de admin
+    return this.http.get<TenantRequest[]>(this.adminApiUrl).pipe(
+      catchError((error: any) => {
+        console.error('❌ TENANT REQUEST SERVICE - Error details:', error);
+        console.error('📡 URL:', this.adminApiUrl);
+        console.error('🔍 Status:', error.status);
+        console.error('📝 Message:', error.message);
+        console.error('📦 Error:', error.error);
+        throw error;
+      })
     );
   }
   
   // Crear nueva solicitud
-  createRequest(request: Omit<TenantRequest, 'status' | 'requestedAt' | 'reviewedAt' | 'reviewedBy' | 'adminNotes' | 'rejectionReason'>): Observable<TenantRequest> {
+  createRequest(request: Omit<TenantRequest, 'id' | 'status' | 'requestedAt' | 'reviewedAt' | 'reviewedBy' | 'adminNotes' | 'rejectionReason'>): Observable<TenantRequest> {
     console.log('🔥 TENANT REQUEST SERVICE - Método createRequest llamado!');
     
     this.isLoading.set(true);
     
-    const newRequest: TenantRequest = {
+    const newRequest: Omit<TenantRequest, 'id'> = {
       ...request,
       status: 'PENDING',
       requestedAt: new Date()
@@ -47,75 +61,112 @@ export class TenantRequestService {
     console.log('🔥 CONECTANDO CON BACKEND REAL - PostgreSQL');
     console.groupEnd();
     
-    // Usar fetch API temporalmente para evitar problemas con HttpClient
-    return new Observable<TenantRequest>(observer => {
-      fetch(this.apiUrl, {
-        method: 'POST',
+    // Usar HttpClient para mejor manejo de errores
+    return this.http.post<TenantRequest>(this.apiUrl, newRequest).pipe(
+      tap(response => {
+        console.log('✅ TENANT REQUEST SERVICE - Datos guardados en PostgreSQL:', response);
+      }),
+      catchError((error: any) => {
+        console.group('❌ TENANT REQUEST SERVICE - Error en petición');
+        console.error('Error completo:', error);
+        console.log('Tipo de error:', error?.constructor?.name);
+        console.log('Mensaje:', error?.message || 'Sin mensaje');
+        console.log('Status HTTP:', error?.status || 'N/A');
+        console.log('Status Text:', error?.statusText || 'N/A');
+        console.log('URL:', this.apiUrl);
+        console.log('Request data:', newRequest);
+        console.log('Error response:', error?.error || 'N/A');
+        console.groupEnd();
+        throw error;
+      })
+    );
+  }
+  
+  // Aprobar solicitud
+  approveRequest(requestId: string, adminNotes?: string): Observable<ApprovalResponse> {
+    this.isLoading.set(true);
+    
+    console.log('🔍 TENANT REQUEST SERVICE - Approve request called');
+    console.log('🔍 TENANT REQUEST SERVICE - Request ID:', requestId);
+    console.log('🔍 TENANT REQUEST SERVICE - Admin Notes:', adminNotes);
+    console.log('🔍 TENANT REQUEST SERVICE - URL:', `${this.adminApiUrl}/${requestId}/approve`);
+    
+    const body = { approvedBy: 'admin@nexum.com', adminNotes: adminNotes || null };
+    console.log('🔍 TENANT REQUEST SERVICE - Request body:', body);
+    
+    // Usar fetch API directamente para evitar problemas con HttpClient
+    return new Observable<ApprovalResponse>(observer => {
+      fetch(`${this.adminApiUrl}/${requestId}/approve`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newRequest)
+        body: JSON.stringify(body)
       })
       .then(response => {
-        console.log('🌐 TENANT REQUEST SERVICE - Respuesta HTTP:', response.status);
+        console.log('🔍 TENANT REQUEST SERVICE - Fetch response status:', response.status);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
       })
       .then(data => {
-        console.log('✅ TENANT REQUEST SERVICE - Datos guardados en PostgreSQL:', data);
+        console.log('✅ TENANT REQUEST SERVICE - Request successful:', data);
         observer.next(data);
         observer.complete();
       })
       .catch(error => {
-        console.error('❌ TENANT REQUEST SERVICE - Error en petición:', error);
+        console.error('❌ TENANT REQUEST SERVICE - Fetch error:', error);
         observer.error(error);
+      })
+      .finally(() => {
+        this.isLoading.set(false);
       });
     });
-  }
-  
-  // Aprobar solicitud
-  approveRequest(requestId: string, adminNotes?: string): Observable<TenantRequest> {
-    this.isLoading.set(true);
-    
-    // TODO: Implementar llamada real a API
-    // return this.http.patch<TenantRequest>(`${this.apiUrl}/${requestId}/approve`, { adminNotes });
-    
-    // Simulación para desarrollo
-    const request = this.requests().find(r => r.email === requestId); // Mock usando email como ID
-    if (request) {
-      request.status = 'APPROVED';
-      request.reviewedAt = new Date();
-      request.reviewedBy = 'admin@nexum.com';
-      request.adminNotes = adminNotes;
-    }
-    
-    return of(request!).pipe(
-      delay(500)
-    );
   }
   
   // Rechazar solicitud
   rejectRequest(requestId: string, rejectionReason: string, adminNotes?: string): Observable<TenantRequest> {
     this.isLoading.set(true);
     
-    // TODO: Implementar llamada real a API
-    // return this.http.patch<TenantRequest>(`${this.apiUrl}/${requestId}/reject`, { rejectionReason, adminNotes });
+    console.log('🔍 TENANT REQUEST SERVICE - Reject request called');
+    console.log('🔍 TENANT REQUEST SERVICE - Request ID:', requestId);
+    console.log('🔍 TENANT REQUEST SERVICE - Rejection Reason:', rejectionReason);
+    console.log('🔍 TENANT REQUEST SERVICE - Admin Notes:', adminNotes);
+    console.log('🔍 TENANT REQUEST SERVICE - URL:', `${this.adminApiUrl}/${requestId}/deny`);
     
-    // Simulación para desarrollo
-    const request = this.requests().find(r => r.email === requestId); // Mock usando email como ID
-    if (request) {
-      request.status = 'REJECTED';
-      request.reviewedAt = new Date();
-      request.reviewedBy = 'admin@nexum.com';
-      request.rejectionReason = rejectionReason;
-      request.adminNotes = adminNotes;
-    }
+    const body = { reason: rejectionReason, deniedBy: 'admin@nexum.com', adminNotes: adminNotes || null };
+    console.log('🔍 TENANT REQUEST SERVICE - Request body:', body);
     
-    return of(request!).pipe(
-      delay(500)
-    );
+    // Usar fetch API directamente para evitar problemas con HttpClient
+    return new Observable<TenantRequest>(observer => {
+      fetch(`${this.adminApiUrl}/${requestId}/deny`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body)
+      })
+      .then(response => {
+        console.log('🔍 TENANT REQUEST SERVICE - Fetch response status:', response.status);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('✅ TENANT REQUEST SERVICE - Request successful:', data);
+        observer.next(data);
+        observer.complete();
+      })
+      .catch(error => {
+        console.error('❌ TENANT REQUEST SERVICE - Fetch error:', error);
+        observer.error(error);
+      })
+      .finally(() => {
+        this.isLoading.set(false);
+      });
+    });
   }
   
   // Obtener tipos de tenant disponibles
@@ -136,6 +187,7 @@ export class TenantRequestService {
   private getMockRequests(): TenantRequest[] {
     return [
       {
+        id: 'mock-1',
         firstName: 'Juan',
         lastName: 'Pérez',
         email: 'juan@consultora.com',
@@ -151,6 +203,7 @@ export class TenantRequestService {
         requestedAt: new Date('2024-01-15')
       },
       {
+        id: 'mock-2',
         firstName: 'María',
         lastName: 'González',
         email: 'maria@tienda.local',

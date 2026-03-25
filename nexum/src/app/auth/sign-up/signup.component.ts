@@ -27,6 +27,7 @@ export class SignupComponent {
   tokenValid = signal<boolean | null>(null);
   tokenChecking = signal(false);
   tenantType = signal('');
+  fromToken = signal(false);
 
   private authService = inject(AuthService);
   private router = inject(Router);
@@ -82,6 +83,9 @@ export class SignupComponent {
       if (result.valid && result.email) {
         this.email.set(result.email);
         this.tenantType.set(result.tenantType || '');
+        this.fromToken.set(true);
+        if (result.firstName) this.firstName.set(result.firstName);
+        if (result.lastName) this.lastName.set(result.lastName);
       }
     } catch (error: any) {
       console.group('🔍 TOKEN VALIDATION - Error');
@@ -99,6 +103,17 @@ export class SignupComponent {
 
   async onSignup(): Promise<void> {
     console.log('🔥 SIGNUP - Método onSignup ejecutado!');
+    console.log('📊 Estado actual:', {
+      firstName: this.firstName(),
+      lastName: this.lastName(),
+      email: this.email(),
+      password: this.password() ? '***' : null,
+      confirmPassword: this.confirmPassword() ? '***' : null,
+      acceptTerms: this.acceptTerms(),
+      fromToken: this.fromToken(),
+      registrationToken: this.registrationToken(),
+      isLoading: this.isLoading()
+    });
     
     // Limpiar mensajes anteriores
     this.errorMessage.set('');
@@ -155,8 +170,12 @@ export class SignupComponent {
       console.groupEnd();
       
       if (success) {
+        console.log('🔥 SIGNUP - Estableciendo mensaje de éxito');
         this.successMessage.set('¡Cuenta creada exitosamente! Redirigiendo al login...');
+        console.log('🔥 SIGNUP - Mensaje de éxito establecido:', this.successMessage());
+        console.log('🔥 SIGNUP - Redirigiendo en 2 segundos...');
         setTimeout(() => {
+          console.log('🔥 SIGNUP - Ejecutando redirección a /login');
           this.router.navigate(['/login']);
         }, 2000);
       } else {
@@ -173,8 +192,11 @@ export class SignupComponent {
       
       this.errorMessage.set('Error al crear la cuenta. Intente nuevamente.');
     } finally {
+      console.log('🔥 SIGNUP - Finally block ejecutado');
       this.isLoading.set(false);
     }
+    
+    console.log('🔥 SIGNUP - Método onSignup finalizado');
   }
 
   togglePasswordVisibility(): void {

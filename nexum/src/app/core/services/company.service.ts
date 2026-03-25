@@ -20,6 +20,16 @@ export class CompanyService {
     return this.http.get<Company>(`${this.apiUrl}/${id}`);
   }
 
+  // Nuevo método para buscar empresas por nombre
+  getCompaniesByName(name: string): Observable<Company[]> {
+    return this.http.get<Company[]>(`${this.apiUrl}?search=${name}`);
+  }
+
+  // Nuevo método para buscar empresas por tenant
+  getCompaniesByTenant(tenantId: string): Observable<Company[]> {
+    return this.http.get<Company[]>(`${this.apiUrl}?tenantId=${tenantId}`);
+  }
+
   createCompany(data: CreateCompanyDto): Observable<Company> {
     return this.http.post<Company>(this.apiUrl, data);
   }

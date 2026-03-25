@@ -1,4 +1,5 @@
 export interface TenantRequest {
+  id: string; // UUID from backend
   // Información Personal
   firstName: string;
   lastName: string;
@@ -23,7 +24,7 @@ export interface TenantRequest {
   referralSource?: string; // ¿Cómo nos conoció?
   
   // Estado y Metadatos
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'DENIED';
   requestedAt: Date;
   reviewedAt?: Date;
   reviewedBy?: string;

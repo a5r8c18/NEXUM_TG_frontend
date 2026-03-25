@@ -26,7 +26,7 @@ export class TenantRequestsComponent {
   adminNotes = signal('');
 
   // Filtros
-  statusFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = 'ALL';
+  statusFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'DENIED' = 'ALL';
   typeFilter: 'ALL' | 'MULTI_COMPANY' | 'SINGLE_COMPANY' = 'ALL';
 
   constructor() {
@@ -65,7 +65,7 @@ export class TenantRequestsComponent {
   }
 
   get rejectedCount(): number {
-    return this.requests().filter(r => r.status === 'REJECTED').length;
+    return this.requests().filter(r => r.status === 'DENIED').length;
   }
 
   // Acciones sobre solicitudes
@@ -86,24 +86,52 @@ export class TenantRequestsComponent {
     this.adminNotes.set('');
   }
 
+  debugClick() {
+    console.log('🔍🔍🔍 BUTTON CLICKED!');
+  }
+
   async approveRequest() {
+    console.log('🔍🔍🔍 COMPONENT - approveRequest method STARTED!');
     const selectedReq = this.selectedRequest();
-    if (!selectedReq) return;
+    console.log('🔍 COMPONENT - Selected request:', selectedReq);
+    if (!selectedReq) {
+      console.log('🔍 COMPONENT - No selected request, returning');
+      return;
+    }
 
     try {
-      await this.tenantRequestService.approveRequest(
-        selectedReq.email,
+      console.log('🔍 COMPONENT - About to call service approveRequest with ID:', selectedReq.id);
+      const result = await firstValueFrom(this.tenantRequestService.approveRequest(
+        selectedReq.id,  // Pass ID instead of email
         this.adminNotes() || undefined
-      );
+      ));
+      console.log('🔍 COMPONENT - Service call completed, result:', result);
       
-      // Actualizar la solicitud localmente
-      const updated = this.requests().map(r => 
-        r.email === selectedReq.email 
-          ? { ...r, status: 'APPROVED' as const, reviewedAt: new Date(), adminNotes: this.adminNotes() }
-          : r
-      );
-      this.requests.set(updated);
-      
+      if (result) {
+        console.log('✅ COMPONENT - Service call completed, result:', result);
+        
+        // Mostrar mensaje de éxito con enlace de registro
+        const frontendUrl = 'http://localhost:4200';
+        const signupUrl = `${frontendUrl}/signup?token=${result.token}`;
+        
+        alert(`✅ Solicitud aprobada exitosamente!
+
+📧 Email: ${result.email}
+🔗 Enlace de registro: ${signupUrl}
+
+El usuario puede usar este enlace para completar su registro.`);
+
+        await this.loadRequests(); // Recargar lista
+        this.closeModals();
+      } else {
+        // Actualizar la solicitud localmente
+        const updated = this.requests().map(r => 
+          r.id === selectedReq.id  // Compare by ID instead of email
+            ? { ...r, status: 'APPROVED' as const, reviewedAt: new Date(), adminNotes: this.adminNotes() }
+            : r
+        );
+        this.requests.set(updated);
+      }
       this.closeModals();
     } catch (error: unknown) {
       console.error('Error approving request:', error instanceof Error ? error.message : String(error));
@@ -111,22 +139,28 @@ export class TenantRequestsComponent {
   }
 
   async rejectRequest() {
+    console.log('🔍 COMPONENT - rejectRequest method called!');
     const selectedReq = this.selectedRequest();
-    if (!selectedReq || !this.rejectionReason()) return;
+    console.log('🔍 COMPONENT - Selected request:', selectedReq);
+    if (!selectedReq || !this.rejectionReason()) {
+      console.log('🔍 COMPONENT - No selected request or rejection reason, returning');
+      return;
+    }
 
     try {
-      await this.tenantRequestService.rejectRequest(
-        selectedReq.email,
+      console.log('🔍 COMPONENT - Calling service rejectRequest with ID:', selectedReq.id);
+      await firstValueFrom(this.tenantRequestService.rejectRequest(
+        selectedReq.id,  // Pass ID instead of email
         this.rejectionReason(),
         this.adminNotes() || undefined
-      );
+      ));
       
       // Actualizar la solicitud localmente
       const updated = this.requests().map(r => 
-        r.email === selectedReq.email 
+        r.id === selectedReq.id  // Compare by ID instead of email
           ? { 
               ...r, 
-              status: 'REJECTED' as const, 
+              status: 'DENIED' as const, 
               reviewedAt: new Date(), 
               rejectionReason: this.rejectionReason(),
               adminNotes: this.adminNotes()
@@ -158,7 +192,7 @@ export class TenantRequestsComponent {
     switch (status) {
       case 'PENDING': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30';
       case 'APPROVED': return 'text-green-400 bg-green-400/10 border-green-400/30';
-      case 'REJECTED': return 'text-red-400 bg-red-400/10 border-red-400/30';
+      case 'DENIED': return 'text-red-400 bg-red-400/10 border-red-400/30';
       default: return 'text-slate-400 bg-slate-400/10 border-slate-400/30';
     }
   }

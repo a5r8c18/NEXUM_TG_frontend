@@ -80,7 +80,7 @@ export class TenantRequestComponent {
     this.errorMessage.set('');
     
     // Log datos del formulario
-    const request: Omit<TenantRequest, 'status' | 'requestedAt' | 'reviewedAt' | 'reviewedBy' | 'adminNotes' | 'rejectionReason'> = {
+    const request: Omit<TenantRequest, 'id' | 'status' | 'requestedAt' | 'reviewedAt' | 'reviewedBy' | 'adminNotes' | 'rejectionReason'> = {
       firstName: this.firstName(),
       lastName: this.lastName(),
       email: this.email(),

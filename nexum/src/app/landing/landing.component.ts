@@ -18,7 +18,7 @@ export class LandingComponent {
   }
 
   goToSignup() {
-    this.router.navigate(['/signup']);
+    this.router.navigate(['/tenant-request']);
   }
 
   startDemo() {

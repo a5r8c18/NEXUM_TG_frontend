@@ -42,11 +42,11 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/login/login.component').then(m => m.LoginComponent)
   },
   {
-    path: 'signup',
+    path: 'tenant-request',
     loadComponent: () => import('./auth/tenant-request/tenant-request.component').then(m => m.TenantRequestComponent)
   },
   {
-    path: 'register',
+    path: 'signup',
     loadComponent: () => import('./auth/sign-up/signup.component').then(m => m.SignupComponent)
   },
   {

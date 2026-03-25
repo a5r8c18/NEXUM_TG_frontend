@@ -4,8 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ContextService } from '../../../../core/services/context.service';
 import { AuthService } from '../../../../core/services/auth.service';
-import { Company } from '../../../../core/models/company.model';
+import { CompanyService } from '../../../../core/services/company.service';
+import { Company } from '../../../../models/company.models';
 import { Tenant } from '../../../../core/models/tenant.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-company-selector',
@@ -17,6 +19,7 @@ export class CompanySelectorComponent {
   private contextService = inject(ContextService);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private companyService = inject(CompanyService);
 
   companies = signal<Company[]>([]);
   isLoading = signal(false);
@@ -64,64 +67,52 @@ export class CompanySelectorComponent {
     this.loadCompanies();
   }
 
-  loadCompanies() {
+  async loadCompanies() {
+    console.log('🔍 COMPANY SELECTOR - Cargando empresas desde la base de datos...');
     this.isLoading.set(true);
     this.hasError.set(false);
 
-    // TODO: Reemplazar con llamada real a GET /companies
-    setTimeout(() => {
+    try {
+      // Cargar empresas reales desde la base de datos
+      const companies = await firstValueFrom(this.companyService.getCompanies());
+      console.log('✅ COMPANY SELECTOR - Empresas cargadas:', companies.length);
+      console.log('📊 COMPANY SELECTOR - Empresas:', companies.map(c => c.name));
+      
+      this.companies.set(companies);
+    } catch (error) {
+      console.error('❌ COMPANY SELECTOR - Error cargando empresas:', error);
+      this.hasError.set(true);
+      
+      // Fallback a empresas de demo si hay error (usando el modelo correcto)
+      console.log('🔍 COMPANY SELECTOR - Usando empresas de demo como fallback');
       this.companies.set([
         {
-          id: 'comp-1',
-          tenantId: 'tenant-multi-1',
-          name: 'Comercial Andes S.A.',
-          taxId: 'RUC-20100001',
-          phone: '+593 2 256-7890',
-          email: 'info@comercialandes.com',
-          address: 'Av. Amazonas N34-56, Quito',
-          isActive: true,
-          createdAt: '2024-01-15T00:00:00Z',
-          updatedAt: '2024-06-01T00:00:00Z'
-        },
-        {
-          id: 'comp-2',
-          tenantId: 'tenant-multi-1',
-          name: 'Distribuidora Pacífico Ltda.',
-          taxId: 'RUC-20100002',
-          phone: '+593 4 230-1234',
-          email: 'contacto@distpacifico.com',
-          address: 'Malecón 2000, Guayaquil',
-          isActive: true,
-          createdAt: '2024-03-20T00:00:00Z',
-          updatedAt: '2024-06-15T00:00:00Z'
-        },
-        {
-          id: 'comp-3',
-          tenantId: 'tenant-multi-1',
-          name: 'Servicios Integrales del Sur',
-          taxId: 'RUC-20100003',
-          phone: '+593 7 284-5678',
-          email: 'admin@serviciossur.com',
-          address: 'Gran Colombia 12-40, Cuenca',
-          isActive: true,
-          createdAt: '2024-05-10T00:00:00Z',
-          updatedAt: '2024-07-01T00:00:00Z'
+          id: 1,
+          tax_id: '20123456789',
+          address: 'Av. Demo 123',
+          phone: '555-1234',
+          email: 'demo@empresa.com',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          name: 'Empresa Demo S.A.'
         }
       ]);
+    } finally {
       this.isLoading.set(false);
-    }, 800);
+    }
   }
 
   selectCompany(company: Company) {
-    this.contextService.setCurrentCompany(company);
+    this.contextService.setCurrentCompany(company as any);
     this.router.navigate(['/dashboard']);
   }
 
   isActiveCompany(company: Company): boolean {
-    return this.currentCompany()?.id === company.id;
+    const current = this.currentCompany();
+    return current?.id?.toString() === company.id?.toString();
   }
 
-  // CRUD Operations
+  // CRUD Operations - Simplificados para evitar errores de tipos
   openCreateModal() {
     this.resetForm();
     this.showCreateModal.set(true);
@@ -131,7 +122,7 @@ export class CompanySelectorComponent {
     event.stopPropagation();
     this.editingCompany.set(company);
     this.formName.set(company.name);
-    this.formTaxId.set(company.taxId);
+    this.formTaxId.set(company.tax_id || '');
     this.formPhone.set(company.phone || '');
     this.formEmail.set(company.email || '');
     this.formAddress.set(company.address || '');
@@ -151,16 +142,14 @@ export class CompanySelectorComponent {
       return;
     }
     const newCompany: Company = {
-      id: 'comp-' + Date.now(),
-      tenantId: this.authService.getCurrentUserTenant()?.id || '',
-      name: this.formName(),
-      taxId: this.formTaxId(),
+      id: Date.now(),
+      tax_id: this.formTaxId(),
+      address: this.formAddress() || undefined,
       phone: this.formPhone() || undefined,
       email: this.formEmail() || undefined,
-      address: this.formAddress() || undefined,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      is_active: true,
+      created_at: new Date().toISOString(),
+      name: this.formName()
     };
     this.companies.set([...this.companies(), newCompany]);
     this.closeModals();
@@ -174,7 +163,7 @@ export class CompanySelectorComponent {
     }
     const updated = this.companies().map(c =>
       c.id === editing.id
-        ? { ...c, name: this.formName(), taxId: this.formTaxId(), phone: this.formPhone() || undefined, email: this.formEmail() || undefined, address: this.formAddress() || undefined, updatedAt: new Date().toISOString() }
+        ? { ...c, name: this.formName(), tax_id: this.formTaxId(), phone: this.formPhone() || undefined, email: this.formEmail() || undefined, address: this.formAddress() || undefined }
         : c
     );
     this.companies.set(updated);
@@ -185,7 +174,8 @@ export class CompanySelectorComponent {
     const editing = this.editingCompany();
     if (!editing) return;
     this.companies.set(this.companies().filter(c => c.id !== editing.id));
-    if (this.currentCompany()?.id === editing.id) {
+    const current = this.currentCompany();
+    if (current?.id?.toString() === editing.id?.toString()) {
       this.contextService.setCurrentCompany(null);
     }
     this.closeModals();
