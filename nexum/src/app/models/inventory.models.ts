@@ -9,6 +9,10 @@ export interface InventoryItem {
   stockLimit?: number;
   unitPrice?: number;
   createdAt?: string;
+  warehouse?: string;
+  warehouseId?: string;
+  entity?: string;
+  productUnit?: string;
 }
 
 export interface InventoryFilters {
@@ -29,6 +33,7 @@ export interface MovementProduct {
   stock: number;
   entity?: string;
   warehouse?: string;
+  warehouseId?: string;
   unitPrice?: number;
   productUnit?: string;
 }
@@ -36,12 +41,14 @@ export interface MovementProduct {
 export interface MovementItem {
   id?: string;
   product: MovementProduct;
-  type: 'entry' | 'exit' | 'return' | 'ENTRY' | 'EXIT' | 'RETURN';
+  type: 'entry' | 'exit' | 'return' | 'transfer' | 'ENTRY' | 'EXIT' | 'RETURN' | 'TRANSFER';
   quantity: number;
   createdAt: string;
   reason?: string;
   label?: string;
   purchaseId?: string;
+  sourceWarehouse?: string;
+  destinationWarehouse?: string;
   purchase?: {
     id: string;
     document: string;
@@ -53,6 +60,8 @@ export interface MovementFilters {
   fromDate?: string;
   toDate?: string;
   product?: string;
+  warehouse?: string;
+  movement_type?: string;
 }
 
 export interface DirectEntryDto {
@@ -61,6 +70,11 @@ export interface DirectEntryDto {
   productDescription?: string;
   quantity: number;
   label?: string;
+  warehouseId: string;
+  entity?: string;
+  unitPrice?: number;
+  unit?: string;
+  location?: string;
 }
 
 export interface ExitDto {
@@ -68,6 +82,6 @@ export interface ExitDto {
   quantity: number;
   reason?: string;
   entity?: string;
-  warehouse?: string;
+  warehouseId: string;
   unit?: string;
 }

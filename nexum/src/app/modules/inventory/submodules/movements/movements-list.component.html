@@ -54,6 +54,27 @@
                (input)="toDate.set($any($event.target).value)"
                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
       </div>
+      <div class="min-w-[150px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Almacén</label>
+        <select [value]="selectedWarehouse()"
+                (input)="selectedWarehouse.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+          <option value="">Todos los almacenes</option>
+          <!-- Opciones cargadas dinámicamente -->
+        </select>
+      </div>
+      <div class="min-w-[150px] space-y-1">
+        <label class="text-xs font-medium text-slate-600">Tipo</label>
+        <select [value]="selectedMovementType()"
+                (input)="selectedMovementType.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+          <option value="">Todos los tipos</option>
+          <option value="entry">Entrada</option>
+          <option value="exit">Salida</option>
+          <option value="transfer">Transferencia</option>
+          <option value="return">Devolución</option>
+        </select>
+      </div>
       <div class="flex gap-2">
         <button (click)="applyFilters()"
                 class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
@@ -138,6 +159,14 @@
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
                         </svg>
                         Salida
+                      </button>
+                      <button (click)="openTransfer(m)"
+                              title="Transferir a otro almacén"
+                              class="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                        Transferir
                       </button>
                       @if (m.purchaseId) {
                         <button (click)="openReturnConfirm(m)"
@@ -313,7 +342,7 @@
       </div>
       <div class="space-y-1">
         <label class="text-xs font-semibold text-slate-700">Almacén <span class="text-red-500">*</span></label>
-        <input type="text" [(ngModel)]="exitData.warehouse"
+        <input type="text" [(ngModel)]="exitData.warehouseId"
                placeholder="Almacén Principal"
                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
       </div>
@@ -348,6 +377,86 @@
         <input type="text" [(ngModel)]="exitData.reason"
                placeholder="Motivo de la salida..."
                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
+      </div>
+    </div>
+  </div>
+</app-modal>
+
+<!-- ─── Modal: Transferencia entre Almacenes ─────────────────────────────── -->
+<app-modal
+  [isOpen]="isTransferOpen()"
+  title="Transferencia entre Almacenes"
+  confirmText="Transferir"
+  iconEmoji="🔄"
+  iconBgClass="bg-blue-50"
+  confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+  maxWidthClass="max-w-2xl"
+  (closeEvent)="closeTransfer()"
+  (confirmEvent)="confirmTransfer()">
+  <div class="space-y-4">
+    <!-- Info producto -->
+    <div class="flex gap-6 p-3 bg-slate-50 rounded-lg border border-slate-200">
+      <p class="text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">Producto:</span>
+        {{ selectedForTransfer?.product?.productName }}
+      </p>
+      <p class="text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">Código:</span>
+        <span class="font-mono">{{ selectedForTransfer?.product?.productCode }}</span>
+      </p>
+      <p class="text-sm text-slate-600">
+        <span class="font-semibold text-slate-800">Stock actual:</span>
+        {{ selectedForTransfer?.product?.stock }}
+      </p>
+    </div>
+    
+    <!-- Fila 1: Almacenes -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Almacén Origen <span class="text-red-500">*</span></label>
+        <select [(ngModel)]="transferData.sourceWarehouseId" 
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+          <option value="">Seleccionar almacén origen</option>
+          @for (warehouse of warehouses; track warehouse.id) {
+            <option [value]="warehouse.id">{{ warehouse.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Almacén Destino <span class="text-red-500">*</span></label>
+        <select [(ngModel)]="transferData.destinationWarehouseId"
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+          <option value="">Seleccionar almacén destino</option>
+          @for (warehouse of warehouses; track warehouse.id) {
+            <option [value]="warehouse.id">{{ warehouse.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    
+    <!-- Fila 2: Cantidad y Motivo -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Cantidad a Transferir <span class="text-red-500">*</span></label>
+        <input type="number" [(ngModel)]="transferData.quantity" min="1"
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+        <p class="text-xs text-slate-400">Máximo: {{ selectedForTransfer?.product?.stock }} unidades</p>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Motivo de Transferencia</label>
+        <input type="text" [(ngModel)]="transferData.reason"
+               placeholder="Reabastecimiento, redistribución..."
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+      </div>
+    </div>
+    
+    <!-- Información de la transferencia -->
+    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <p class="text-xs text-blue-800 font-medium mb-1">📋 Resumen de la transferencia:</p>
+      <div class="text-xs text-blue-700 space-y-1">
+        <p>• Se transferirán <strong>{{ transferData.quantity }}</strong> unidades de <strong>{{ transferData.sourceWarehouseId }}</strong> a <strong>{{ transferData.destinationWarehouseId }}</strong></p>
+        <p>• El stock del almacén origen se reducirá en {{ transferData.quantity }} unidades</p>
+        <p>• El stock del almacén destino aumentará en {{ transferData.quantity }} unidades</p>
       </div>
     </div>
   </div>

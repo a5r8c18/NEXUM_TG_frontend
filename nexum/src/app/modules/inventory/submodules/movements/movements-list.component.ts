@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { MovementsService } from '../../../../core/services/movements.service';
+import { MovementsService, TransferDto, TransferFilters } from '../../../../core/services/movements.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -34,7 +34,18 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   // --- Modal: Entrada directa ---
   isDirectEntryOpen = signal(false);
-  directEntry: DirectEntryDto = { productCode: '', productName: '', productDescription: '', quantity: 1, label: '' };
+  directEntry: DirectEntryDto = { 
+    productCode: '', 
+    productName: '', 
+    productDescription: '', 
+    quantity: 1, 
+    label: '',
+    warehouseId: '',
+    entity: '',
+    unitPrice: 0,
+    unit: '',
+    location: ''
+  };
 
   // --- Modal: Confirmar devolución ---
   isConfirmReturnOpen = signal(false);
@@ -48,8 +59,30 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   isExitOpen = signal(false);
   selectedForExit: MovementItem | null = null;
   exitData: ExitDto & { unitPrice: number; unit: string } = {
-    productCode: '', quantity: 1, reason: '', entity: '', warehouse: '', unit: '', unitPrice: 0
+    productCode: '', 
+    quantity: 1, 
+    reason: '', 
+    entity: '', 
+    warehouseId: '', 
+    unit: '', 
+    unitPrice: 0
   };
+
+  // --- Modal: Transferencia ---
+  isTransferOpen = signal(false);
+  selectedForTransfer: MovementItem | null = null;
+  transferData: TransferDto = {
+    productCode: '',
+    quantity: 1,
+    sourceWarehouseId: '',
+    destinationWarehouseId: '',
+    reason: ''
+  };
+  warehouses: any[] = [];
+
+  // --- Filtros adicionales ---
+  selectedWarehouse = signal('');
+  selectedMovementType = signal('');
 
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
@@ -71,7 +104,14 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   loadMovements(filters?: MovementFilters): void {
     this.isLoading.set(true);
     this.hasError.set(false);
-    this.movementsService.getMovements(filters).subscribe({
+    
+    const enhancedFilters: MovementFilters & { warehouse?: string; movement_type?: string } = {
+      ...filters,
+      warehouse: this.selectedWarehouse() || undefined,
+      movement_type: this.selectedMovementType() || undefined
+    };
+    
+    this.movementsService.getMovements(enhancedFilters).subscribe({
       next: (data) => {
         this.movements.set(data);
         this.currentPage.set(1);
@@ -168,7 +208,18 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   // ─── Entrada directa ──────────────────────────────────────────────────────
   openDirectEntry(): void {
-    this.directEntry = { productCode: '', productName: '', productDescription: '', quantity: 1, label: '' };
+    this.directEntry = { 
+      productCode: '', 
+      productName: '', 
+      productDescription: '', 
+      quantity: 1, 
+      label: '',
+      warehouseId: '',
+      entity: '',
+      unitPrice: 0,
+      unit: '',
+      location: ''
+    };
     this.isDirectEntryOpen.set(true);
   }
 
@@ -230,7 +281,14 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       this.notificationService.showError('El motivo de devolución es obligatorio');
       return;
     }
-    this.movementsService.createReturn(this.selectedForReturn!.purchaseId!, this.returnComment).subscribe({
+    const returnData = {
+      product_code: this.selectedForReturn!.product.productCode,
+      quantity: 1,
+      purchase_id: this.selectedForReturn!.purchaseId!,
+      reason: this.returnComment,
+      warehouseId: this.selectedForReturn!.product.warehouseId || ''
+    };
+    this.movementsService.createReturn(returnData).subscribe({
       next: () => {
         this.notificationService.showSuccess('Devolución registrada correctamente');
         this.closeReturn();
@@ -249,7 +307,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       quantity: 1,
       reason: '',
       entity: m.product.entity ?? '',
-      warehouse: m.product.warehouse ?? '',
+      warehouseId: m.product.warehouseId ?? '',
       unit: m.product.productUnit ?? '',
       unitPrice: m.product.unitPrice ?? 0,
     };
@@ -271,7 +329,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       quantity: this.exitData.quantity,
       reason: this.exitData.reason,
       entity: this.exitData.entity,
-      warehouse: this.exitData.warehouse,
+      warehouseId: this.exitData.warehouseId,
     };
     this.movementsService.registerExit(payload).subscribe({
       next: () => {
@@ -288,6 +346,64 @@ export class MovementsListComponent implements OnInit, OnDestroy {
     this.inventoryService.getInventory().subscribe({
       next: (inv) => this.notificationService.refreshNotifications(inv),
       error: () => {}
+    });
+  }
+
+  // ─── Transferencia ───────────────────────────────────────────────────────────
+  openTransfer(m: MovementItem): void {
+    this.selectedForTransfer = m;
+    this.transferData = {
+      productCode: m.product.productCode,
+      quantity: 1,
+      sourceWarehouseId: m.product.warehouseId || '',
+      destinationWarehouseId: '',
+      reason: 'Transferencia entre almacenes'
+    };
+    this.loadWarehouses();
+    this.isTransferOpen.set(true);
+  }
+
+  closeTransfer(): void {
+    this.isTransferOpen.set(false);
+    this.selectedForTransfer = null;
+  }
+
+  loadWarehouses(): void {
+    // Cargar warehouses disponibles para transferencia
+    this.inventoryService.getInventory().subscribe(data => {
+      const uniqueWarehouses = [...new Map(data.map(item => [
+        item.warehouse || 'default', 
+        { 
+          id: item.warehouse || 'default', 
+          name: item.warehouse || 'Almacén por Defecto' 
+        }
+      ])).values()];
+      this.warehouses = uniqueWarehouses;
+    });
+  }
+
+  confirmTransfer(): void {
+    if (!this.transferData.quantity || this.transferData.quantity <= 0) {
+      this.notificationService.showError('La cantidad debe ser mayor a 0');
+      return;
+    }
+    if (!this.transferData.sourceWarehouseId || !this.transferData.destinationWarehouseId) {
+      this.notificationService.showError('Debe seleccionar almacén origen y destino');
+      return;
+    }
+    if (this.transferData.sourceWarehouseId === this.transferData.destinationWarehouseId) {
+      this.notificationService.showError('El almacén origen y destino no pueden ser el mismo');
+      return;
+    }
+
+    this.movementsService.createTransfer(this.transferData).subscribe({
+      next: () => {
+        this.notificationService.showSuccess('Transferencia registrada correctamente');
+        this.closeTransfer();
+        this.loadMovements();
+        this.refreshStock();
+      },
+      error: () => this.notificationService.showError('Error al registrar transferencia')
     });
   }
 }
