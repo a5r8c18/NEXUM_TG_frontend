@@ -40,6 +40,29 @@ export class SidebarComponent {
     return this.authService.isMultiCompany();
   }
 
+  get currentUser() {
+    return this.authService.currentUser();
+  }
+
+  get filteredNavItems(): NavItem[] {
+    const user = this.authService.currentUser();
+    if (!user) return [];
+
+    // Si es facturador, solo mostrar Dashboard y Facturacion
+    if (user.role === 'facturador') {
+      return this.navItems.filter(item => 
+        item.label === 'Dashboard' || 
+        item.label === 'Facturacion'
+      );
+    }
+
+    // Para otros roles, mostrar todo excepto opciones de admin
+    return this.navItems.filter(item => 
+      item.label !== 'Configuracion' || 
+      user.role === 'admin'
+    );
+  }
+
   navItems: NavItem[] = [
     { icon: 'Home', label: 'Dashboard', route: '/dashboard' },
     { 

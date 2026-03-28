@@ -12,7 +12,7 @@ export interface NexumUser {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'superadmin' | 'admin' | 'user';
+  role: 'superadmin' | 'admin' | 'user' | 'facturador';
   tenantId: string;
   tenantName: string;
   tenantType: 'MULTI_COMPANY' | 'SINGLE_COMPANY';

@@ -20,7 +20,7 @@
   <!-- Menú de Navegación -->
   <nav class="flex-1 p-4">
     <ul class="space-y-2">
-      @for (item of navItems; track item.label) {
+      @for (item of filteredNavItems; track item.label) {
         <li>
           @if (item.hasSubmenu) {
             <!-- Menú con submenú -->

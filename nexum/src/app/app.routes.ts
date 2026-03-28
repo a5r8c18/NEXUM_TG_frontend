@@ -3,6 +3,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { tenantSelectedGuard } from './core/guards/tenant-selected.guard';
 import { companySelectedGuard } from './core/guards/company-selected.guard';
 import { permissionsGuard } from './core/guards/permissions.guard';
+import { RoleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   // Rutas de Desarrollo (acceso directo sin guards)
@@ -107,7 +108,8 @@ export const routes: Routes = [
       // Billing Module
       {
         path: 'billing/invoices',
-        loadComponent: () => import('./modules/invoices/invoices.component').then(m => m.InvoicesComponent)
+        loadComponent: () => import('./modules/invoices/invoices.component').then(m => m.InvoicesComponent),
+        canActivate: [RoleGuard]
       },
       {
         path: 'billing/fixed-assets',
