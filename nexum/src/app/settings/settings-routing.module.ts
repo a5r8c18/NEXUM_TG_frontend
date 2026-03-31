@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AdminOnlyGuard } from '../core/guards/role.guard';
 
 export const SETTINGS_ROUTES: Routes = [
   {
@@ -7,10 +8,12 @@ export const SETTINGS_ROUTES: Routes = [
   },
   {
     path: 'users',
-    loadComponent: () => import('./users/users.component').then(m => m.UsersComponent)
+    loadComponent: () => import('./users/users.component').then(m => m.UsersComponent),
+    canActivate: [AdminOnlyGuard] // Solo admin y superadmin
   },
   {
     path: 'companies',
+    canActivate: [AdminOnlyGuard], // Solo admin y superadmin
     children: [
       {
         path: '',

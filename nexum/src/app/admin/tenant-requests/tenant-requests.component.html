@@ -7,12 +7,14 @@
           <h1 class="text-2xl font-medium text-white">Solicitudes de Acceso</h1>
           <p class="text-slate-400 text-sm mt-1">Gestiona las solicitudes para acceder al sistema NEXUM</p>
         </div>
-        <button 
-          (click)="goToDashboard()"
-          class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-        >
-          Volver al Dashboard
-        </button>
+        @if (shouldShowDashboardButton()) {
+          <button 
+            (click)="goToDashboard()"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+          >
+            Volver al Dashboard
+          </button>
+        }
       </div>
     </div>
   </div>

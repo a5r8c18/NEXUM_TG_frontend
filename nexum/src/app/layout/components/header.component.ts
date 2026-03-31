@@ -1,62 +1,31 @@
-import { Component, signal, inject, HostListener, OnInit } from '@angular/core';
+import { Component, signal, inject, HostListener, OnInit, OnDestroy, computed } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ContextService } from '../../core/services/context.service';
 import { CompanyService } from '../../core/services/company.service';
+import { WebSocketService } from '../../core/services/websocket.service';
 import { Company } from '../../models/company.models';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [],
+  imports: [DatePipe],
   templateUrl: './header.component.html'
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private contextService = inject(ContextService);
   private router = inject(Router);
   private companyService = inject(CompanyService);
+  wsService = inject(WebSocketService);
 
   showUserMenu = signal(false);
   showNotifications = signal(false);
   showCompanyDropdown = signal(false);
   companies = signal<Company[]>([]);
   isLoadingCompanies = signal(false);
-  notifications = signal([
-    {
-      id: 1,
-      title: 'Nueva factura creada',
-      message: 'Factura #00123 ha sido generada',
-      time: 'Hace 5 minutos',
-      read: false,
-      type: 'info'
-    },
-    {
-      id: 2,
-      title: 'Stock bajo',
-      message: 'Producto "Laptop Dell" tiene menos de 5 unidades',
-      time: 'Hace 15 minutos',
-      read: false,
-      type: 'warning'
-    },
-    {
-      id: 3,
-      title: 'Pago recibido',
-      message: 'Cliente ABC ha pagado factura #00120',
-      time: 'Hace 1 hora',
-      read: true,
-      type: 'success'
-    },
-    {
-      id: 4,
-      title: 'Mantenimiento programado',
-      message: 'Sistema en mantenimiento mañana a las 2:00 AM',
-      time: 'Hace 2 horas',
-      read: true,
-      type: 'info'
-    }
-  ]);
 
   get pageTitle(): string {
     const company = this.contextService.currentCompany();
@@ -89,6 +58,14 @@ export class HeaderComponent implements OnInit {
     return this.authService.isMultiCompany();
   }
 
+  shouldShowCompanySelector = computed(() => {
+    return this.isMultiCompany;
+  });
+
+  shouldShowSwitchCompanyOption = computed(() => {
+    return this.isMultiCompany;
+  });
+
   get userInitials(): string {
     const user = this.authService.currentUser();
     if (!user || !user.firstName || !user.lastName) return 'U';
@@ -96,9 +73,14 @@ export class HeaderComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.wsService.connect();
     if (this.isMultiCompany) {
       this.loadCompanies();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.wsService.disconnect();
   }
 
   async loadCompanies(): Promise<void> {
@@ -152,32 +134,24 @@ export class HeaderComponent implements OnInit {
     }
   }
 
-  deleteNotification(id: number): void {
-    const currentNotifications = this.notifications();
-    const updatedNotifications = currentNotifications.filter(n => n.id !== id);
-    this.notifications.set(updatedNotifications);
+  deleteNotification(id: string): void {
+    this.wsService.deleteNotification(id);
   }
 
-  markAsRead(id: number): void {
-    const currentNotifications = this.notifications();
-    const updatedNotifications = currentNotifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    );
-    this.notifications.set(updatedNotifications);
+  markAsRead(id: string): void {
+    this.wsService.markAsRead(id);
   }
 
   markAllAsRead(): void {
-    const currentNotifications = this.notifications();
-    const updatedNotifications = currentNotifications.map(n => ({ ...n, read: true }));
-    this.notifications.set(updatedNotifications);
+    this.wsService.markAllAsRead();
   }
 
   clearAllNotifications(): void {
-    this.notifications.set([]);
+    this.wsService.clearAll();
   }
 
   get unreadCount(): number {
-    return this.notifications().filter(n => !n.read).length;
+    return this.wsService.unreadCount();
   }
 
   switchCompany(): void {

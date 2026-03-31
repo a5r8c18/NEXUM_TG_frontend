@@ -15,16 +15,15 @@ export class RoleGuard implements CanActivate {
     const currentUser = this.authService.currentUser();
     
     if (!currentUser) {
-      this.router.navigate(['/auth/login']);
+      this.router.navigate(['/login']);
       return false;
     }
 
-    // Para el guard de facturador, verificamos si el usuario tiene rol de facturador o admin
-    if (currentUser.role === 'facturador' || currentUser.role === 'admin') {
+    // Superadmin, admin y facturador tienen acceso a facturación
+    if (currentUser.role === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'facturador') {
       return true;
     }
 
-    // Si no tiene el rol adecuado, redirigir al dashboard
     this.router.navigate(['/dashboard']);
     return false;
   }
@@ -42,7 +41,28 @@ export class AdminOnlyGuard implements CanActivate {
   canActivate(): boolean {
     const currentUser = this.authService.currentUser();
     
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+      this.router.navigate(['/dashboard']);
+      return false;
+    }
+
+    return true;
+  }
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class SuperadminOnlyGuard implements CanActivate {
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  canActivate(): boolean {
+    const currentUser = this.authService.currentUser();
+    
+    if (!currentUser || currentUser.role !== 'superadmin') {
       this.router.navigate(['/dashboard']);
       return false;
     }

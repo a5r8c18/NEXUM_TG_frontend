@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TenantRequestService } from '../../core/services/tenant-request.service';
+import { AuthService } from '../../core/services/auth.service';
 import { TenantRequest, TenantType } from '../../core/models/tenant-request.model';
 
 @Component({
@@ -15,6 +16,7 @@ import { TenantRequest, TenantType } from '../../core/models/tenant-request.mode
 export class TenantRequestsComponent {
   private tenantRequestService = inject(TenantRequestService);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   requests = signal<TenantRequest[]>([]);
   isLoading = signal(false);
@@ -24,6 +26,12 @@ export class TenantRequestsComponent {
   showRejectionModal = signal(false);
   rejectionReason = signal('');
   adminNotes = signal('');
+
+  // Ocultar botón "Volver al Dashboard" para el CEO
+  shouldShowDashboardButton = computed(() => {
+    const currentUser = this.authService.currentUser();
+    return currentUser?.email !== 'ceo@gmail.com';
+  });
 
   // Filtros
   statusFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'DENIED' = 'ALL';

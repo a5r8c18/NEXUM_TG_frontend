@@ -1,6 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, delay } from 'rxjs';
+import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { TenantRequest, TENANT_TYPES, TenantType } from '../models/tenant-request.model';
 
@@ -86,87 +86,38 @@ export class TenantRequestService {
   approveRequest(requestId: string, adminNotes?: string): Observable<ApprovalResponse> {
     this.isLoading.set(true);
     
-    console.log('🔍 TENANT REQUEST SERVICE - Approve request called');
-    console.log('🔍 TENANT REQUEST SERVICE - Request ID:', requestId);
-    console.log('🔍 TENANT REQUEST SERVICE - Admin Notes:', adminNotes);
-    console.log('🔍 TENANT REQUEST SERVICE - URL:', `${this.adminApiUrl}/${requestId}/approve`);
-    
     const body = { approvedBy: 'admin@nexum.com', adminNotes: adminNotes || null };
-    console.log('🔍 TENANT REQUEST SERVICE - Request body:', body);
     
-    // Usar fetch API directamente para evitar problemas con HttpClient
-    return new Observable<ApprovalResponse>(observer => {
-      fetch(`${this.adminApiUrl}/${requestId}/approve`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
-      })
-      .then(response => {
-        console.log('🔍 TENANT REQUEST SERVICE - Fetch response status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('✅ TENANT REQUEST SERVICE - Request successful:', data);
-        observer.next(data);
-        observer.complete();
-      })
-      .catch(error => {
-        console.error('❌ TENANT REQUEST SERVICE - Fetch error:', error);
-        observer.error(error);
-      })
-      .finally(() => {
+    return this.http.put<ApprovalResponse>(`${this.adminApiUrl}/${requestId}/approve`, body).pipe(
+      tap(data => {
+        console.log('✅ TENANT REQUEST SERVICE - Request approved:', data);
         this.isLoading.set(false);
-      });
-    });
+      }),
+      catchError((error: any) => {
+        console.error('❌ TENANT REQUEST SERVICE - Approve error:', error);
+        this.isLoading.set(false);
+        throw error;
+      })
+    );
   }
   
   // Rechazar solicitud
-  rejectRequest(requestId: string, rejectionReason: string, adminNotes?: string): Observable<TenantRequest> {
+  rejectRequest(requestId: string, rejectionReason: string, adminNotes?: string): Observable<any> {
     this.isLoading.set(true);
     
-    console.log('🔍 TENANT REQUEST SERVICE - Reject request called');
-    console.log('🔍 TENANT REQUEST SERVICE - Request ID:', requestId);
-    console.log('🔍 TENANT REQUEST SERVICE - Rejection Reason:', rejectionReason);
-    console.log('🔍 TENANT REQUEST SERVICE - Admin Notes:', adminNotes);
-    console.log('🔍 TENANT REQUEST SERVICE - URL:', `${this.adminApiUrl}/${requestId}/deny`);
-    
     const body = { reason: rejectionReason, deniedBy: 'admin@nexum.com', adminNotes: adminNotes || null };
-    console.log('🔍 TENANT REQUEST SERVICE - Request body:', body);
     
-    // Usar fetch API directamente para evitar problemas con HttpClient
-    return new Observable<TenantRequest>(observer => {
-      fetch(`${this.adminApiUrl}/${requestId}/deny`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
-      })
-      .then(response => {
-        console.log('🔍 TENANT REQUEST SERVICE - Fetch response status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('✅ TENANT REQUEST SERVICE - Request successful:', data);
-        observer.next(data);
-        observer.complete();
-      })
-      .catch(error => {
-        console.error('❌ TENANT REQUEST SERVICE - Fetch error:', error);
-        observer.error(error);
-      })
-      .finally(() => {
+    return this.http.put<any>(`${this.adminApiUrl}/${requestId}/deny`, body).pipe(
+      tap(data => {
+        console.log('✅ TENANT REQUEST SERVICE - Request denied:', data);
         this.isLoading.set(false);
-      });
-    });
+      }),
+      catchError((error: any) => {
+        console.error('❌ TENANT REQUEST SERVICE - Deny error:', error);
+        this.isLoading.set(false);
+        throw error;
+      })
+    );
   }
   
   // Obtener tipos de tenant disponibles

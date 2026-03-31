@@ -56,11 +56,18 @@ export class SidebarComponent {
       );
     }
 
-    // Para otros roles, mostrar todo excepto opciones de admin
-    return this.navItems.filter(item => 
-      item.label !== 'Configuracion' || 
-      user.role === 'admin'
-    );
+    let items = [...this.navItems];
+
+    // Solo superadmin ve "Solicitudes" (gestión de acceso al sistema)
+    if (user.role === 'superadmin') {
+      items.splice(1, 0, { 
+        icon: 'ClipboardList', 
+        label: 'Solicitudes', 
+        route: '/admin/tenant-requests' 
+      });
+    }
+
+    return items;
   }
 
   navItems: NavItem[] = [
@@ -90,11 +97,21 @@ export class SidebarComponent {
       ]
     },
     { icon: 'Building', label: 'Activos Fijos', route: '/billing/fixed-assets' },
-    { icon: 'Calculator', label: 'Contabilidad', route: '/accounting' },
+    { 
+      icon: 'Calculator', 
+      label: 'Contabilidad', 
+      route: '/accounting',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: [
+        { icon: 'BookOpen', label: 'Asientos', route: '/accounting/entries' },
+        { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' }
+      ]
+    },
     { 
       icon: 'Users', 
       label: 'Recursos Humanos', 
-      route: '/hr' 
+      route: '/hr/employees'
     },
     { 
       icon: 'Settings', 
@@ -126,18 +143,26 @@ export class SidebarComponent {
   }
 
   getSettingsSubmenu(): NavItem[] {
-    const baseMenu = [
-      { icon: 'Users', label: 'Usuarios', route: '/settings/users' },
-      { icon: 'Cog', label: 'General', route: '/settings/general' }
-    ];
+    const user = this.authService.currentUser();
+    const baseMenu: NavItem[] = [];
     
-    // Agregar "Empresas" solo si es multi-company
-    if (this.authService.isMultiCompany()) {
-      baseMenu.unshift({ 
-        icon: 'Building', 
-        label: 'Empresas', 
-        route: '/settings/companies' 
-      });
+    // Agregar opciones según el rol
+    if (user?.role === 'admin' || user?.role === 'superadmin') {
+      // Admin y superadmin ven todo
+      baseMenu.push({ icon: 'Users', label: 'Usuarios', route: '/settings/users' });
+      baseMenu.push({ icon: 'Cog', label: 'General', route: '/settings/general' });
+      
+      // Agregar "Empresas" solo si es multi-company y es admin
+      if (this.authService.isMultiCompany()) {
+        baseMenu.unshift({ 
+          icon: 'Building', 
+          label: 'Empresas', 
+          route: '/settings/companies' 
+        });
+      }
+    } else if (user?.role === 'user' || user?.role === 'facturador') {
+      // User y facturador solo ven "General", no ven "Usuarios" ni "Empresas"
+      baseMenu.push({ icon: 'Cog', label: 'General', route: '/settings/general' });
     }
     
     return baseMenu;

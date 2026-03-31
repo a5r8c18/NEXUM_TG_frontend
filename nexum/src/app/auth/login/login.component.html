@@ -1,4 +1,6 @@
 <div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+  <!-- Debug Log -->
+  <script>console.log('🔥 TEMPLATE - Login component loaded');</script>
   <!-- Botón Volver -->
   <button 
     (click)="goBack()"
@@ -24,7 +26,7 @@
 
     <!-- Formulario de Login -->
     <div class="bg-white/10 backdrop-blur-md rounded-2xl border border-slate-700 p-8">
-      <form class="space-y-6" (ngSubmit)="onLogin()">
+      <form class="space-y-6">
         <!-- Mensaje de Error -->
         @if (errorMessage()) {
           <div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg">
@@ -187,16 +189,14 @@
           </button>
         } @else {
           <button
-            type="submit"
+            type="button"
+            (click)="logSubmitClick(); onLogin()"
             class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             [disabled]="isLoading()"
           >
             @if (isLoading()) {
               <div class="flex items-center justify-center">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V8C4.582 8.067 4.667 8.154 4.8 8.232a8.8 8 8 0 00-1.517 6.326A8.898 8.898 0 0012 20a8.898 8.898 0 008.717-6.442A8.8 8 8 0 0019.2 8.232C19.333 8.154 19.418 8.067 20 8V8a8 8 0 10-16 0z"></path>
-                </svg>
+                <div class="animate-spin -ml-1 mr-3 h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
                 Iniciando sesión...
               </div>
             } @else {

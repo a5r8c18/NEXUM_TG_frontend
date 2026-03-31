@@ -1,0 +1,221 @@
+<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+         [class.bg-green-50]="toast()!.type === 'success'"
+         [class.text-green-800]="toast()!.type === 'success'"
+         [class.border-green-200]="toast()!.type === 'success'"
+         [class.bg-red-50]="toast()!.type === 'error'"
+         [class.text-red-800]="toast()!.type === 'error'"
+         [class.border-red-200]="toast()!.type === 'error'"
+         [class.bg-blue-50]="toast()!.type === 'info'"
+         [class.text-blue-800]="toast()!.type === 'info'"
+         [class.border-blue-200]="toast()!.type === 'info'">
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-sky-100 rounded-xl">
+        <svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-slate-800">Mensajes</h2>
+        <p class="text-xs text-slate-500">Comunicación interna del equipo</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button (click)="openCompose()"
+         class="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 transition-colors shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nuevo Mensaje
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs + Search -->
+  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4 mb-6">
+    <div class="flex flex-wrap gap-3 items-center justify-between">
+      <div class="flex gap-1 bg-slate-100 rounded-lg p-1">
+        <button (click)="switchTab('inbox')"
+                class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
+                [class.bg-white]="activeTab() === 'inbox'"
+                [class.text-slate-800]="activeTab() === 'inbox'"
+                [class.shadow-sm]="activeTab() === 'inbox'"
+                [class.text-slate-500]="activeTab() !== 'inbox'">
+          Bandeja de entrada
+        </button>
+        <button (click)="switchTab('sent')"
+                class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
+                [class.bg-white]="activeTab() === 'sent'"
+                [class.text-slate-800]="activeTab() === 'sent'"
+                [class.shadow-sm]="activeTab() === 'sent'"
+                [class.text-slate-500]="activeTab() !== 'sent'">
+          Enviados
+        </button>
+      </div>
+      <div class="flex-1 max-w-sm">
+        <input type="text"
+               [value]="searchTerm()"
+               (input)="searchTerm.set($any($event.target).value)"
+               placeholder="Buscar mensajes..."
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3 text-slate-500">
+        <svg class="w-8 h-8 animate-spin text-sky-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">Cargando mensajes...</span>
+      </div>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (hasError() && !isLoading()) {
+    <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6 text-red-700 text-sm">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>No se pudo conectar con el servidor.</span>
+      <button (click)="loadMessages()" class="ml-auto font-medium underline">Reintentar</button>
+    </div>
+  }
+
+  <!-- Message Detail View -->
+  @if (selectedMessage() && !isLoading()) {
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+      <div class="p-5 border-b border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <button (click)="backToList()" class="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Volver
+          </button>
+          <div class="flex gap-1">
+            <button (click)="archiveMessage(selectedMessage()!)"
+                    class="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="Archivar">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+              </svg>
+            </button>
+            <button (click)="deleteMessage(selectedMessage()!)"
+                    class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-800 mb-2">{{ selectedMessage()!.subject }}</h3>
+        <div class="flex items-center gap-4 text-xs text-slate-500">
+          <span><strong>De:</strong> {{ selectedMessage()!.fromUserName }}</span>
+          <span><strong>Para:</strong> {{ selectedMessage()!.toUserName }}</span>
+          <span>{{ formatDate(selectedMessage()!.sentAt) }}</span>
+          <span class="inline-flex px-2 py-0.5 rounded-full text-xs" [class]="getPriorityClass(selectedMessage()!.priority)">
+            {{ getPriorityLabel(selectedMessage()!.priority) }}
+          </span>
+        </div>
+      </div>
+      <div class="p-5">
+        <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ selectedMessage()!.body }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Message List -->
+  @if (!selectedMessage() && !isLoading()) {
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+      <div class="divide-y divide-slate-100">
+        @for (msg of filteredMessages(); track msg.id) {
+          <div (click)="selectMessage(msg)"
+               class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/80 cursor-pointer transition-colors"
+               [class.bg-sky-50/30]="!msg.isRead && activeTab() === 'inbox'">
+            <!-- Avatar -->
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+                 [class.bg-sky-100]="!msg.isRead"
+                 [class.text-sky-700]="!msg.isRead"
+                 [class.bg-slate-100]="msg.isRead"
+                 [class.text-slate-500]="msg.isRead">
+              {{ (activeTab() === 'inbox' ? msg.fromUserName : msg.toUserName).charAt(0).toUpperCase() }}
+            </div>
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm truncate"
+                      [class.font-semibold]="!msg.isRead"
+                      [class.text-slate-800]="!msg.isRead"
+                      [class.font-medium]="msg.isRead"
+                      [class.text-slate-600]="msg.isRead">
+                  {{ activeTab() === 'inbox' ? msg.fromUserName : msg.toUserName }}
+                </span>
+                <span class="text-xs text-slate-400 flex-shrink-0">{{ formatDate(msg.sentAt) }}</span>
+              </div>
+              <div class="text-sm truncate"
+                   [class.text-slate-800]="!msg.isRead"
+                   [class.font-medium]="!msg.isRead"
+                   [class.text-slate-500]="msg.isRead">
+                {{ msg.subject }}
+              </div>
+            </div>
+            <!-- Priority -->
+            @if (msg.priority !== 'normal') {
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs flex-shrink-0"
+                    [class]="getPriorityClass(msg.priority)">
+                {{ getPriorityLabel(msg.priority) }}
+              </span>
+            }
+          </div>
+        }
+        @empty {
+          <div class="px-5 py-16 text-center">
+            <div class="flex flex-col items-center gap-2 text-slate-400">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <p class="text-sm font-medium">No hay mensajes</p>
+              <p class="text-xs">Tu bandeja está vacía</p>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Modal Compose -->
+  @if (isComposeOpen()) {
+    <app-modal [isOpen]="isComposeOpen()" (closeEvent)="closeCompose()" (confirmEvent)="sendMessage()" title="Nuevo Mensaje" confirmText="Enviar" confirmButtonClass="bg-sky-600 hover:bg-sky-700">
+      <div class="p-6">
+        <div class="text-center py-8">
+          <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <h4 class="text-lg font-medium text-slate-800 mb-2">Redactar Mensaje</h4>
+          <p class="text-sm text-slate-500">Formulario completo en desarrollo</p>
+        </div>
+      </div>
+    </app-modal>
+  }
+
+</div>

@@ -70,13 +70,19 @@ export class AuthService {
         this.setSession(user, response.token);
         
         // Establecer la empresa en el ContextService
-        console.log('🔍 AUTH SERVICE - Usuario tiene companyId:', response.user.companyId);
         if (response.user.companyId) {
           await this.setCompanyContext(response.user.companyId);
-        } else {
-          console.warn('⚠️ AUTH SERVICE - Usuario no tiene companyId asignado');
-          // Para usuarios sin empresa, no establecer contexto
         }
+        
+        // Establecer el tenant en el ContextService
+        this.contextService.setCurrentTenant({
+          id: response.user.tenantId || 'tenant-1',
+          name: response.user.tenantName || 'Tenant Demo',
+          type: response.user.tenantType || 'SINGLE_COMPANY',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
         
         return true;
       }
@@ -86,22 +92,13 @@ export class AuthService {
     }
   }
 
-  // Método para desarrollo: saltar autenticación
-  skipAuth(): void {
-    if (this.isDevMode()) {
-      const user: NexumUser = {
-        id: 'dev-user',
-        email: 'dev@nexum.com',
-        firstName: 'Developer',
-        lastName: 'Mode',
-        role: 'superadmin',
-        tenantId: 'tenant-dev',
-        tenantName: 'Tenant Desarrollo',
-        tenantType: 'MULTI_COMPANY',
-        currentCompanyId: 1
-      };
-      this.setSession(user, 'dev-jwt-token');
-    }
+  isSuperadmin(): boolean {
+    return this.currentUser()?.role === 'superadmin';
+  }
+
+  isAdmin(): boolean {
+    const role = this.currentUser()?.role;
+    return role === 'admin' || role === 'superadmin';
   }
 
   async signup(userData: { firstName: string; lastName: string; email: string; password: string; token?: string }): Promise<boolean> {
@@ -245,9 +242,7 @@ export class AuthService {
 
   private async setCompanyContext(companyId: number): Promise<void> {
     try {
-      console.log('🔍 AUTH SERVICE - Estableciendo contexto de empresa:', companyId);
       const company = await firstValueFrom(this.companyService.getCompany(companyId));
-      console.log('✅ AUTH SERVICE - Empresa obtenida:', company.name);
       
       this.contextService.setCurrentCompany({
         id: company.id.toString(),
@@ -260,10 +255,26 @@ export class AuthService {
         created_at: company.created_at
       } as any);
       
-      console.log('✅ AUTH SERVICE - Contexto de empresa establecido');
     } catch (error) {
-      console.error('❌ AUTH SERVICE - Error estableciendo contexto de empresa:', error);
+      // Error estableciendo contexto de empresa
     }
+  }
+
+  // Headers del usuario autenticado
+  getUserHeaders(): { [key: string]: string } {
+    const headers: { [key: string]: string } = {};
+    const user = this.currentUser();
+    
+    if (user) {
+      headers['X-User-ID'] = user.id;
+      headers['X-User-Email'] = user.email;
+      headers['X-User-Role'] = user.role;
+      if (user.companyId) {
+        headers['X-Company-ID'] = user.companyId.toString();
+      }
+    }
+    
+    return headers;
   }
 
   private checkAuthStatus(): void {
@@ -278,8 +289,19 @@ export class AuthService {
         
         // Restaurar el contexto de la empresa si el usuario tiene companyId
         if (user.companyId) {
-          console.log('🔄 AUTH SERVICE - Restaurando contexto de empresa:', user.companyId);
           this.setCompanyContext(user.companyId);
+        }
+        
+        // Restaurar el tenant si el usuario tiene tenantId
+        if (user.tenantId) {
+          this.contextService.setCurrentTenant({
+            id: user.tenantId,
+            name: user.tenantName || 'Tenant Demo',
+            type: user.tenantType || 'SINGLE_COMPANY',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
         }
       } catch {
         this.logout();

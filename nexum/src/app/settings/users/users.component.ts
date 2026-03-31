@@ -1,10 +1,10 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { UsersService, User, CreateUserRequest, UpdateUserRequest } from '../../core/services/users.service';
+import { UsersService, User, CreateUserRequest, UpdateUserRequest, UserCompany, AssignCompaniesRequest } from '../../core/services/users.service';
+import { CompanyService } from '../../core/services/company.service';
 import { ContextService } from '../../core/services/context.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -14,7 +14,6 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    ModalComponent,
     PaginationComponent,
   ],
   templateUrl: './users.component.html',
@@ -24,9 +23,20 @@ export class UsersComponent implements OnInit {
   loading = signal(false);
   showCreateModal = signal(false);
   showEditModal = signal(false);
+  showPasswordModal = signal(false);
+  showAssignCompaniesModal = signal(false);
   selectedUser = signal<User | null>(null);
   searchTerm = signal('');
+  newPassword = signal('');
   toast = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  
+  // Companies assignment
+  availableCompanies = signal<any[]>([]);
+  userCompanies = signal<UserCompany[]>([]);
+  selectedCompanyIds = signal<number[]>([]);
+  selectedRole = signal('user');
+  loadingCompanies = signal(false);
+  assigning = signal(false);
   
   userForm: FormGroup;
   currentPage = signal(1);
@@ -50,6 +60,7 @@ export class UsersComponent implements OnInit {
 
   constructor(
     private usersService: UsersService,
+    private companyService: CompanyService,
     private contextService: ContextService,
     private notificationService: NotificationService,
     private fb: FormBuilder,
@@ -58,7 +69,6 @@ export class UsersComponent implements OnInit {
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required],
       role: ['user', Validators.required],
     });
   }
@@ -92,7 +102,6 @@ export class UsersComponent implements OnInit {
       firstName: '',
       lastName: '',
       email: '',
-      password: '',
       role: 'user',
     });
     this.showCreateModal.set(true);
@@ -104,7 +113,6 @@ export class UsersComponent implements OnInit {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      password: '',
       role: user.role,
     });
     this.showEditModal.set(true);
@@ -113,6 +121,7 @@ export class UsersComponent implements OnInit {
   closeModals() {
     this.showCreateModal.set(false);
     this.showEditModal.set(false);
+    this.showAssignCompaniesModal.set(false);
     this.selectedUser.set(null);
     this.userForm.reset();
   }
@@ -136,8 +145,24 @@ export class UsersComponent implements OnInit {
 
     this.loading.set(true);
     this.usersService.createUser(userData).subscribe({
-      next: () => {
+      next: (response) => {
         this.notificationService.showSuccess('Usuario creado exitosamente');
+        
+        // Mostrar token de configuración si viene en la respuesta
+        if (response && response.setupToken) {
+          console.log('=== TOKEN DE CONFIGURACIÓN PARA USUARIO CREADO ===');
+          console.log('Usuario:', response.user.email);
+          console.log('Empresa:', response.user.company?.name || 'Empresa asignada');
+          console.log('Token:', response.setupToken);
+          console.log('URL:', response.setupUrl);
+          console.log('================================================');
+          
+          // También mostrar en una notificación más duradera
+          this.notificationService.showInfo(
+            `Token generado para ${response.user.email}. Revisa la consola para obtener la URL de configuración.`
+          );
+        }
+        
         this.closeModals();
         this.loadUsers();
         this.loading.set(false);
@@ -164,11 +189,6 @@ export class UsersComponent implements OnInit {
       email: this.userForm.value.email,
       role: this.userForm.value.role,
     };
-
-    // Solo incluir contraseña si se proporcionó una nueva
-    if (this.userForm.value.password) {
-      updateData.password = this.userForm.value.password;
-    }
 
     this.loading.set(true);
     this.usersService.updateUser(user.id, updateData).subscribe({
@@ -218,20 +238,35 @@ export class UsersComponent implements OnInit {
   }
 
   changePassword(user: User) {
-    const newPassword = prompt('Ingrese la nueva contraseña:');
-    if (newPassword) {
-      this.loading.set(true);
-      this.usersService.changePassword(user.id, newPassword).subscribe({
-        next: () => {
-          this.notificationService.showSuccess('Contraseña cambiada exitosamente');
-          this.loading.set(false);
-        },
-        error: (error) => {
-          this.notificationService.showError('Error cambiando contraseña: ' + error.message);
-          this.loading.set(false);
-        },
-      });
-    }
+    this.selectedUser.set(user);
+    this.newPassword.set('');
+    this.showPasswordModal.set(true);
+  }
+
+  updatePassword() {
+    const user = this.selectedUser();
+    const password = this.newPassword();
+    
+    if (!user || !password) return;
+    
+    this.loading.set(true);
+    this.usersService.changePassword(user.id, password).subscribe({
+      next: () => {
+        this.notificationService.showSuccess('Contraseña cambiada exitosamente');
+        this.closePasswordModal();
+        this.loading.set(false);
+      },
+      error: (error) => {
+        this.notificationService.showError('Error cambiando contraseña: ' + error.message);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  closePasswordModal() {
+    this.showPasswordModal.set(false);
+    this.selectedUser.set(null);
+    this.newPassword.set('');
   }
 
   onPageChange(page: number) {
@@ -252,5 +287,89 @@ export class UsersComponent implements OnInit {
       SINGLE_COMPANY: 'Empresa Individual',
     };
     return typeMap[type] || type;
+  }
+
+  // Companies assignment methods
+  openAssignCompaniesModal(user: User) {
+    this.selectedUser.set(user);
+    this.selectedCompanyIds.set([]);
+    this.selectedRole.set('user');
+    this.showAssignCompaniesModal.set(true);
+    this.loadCompaniesData();
+  }
+
+  loadCompaniesData() {
+    this.loadingCompanies.set(true);
+    
+    // Load all available companies
+    this.companyService.getCompanies().subscribe({
+      next: (companies) => {
+        this.availableCompanies.set(companies);
+        
+        // Load user's current company assignments
+        const user = this.selectedUser();
+        if (user) {
+          this.usersService.getUserCompanies(user.id).subscribe({
+            next: (userCompanies) => {
+              this.userCompanies.set(userCompanies);
+              const assignedIds = userCompanies.map(uc => uc.companyId);
+              this.selectedCompanyIds.set(assignedIds);
+              this.loadingCompanies.set(false);
+            },
+            error: (error) => {
+              console.error('Error loading user companies:', error);
+              this.loadingCompanies.set(false);
+            }
+          });
+        } else {
+          this.loadingCompanies.set(false);
+        }
+      },
+      error: (error) => {
+        this.notificationService.showError('Error cargando empresas: ' + error.message);
+        this.loadingCompanies.set(false);
+      }
+    });
+  }
+
+  isCompanySelected(companyId: number): boolean {
+    return this.selectedCompanyIds().includes(companyId);
+  }
+
+  toggleCompanySelection(companyId: number) {
+    const currentIds = this.selectedCompanyIds();
+    if (currentIds.includes(companyId)) {
+      this.selectedCompanyIds.set(currentIds.filter(id => id !== companyId));
+    } else {
+      this.selectedCompanyIds.set([...currentIds, companyId]);
+    }
+  }
+
+  getCompanyName(companyId: number): string {
+    const company = this.availableCompanies().find(c => c.id === companyId);
+    return company ? company.name : `Empresa ${companyId}`;
+  }
+
+  assignCompanies() {
+    const user = this.selectedUser();
+    if (!user || this.selectedCompanyIds().length === 0) return;
+
+    const request: AssignCompaniesRequest = {
+      companyIds: this.selectedCompanyIds(),
+      role: this.selectedRole()
+    };
+
+    this.assigning.set(true);
+    this.usersService.assignCompaniesToUser(user.id, request).subscribe({
+      next: (result) => {
+        this.notificationService.showSuccess(`Empresas asignadas exitosamente a ${user.firstName} ${user.lastName}`);
+        this.closeModals();
+        this.assigning.set(false);
+      },
+      error: (error) => {
+        this.notificationService.showError('Error asignando empresas: ' + error.message);
+        this.assigning.set(false);
+      }
+    });
   }
 }

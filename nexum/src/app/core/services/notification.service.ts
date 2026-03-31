@@ -20,6 +20,10 @@ export class NotificationService {
     this.toasts$.next({ message, type: 'error' });
   }
 
+  showInfo(message: string): void {
+    this.toasts$.next({ message, type: 'info' });
+  }
+
   triggerRefresh(): void {
     this.refreshSubject.next();
   }

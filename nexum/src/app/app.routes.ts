@@ -3,36 +3,10 @@ import { authGuard } from './core/guards/auth.guard';
 import { tenantSelectedGuard } from './core/guards/tenant-selected.guard';
 import { companySelectedGuard } from './core/guards/company-selected.guard';
 import { permissionsGuard } from './core/guards/permissions.guard';
-import { RoleGuard } from './core/guards/role.guard';
+import { RoleGuard, AdminOnlyGuard, SuperadminOnlyGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
-  // Rutas de Desarrollo (acceso directo sin guards)
-  {
-    path: 'dev/tenant-requests',
-    loadComponent: () => import('./admin/tenant-requests/tenant-requests.component').then(m => m.TenantRequestsComponent)
-  },
-  {
-    path: 'dev/tenant-request',
-    loadComponent: () => import('./auth/tenant-request/tenant-request.component').then(m => m.TenantRequestComponent)
-  },
-  {
-    path: 'dev/company-selection',
-    loadComponent: () => import('./shared/components/context-selector/company-selector/company-selector.component').then(m => m.CompanySelectorComponent)
-  },
-  {
-    path: 'dev/dashboard',
-    loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent)
-  },
-  {
-    path: 'dev/login',
-    loadComponent: () => import('./auth/login/login.component').then(m => m.LoginComponent)
-  },
-  {
-    path: 'dev/landing',
-    loadComponent: () => import('./landing/landing.component').then(m => m.LandingComponent)
-  },
-  
-  // Rutas Principales (con guards simplificados)
+  // Rutas Principales
   {
     path: '',
     loadComponent: () => import('./landing/landing.component').then(m => m.LandingComponent),
@@ -49,6 +23,10 @@ export const routes: Routes = [
   {
     path: 'signup',
     loadComponent: () => import('./auth/sign-up/signup.component').then(m => m.SignupComponent)
+  },
+  {
+    path: 'setup-password',
+    loadComponent: () => import('./auth/setup-password/setup-password.component').then(m => m.SetupPasswordComponent)
   },
   {
     path: 'company-selection',
@@ -115,24 +93,41 @@ export const routes: Routes = [
         path: 'billing/fixed-assets',
         loadComponent: () => import('./modules/fixed-assets/fixed-assets.component').then(m => m.FixedAssetsComponent)
       },
-      // Admin Module (solo superadmin)
+      // Accounting Module
+      {
+        path: 'accounting',
+        redirectTo: 'accounting/entries',
+        pathMatch: 'full'
+      },
+      {
+        path: 'accounting/entries',
+        loadComponent: () => import('./modules/accounting/accounting.component').then(m => m.AccountingComponent)
+      },
+      {
+        path: 'accounting/accounts',
+        loadComponent: () => import('./modules/accounting/submodules/accounts/accounts.component').then(m => m.AccountsComponent)
+      },
+      // HR Module
+      {
+        path: 'hr/employees',
+        loadComponent: () => import('./modules/hr/employees/employees.component').then(m => m.EmployeesComponent)
+      },
+      // Messages Module
+      {
+        path: 'messages',
+        loadComponent: () => import('./modules/messages/messages.component').then(m => m.MessagesComponent)
+      },
+      // Admin Module (solo superadmin - Teneduria Garcia)
       {
         path: 'admin',
         loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
-        canActivate: [authGuard, permissionsGuard],
-        data: { permission: 'admin.access' }
+        canActivate: [SuperadminOnlyGuard]
       },
-      // Admin Tenant Requests (acceso directo)
+      // Admin Tenant Requests (solo superadmin)
       {
         path: 'admin/tenant-requests',
         loadComponent: () => import('./admin/tenant-requests/tenant-requests.component').then(m => m.TenantRequestsComponent),
-        canActivate: [authGuard, tenantSelectedGuard]
-      },
-      // Admin Tenant Requests (desarrollo - solo auth)
-      {
-        path: 'tenant-requests',
-        loadComponent: () => import('./admin/tenant-requests/tenant-requests.component').then(m => m.TenantRequestsComponent),
-        canActivate: [authGuard]
+        canActivate: [SuperadminOnlyGuard]
       },
       // Settings Module (configuración por compañía)
       {
