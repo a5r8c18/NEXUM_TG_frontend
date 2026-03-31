@@ -107,6 +107,14 @@ export const routes: Routes = [
         path: 'accounting/accounts',
         loadComponent: () => import('./modules/accounting/submodules/accounts/accounts.component').then(m => m.AccountsComponent)
       },
+      {
+        path: 'accounting/cost-centers',
+        loadComponent: () => import('./modules/accounting/submodules/cost-centers/cost-centers.component').then(m => m.CostCentersComponent)
+      },
+      {
+        path: 'accounting/reports',
+        loadComponent: () => import('./modules/accounting/submodules/reports/reports.component').then(m => m.ReportsComponent)
+      },
       // HR Module
       {
         path: 'hr/employees',

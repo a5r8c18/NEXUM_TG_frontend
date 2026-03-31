@@ -105,7 +105,9 @@ export class SidebarComponent {
       isExpanded: false,
       submenu: [
         { icon: 'BookOpen', label: 'Asientos', route: '/accounting/entries' },
-        { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' }
+        { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
+        { icon: 'Building', label: 'Centros de Costo', route: '/accounting/cost-centers' },
+        { icon: 'FileText', label: 'Informes', route: '/accounting/reports' }
       ]
     },
     { 

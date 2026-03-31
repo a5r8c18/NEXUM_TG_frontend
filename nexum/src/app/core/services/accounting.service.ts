@@ -55,6 +55,53 @@ export interface AccountStatistics {
   byLevel: Record<number, number>;
 }
 
+export interface CostCenter {
+  id: string;
+  companyId: number;
+  code: string;
+  name: string;
+  description: string | null;
+  type: 'production' | 'administrative' | 'sales' | 'maintenance' | 'research' | 'marketing' | 'general';
+  manager: string | null;
+  budget: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostCenterFilters {
+  type?: string;
+  search?: string;
+  activeOnly?: string;
+}
+
+export interface CostCenterStatistics {
+  total: number;
+  active: number;
+  byType: Record<string, number>;
+  totalBudget: number;
+}
+
+export interface AccountingReport {
+  id: string;
+  type: string;
+  title: string;
+  date: string;
+  description: string;
+  generatedBy: string;
+  generatedAt: string;
+  fileSize: string;
+  downloadUrl: string;
+  data: any[];
+}
+
+export interface ReportFilters {
+  type?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  accountCode?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AccountingService {
   private http = inject(HttpClient);
@@ -109,5 +156,30 @@ export class AccountingService {
 
   deleteAccount(id: string) {
     return this.http.delete(`${this.baseUrl}/accounts/${id}`);
+  }
+
+  // Cost Centers
+  getCostCenters(filters?: CostCenterFilters) {
+    const params: any = {};
+    if (filters?.type) params.type = filters.type;
+    if (filters?.search) params.search = filters.search;
+    if (filters?.activeOnly) params.activeOnly = filters.activeOnly;
+    return this.http.get<CostCenter[]>(`${this.baseUrl}/cost-centers`, { params });
+  }
+
+  getCostCenterStatistics() {
+    return this.http.get<CostCenterStatistics>(`${this.baseUrl}/cost-centers/statistics`);
+  }
+
+  createCostCenter(data: Partial<CostCenter>) {
+    return this.http.post<CostCenter>(`${this.baseUrl}/cost-centers`, data);
+  }
+
+  updateCostCenter(id: string, data: Partial<CostCenter>) {
+    return this.http.put<CostCenter>(`${this.baseUrl}/cost-centers/${id}`, data);
+  }
+
+  deleteCostCenter(id: string) {
+    return this.http.delete(`${this.baseUrl}/cost-centers/${id}`);
   }
 }
