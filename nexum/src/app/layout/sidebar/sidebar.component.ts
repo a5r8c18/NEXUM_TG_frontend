@@ -104,10 +104,11 @@ export class SidebarComponent {
       hasSubmenu: true,
       isExpanded: false,
       submenu: [
-        { icon: 'BookOpen', label: 'Asientos', route: '/accounting/entries' },
+        { icon: 'FileText', label: 'Informes', route: '/accounting/reports' },
         { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
-        { icon: 'Building', label: 'Centros de Costo', route: '/accounting/cost-centers' },
-        { icon: 'FileText', label: 'Informes', route: '/accounting/reports' }
+        { icon: 'BookOpen', label: 'Partidas', route: '/accounting/partidas' },
+        { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
+        { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' }
       ]
     },
     { 

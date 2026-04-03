@@ -99,20 +99,24 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/accounting/submodules/journal-entries/journal-entries.component').then(m => m.JournalEntriesComponent)
       },
       {
-        path: 'accounting/entries',
-        loadComponent: () => import('./modules/accounting/accounting.component').then(m => m.AccountingComponent)
+        path: 'accounting/reports',
+        loadComponent: () => import('./modules/accounting/submodules/reports/reports.component').then(m => m.ReportsComponent)
       },
       {
         path: 'accounting/accounts',
         loadComponent: () => import('./modules/accounting/submodules/accounts/accounts.component').then(m => m.AccountsComponent)
       },
       {
-        path: 'accounting/cost-centers',
-        loadComponent: () => import('./modules/accounting/submodules/cost-centers/cost-centers.component').then(m => m.CostCentersComponent)
+        path: 'accounting/partidas',
+        loadComponent: () => import('./modules/accounting/submodules/partidas/partidas.component').then(m => m.PartidasComponent)
       },
       {
-        path: 'accounting/reports',
-        loadComponent: () => import('./modules/accounting/submodules/reports/reports.component').then(m => m.ReportsComponent)
+        path: 'accounting/elementos',
+        loadComponent: () => import('./modules/accounting/submodules/elementos/elementos.component').then(m => m.ElementosComponent)
+      },
+      {
+        path: 'accounting/cost-centers',
+        loadComponent: () => import('./modules/accounting/submodules/cost-centers/cost-centers.component').then(m => m.CostCentersComponent)
       },
       // HR Module
       {
