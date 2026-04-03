@@ -96,8 +96,7 @@ export const routes: Routes = [
       // Accounting Module
       {
         path: 'accounting',
-        redirectTo: 'accounting/entries',
-        pathMatch: 'full'
+        loadComponent: () => import('./modules/accounting/submodules/journal-entries/journal-entries.component').then(m => m.JournalEntriesComponent)
       },
       {
         path: 'accounting/entries',

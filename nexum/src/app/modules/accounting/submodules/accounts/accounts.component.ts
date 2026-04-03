@@ -37,25 +37,17 @@ export class AccountsComponent implements OnInit {
   // Modals
   showCreateModal = signal(false);
   showEditModal = signal(false);
+  showSubaccountModal = signal(false);
   selectedAccount = signal<Account | null>(null);
+  parentAccountForSubaccount = signal<Account | null>(null);
 
   // Tree expansion state
   expandedNodes = signal<Set<string>>(new Set());
 
-  accountForm: FormGroup;
+  // Subaccount management
+  showSubaccountActions = signal<string | null>(null);
 
-  // Cuban accounting group labels
-  groupLabels: Record<string, string> = {
-    '1': 'Activos',
-    '2': 'Pasivos',
-    '3': 'Patrimonio',
-    '4': 'Ingresos',
-    '5': 'Costos',
-    '6': 'Gastos',
-    '7': 'Resultados',
-    '8': 'Cuentas de Memorándum',
-    '9': 'Cuentas de Control',
-  };
+  accountForm: FormGroup;
 
   typeLabels: Record<string, string> = {
     asset: 'Activo',
@@ -93,8 +85,51 @@ export class AccountsComponent implements OnInit {
     if (this.activeOnly()) {
       filtered = filtered.filter((a) => a.isActive);
     }
-    return filtered;
+    
+    // Ordenar jerárquicamente
+    return this.sortHierarchically(filtered);
   });
+
+  sortHierarchically(accounts: Account[]): Account[] {
+    // Crear mapa de hijos por padre
+    const childrenMap = new Map<string, Account[]>();
+    const rootAccounts: Account[] = [];
+    
+    // Separar cuentas raíz y organizar hijos
+    accounts.forEach(account => {
+      const parentCode = account.parentCode || '';
+      if (!parentCode) {
+        rootAccounts.push(account);
+      } else {
+        if (!childrenMap.has(parentCode)) {
+          childrenMap.set(parentCode, []);
+        }
+        childrenMap.get(parentCode)!.push(account);
+      }
+    });
+    
+    // Ordenar cada grupo de hijos
+    childrenMap.forEach(children => {
+      children.sort((a, b) => a.code.localeCompare(b.code));
+    });
+    
+    // Función recursiva para construir la lista ordenada
+    const buildHierarchy = (accounts: Account[]): Account[] => {
+      const result: Account[] = [];
+      accounts.forEach(account => {
+        result.push(account);
+        const children = childrenMap.get(account.code) || [];
+        if (children.length > 0) {
+          result.push(...buildHierarchy(children));
+        }
+      });
+      return result;
+    };
+    
+    // Ordenar cuentas raíz y construir jerarquía
+    rootAccounts.sort((a, b) => a.code.localeCompare(b.code));
+    return buildHierarchy(rootAccounts);
+  }
 
   pagedAccounts = computed(() => {
     const filtered = this.filteredAccounts();
@@ -104,13 +139,41 @@ export class AccountsComponent implements OnInit {
 
   treeAccounts = computed(() => {
     const filtered = this.filteredAccounts();
-    // Build tree: group by level 1 parent
-    const roots = filtered.filter((a) => a.level === 1);
-    return roots.map((root) => ({
-      ...root,
-      children: this.getChildren(root.code, filtered),
-    }));
+    // Usar la misma lógica jerárquica que en sortHierarchically
+    return this.buildTreeStructure(filtered);
   });
+
+  buildTreeStructure(accounts: Account[]): Account[] {
+    // Crear mapa de hijos por padre
+    const childrenMap = new Map<string, Account[]>();
+    const rootAccounts: Account[] = [];
+    
+    // Separar cuentas raíz y organizar hijos
+    accounts.forEach(account => {
+      const parentCode = account.parentCode || '';
+      if (!parentCode) {
+        rootAccounts.push(account);
+      } else {
+        if (!childrenMap.has(parentCode)) {
+          childrenMap.set(parentCode, []);
+        }
+        childrenMap.get(parentCode)!.push(account);
+      }
+    });
+    
+    // Función recursiva para construir árbol
+    const buildNode = (account: Account): Account => {
+      const children = childrenMap.get(account.code) || [];
+      return {
+        ...account,
+        children: children.map(child => buildNode(child))
+      };
+    };
+    
+    // Ordenar cuentas raíz y construir árbol
+    rootAccounts.sort((a, b) => a.code.localeCompare(b.code));
+    return rootAccounts.map(root => buildNode(root));
+  }
 
   paginationConfig = computed(() => ({
     currentPage: this.currentPage(),
@@ -119,7 +182,6 @@ export class AccountsComponent implements OnInit {
     totalPages: Math.ceil(this.filteredAccounts().length / this.pageSize),
   }));
 
-  // Distinct levels present in accounts
   availableLevels = computed(() => {
     const levels = [...new Set(this.accounts().map((a) => a.level))];
     return levels.sort((a, b) => a - b);
@@ -137,6 +199,14 @@ export class AccountsComponent implements OnInit {
       parentCode: [''],
       isActive: [true],
       allowsMovements: [false],
+    });
+
+    // Cerrar dropdown al hacer clic fuera
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.subaccount-dropdown')) {
+        this.showSubaccountActions.set(null);
+      }
     });
   }
 
@@ -194,19 +264,26 @@ export class AccountsComponent implements OnInit {
     return account.children && account.children.length > 0;
   }
 
-  
-  // Expand all nodes
   expandAll() {
     const allCodes = this.accounts().map(a => a.code);
     this.expandedNodes.set(new Set(allCodes));
   }
 
-  // Collapse all nodes
   collapseAll() {
     this.expandedNodes.set(new Set());
   }
 
-  // Actions
+  toggleNode(code: string) {
+    const current = this.expandedNodes();
+    const newSet = new Set(current);
+    if (newSet.has(code)) {
+      newSet.delete(code);
+    } else {
+      newSet.add(code);
+    }
+    this.expandedNodes.set(newSet);
+  }
+
   openCreateModal() {
     this.accountForm.reset({
       code: '',
@@ -243,7 +320,9 @@ export class AccountsComponent implements OnInit {
   closeModals() {
     this.showCreateModal.set(false);
     this.showEditModal.set(false);
+    this.showSubaccountModal.set(false);
     this.selectedAccount.set(null);
+    this.parentAccountForSubaccount.set(null);
     this.accountForm.reset();
   }
 
@@ -253,7 +332,6 @@ export class AccountsComponent implements OnInit {
       return;
     }
     const data = this.accountForm.value;
-    // Auto-detect groupNumber from first digit of code
     if (!data.groupNumber && data.code) {
       data.groupNumber = data.code.charAt(0);
     }
@@ -297,6 +375,12 @@ export class AccountsComponent implements OnInit {
   }
 
   deleteAccount(account: Account) {
+    // Validar si tiene subcuentas
+    const hasChildren = this.accounts().some(a => a.parentCode === account.code);
+    if (hasChildren) {
+      this.showToast('No se puede eliminar una cuenta que tiene subcuentas. Elimine primero las subcuentas.', 'error');
+      return;
+    }
     if (!confirm(`¿Eliminar la cuenta ${account.code} - ${account.name}?`)) return;
     this.accountingService.deleteAccount(account.id).subscribe({
       next: () => {
@@ -326,7 +410,6 @@ export class AccountsComponent implements OnInit {
       });
   }
 
-  // Auto-fill fields based on code
   onCodeChange() {
     const code = this.accountForm.get('code')?.value;
     if (!code) return;
@@ -334,7 +417,6 @@ export class AccountsComponent implements OnInit {
     const firstDigit = code.charAt(0);
     this.accountForm.patchValue({ groupNumber: firstDigit });
 
-    // Auto-detect type based on Cuban accounting groups
     const typeMap: Record<string, string> = {
       '1': 'asset',
       '2': 'liability',
@@ -365,18 +447,41 @@ export class AccountsComponent implements OnInit {
       });
     }
 
-    // Auto-detect level by code length
-    this.accountForm.patchValue({ level: code.length });
+    // Sistema híbrido: decimal para subgrupos, numérico para cuentas
+    const level = this.getLevelFromCode(code);
+    this.accountForm.patchValue({ level });
 
-    // Auto-detect parent code
-    if (code.length > 1) {
-      this.accountForm.patchValue({ parentCode: code.slice(0, -1) });
-    } else {
-      this.accountForm.patchValue({ parentCode: '' });
-    }
+    const parentCode = this.getParentCode(code);
+    this.accountForm.patchValue({ parentCode });
   }
 
-  // Filters
+  getLevelFromCode(code: string): number {
+    // Si tiene puntos, es sistema decimal (subgrupos)
+    if (code.includes('.')) {
+      return code.split('.').length;
+    }
+    // Si no tiene puntos, es sistema numérico (cuentas)
+    // El nivel se basa en la longitud y el contexto
+    if (code.length === 1) return 1; // 10, 20, etc.
+    if (code.length === 2) return 2; // 10.1, 20.1, etc.
+    return 3; // 101, 102, etc.
+  }
+
+  getParentCode(code: string): string {
+    // Si tiene puntos, eliminar el último segmento
+    if (code.includes('.')) {
+      const parts = code.split('.');
+      if (parts.length <= 1) return '';
+      return parts.slice(0, -1).join('.');
+    }
+    // Si no tiene puntos y es de 3 dígitos, buscar subgrupo padre
+    if (code.length === 3) {
+      const firstTwo = code.substring(0, 2);
+      return `${firstTwo.substring(0, 1)}.${firstTwo.substring(1)}`;
+    }
+    return '';
+  }
+
   applyFilters() {
     this.currentPage.set(1);
   }
@@ -394,7 +499,6 @@ export class AccountsComponent implements OnInit {
     this.currentPage.set(page);
   }
 
-  // Helpers
   getTypeClass(type: string): string {
     const classes: Record<string, string> = {
       asset: 'bg-blue-100 text-blue-800',
@@ -413,7 +517,76 @@ export class AccountsComponent implements OnInit {
   }
 
   getLevelIndent(level: number): string {
-    return `${(level - 1) * 1.5}rem`;
+    return `${(level - 1) * 1.5}rem`; // Indentación para cada nivel jerárquico
+  }
+
+  openSubaccountModal(parentAccount: Account) {
+    this.parentAccountForSubaccount.set(parentAccount);
+    this.accountForm.reset({
+      code: '',
+      name: '',
+      description: '',
+      type: parentAccount.type,
+      nature: parentAccount.nature,
+      level: parentAccount.level + 1,
+      groupNumber: parentAccount.groupNumber,
+      parentCode: parentAccount.code,
+      isActive: true,
+      allowsMovements: parentAccount.allowsMovements,
+    });
+    this.showSubaccountModal.set(true);
+  }
+
+  createSubaccount() {
+    if (this.accountForm.invalid) {
+      this.accountForm.markAllAsTouched();
+      return;
+    }
+    const data = this.accountForm.value;
+    const parent = this.parentAccountForSubaccount();
+    if (!parent) return;
+
+    if (!data.code.startsWith(parent.code)) {
+      this.showToast('El código de subcuenta debe comenzar con el código de la cuenta padre', 'error');
+      return;
+    }
+    if (data.level <= parent.level) {
+      this.showToast('El nivel de subcuenta debe ser mayor que el nivel de la cuenta padre', 'error');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.accountingService.createAccount(data).subscribe({
+      next: () => {
+        this.showToast(`Subcuenta creada bajo ${parent.name}`, 'success');
+        this.closeModals();
+        this.loadAccounts();
+        this.loadStatistics();
+        this.toggleNode(parent.code);
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al crear subcuenta', 'error');
+        this.isLoading.set(false);
+      },
+    });
+  }
+
+  getSubaccounts(account: Account): Account[] {
+    return this.accounts().filter(a => a.parentCode === account.code);
+  }
+
+  hasSubaccounts(account: Account): boolean {
+    return this.accounts().some(a => a.parentCode === account.code);
+  }
+
+  canHaveSubaccounts(account: Account): boolean {
+    return account.level < 9 && account.isActive;
+  }
+
+  toggleSubaccountActions(accountCode: string, event?: Event) {
+    if (event) event.stopPropagation();
+    const current = this.showSubaccountActions();
+    this.showSubaccountActions.set(current === accountCode ? null : accountCode);
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info') {

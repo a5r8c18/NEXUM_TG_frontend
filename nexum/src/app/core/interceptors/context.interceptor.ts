@@ -13,6 +13,9 @@ export const contextInterceptor: HttpInterceptorFn = (req, next) => {
   const token = authService.getToken();
   if (token) {
     headers = headers.set('Authorization', `Bearer ${token}`);
+    console.log(' Interceptor: Adding token for:', req.url);
+  } else {
+    console.log(' Interceptor: No token found for:', req.url);
   }
 
   // Agregar headers de contexto

@@ -185,7 +185,12 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken');
+    console.log('🔐 AUTH: getToken() - Token exists:', !!token);
+    if (token) {
+      console.log('🔐 AUTH: Token length:', token.length);
+    }
+    return token;
   }
 
   hasRole(role: string): boolean {
@@ -234,10 +239,15 @@ export class AuthService {
   }
 
   private setSession(user: NexumUser, token: string): void {
+    console.log('🔐 AUTH: Setting session with token:', token.substring(0, 20) + '...');
+    console.log('👤 AUTH: User:', user.email, user.role);
+    
     this.currentUserSignal.set(user);
     this.isAuthenticatedSignal.set(true);
     localStorage.setItem('authToken', token);
     localStorage.setItem('currentUser', JSON.stringify(user));
+    
+    console.log('✅ AUTH: Token saved to localStorage');
   }
 
   private async setCompanyContext(companyId: number): Promise<void> {

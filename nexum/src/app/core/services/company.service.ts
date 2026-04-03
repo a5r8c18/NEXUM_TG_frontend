@@ -30,6 +30,13 @@ export class CompanyService {
     return this.http.get<Company[]>(`${this.apiUrl}?tenantId=${tenantId}`);
   }
 
+  // Método público para buscar empresas sin autenticación (para login)
+  getCompaniesForLogin(email: string): Observable<Company[]> {
+    // Solo enviar el email, el backend devolverá todas las empresas activas
+    const url = `${this.apiUrl}/public/search?email=${encodeURIComponent(email)}`;
+    return this.http.get<Company[]>(url);
+  }
+
   createCompany(data: CreateCompanyDto): Observable<Company> {
     return this.http.post<Company>(this.apiUrl, data);
   }

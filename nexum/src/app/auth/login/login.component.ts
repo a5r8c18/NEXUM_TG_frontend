@@ -39,64 +39,31 @@ export class LoginComponent {
   }
 
   private async loadCompaniesForUser(email: string): Promise<void> {
+    console.log('🔍 Loading companies for user:', email);
+    
     try {
-      // Extraer el apellido del email para buscar empresas
-      const emailParts = email.split('@')[0].split('.');
-      const lastName = emailParts.length > 1 ? emailParts[emailParts.length - 1] : '';
-      const firstName = emailParts[0];
-      
-      let companies: Company[] = [];
-      
-      // Estrategia 1: Buscar por apellido (ej: "Garcia" de "developer@gmail.com")
-      if (lastName) {
-        try {
-          companies = await firstValueFrom(this.companyService.getCompaniesByName(lastName));
-          
-          if (companies.length > 0) {
-            // Empresa encontrada por apellido
-          }
-        } catch (error) {
-          // Error buscando por apellido
-        }
-      }
-      
-      // Estrategia 2: Buscar por nombre completo si no se encontró por apellido
-      if (companies.length === 0) {
-        try {
-          companies = await firstValueFrom(this.companyService.getCompaniesByName(firstName));
-        } catch (error) {
-          // Error buscando por nombre
-        }
-      }
-      
-      // Estrategia 3: Fallback a todas las empresas
-      if (companies.length === 0) {
-        companies = await firstValueFrom(this.companyService.getCompanies());
-      }
+      // Usar el método público que no requiere autenticación
+      console.log('🔍 Using public company search');
+      const companies = await firstValueFrom(this.companyService.getCompaniesForLogin(email));
+      console.log('✅ Found companies:', companies.length);
       
       this.availableCompanies.set(companies);
       
       // Seleccionar la primera empresa por defecto
       if (companies.length > 0) {
+        console.log('✅ Selected first company:', companies[0].name);
         this.selectedCompany.set(companies[0]);
+      } else {
+        console.log('❌ No companies found to select');
+        // Si no hay empresas, mostrar mensaje claro
+        this.errorMessage.set('No se encontraron empresas para este email. Contacte al administrador.');
       }
     } catch (error) {
-      // Fallback a empresas de demo si hay error
-      const fallbackCompanies: Company[] = [
-        {
-          id: 1,
-          name: 'Empresa Demo S.A.',
-          tax_id: '20123456789',
-          address: 'Av. Demo 123',
-          phone: '555-1234',
-          email: 'demo@empresa.com',
-          is_active: true,
-          created_at: new Date().toISOString()
-        }
-      ];
-      
-      this.availableCompanies.set(fallbackCompanies);
-      this.selectedCompany.set(fallbackCompanies[0]);
+      console.log('🚨 Error in loadCompaniesForUser:', error);
+      // Si hay error, mostrar mensaje claro al usuario
+      this.errorMessage.set('Error al cargar empresas. Verifique su conexión o contacte al administrador.');
+      this.availableCompanies.set([]);
+      this.selectedCompany.set(null);
     }
   }
 

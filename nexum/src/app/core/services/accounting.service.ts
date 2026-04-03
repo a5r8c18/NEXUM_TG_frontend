@@ -35,6 +35,7 @@ export interface Account {
   allowsMovements: boolean;
   createdAt: string;
   updatedAt: string;
+  children?: Account[];
 }
 
 export interface AccountFilters {
@@ -53,6 +54,34 @@ export interface AccountStatistics {
   byType: Record<string, number>;
   byNature: Record<string, number>;
   byLevel: Record<number, number>;
+}
+
+export interface JournalEntryComprobante {
+  id: string;
+  voucherId: string;
+  accountCode: string;
+  accountName: string;
+  debitAmount: number;
+  creditAmount: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface ComprobanteOperacion {
+  id: string;
+  companyId: number;
+  date: string;
+  reference?: string;
+  description: string;
+  type: 'factura' | 'recibo' | 'nota_debito' | 'nota_credito' | 'nomina' | 'contrato' | 'certificado' | 'informe' | 'otro';
+  status: 'draft' | 'posted' | 'cancelled';
+  totalAmount: number;
+  documentNumber?: string;
+  issuer?: string;
+  receiver?: string;
+  entries: JournalEntryComprobante[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CostCenter {

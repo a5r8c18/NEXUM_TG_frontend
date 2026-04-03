@@ -1,0 +1,238 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="bg-white rounded-xl border border-slate-200 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Comprobantes Contables</h1>
+        <p class="text-sm text-slate-500 mt-1">Gestión de asientos y operaciones contables</p>
+      </div>
+      <button (click)="createComprobante()"
+              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nuevo Comprobante
+      </button>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-slate-50 rounded-lg p-4">
+        <div class="text-sm text-slate-600">Total Comprobantes</div>
+        <div class="text-2xl font-bold text-slate-900">{{ statistics().total }}</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-4">
+        <div class="text-sm text-blue-600">Monto Total</div>
+        <div class="text-2xl font-bold text-blue-900">${{ statistics().totalAmount.toFixed(2) }}</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-4">
+        <div class="text-sm text-green-600">Contabilizados</div>
+        <div class="text-2xl font-bold text-green-900">{{ statistics().posted }}</div>
+      </div>
+      <div class="bg-amber-50 rounded-lg p-4">
+        <div class="text-sm text-amber-600">En Borrador</div>
+        <div class="text-2xl font-bold text-amber-900">{{ statistics().draft }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-xl border border-slate-200 p-6">
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Filtros</h2>
+    <form [formGroup]="filterForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Buscar</label>
+        <input type="text" formControlName="search"
+               placeholder="Descripción, referencia..."
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Tipo</label>
+        <select formControlName="type"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+          <option value="">Todos</option>
+          <option value="opening">Apertura</option>
+          <option value="normal">Normal</option>
+          <option value="adjustment">Ajuste</option>
+          <option value="closing">Cierre</option>
+          <option value="reversal">Reverso</option>
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Estado</label>
+        <select formControlName="status"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+          <option value="">Todos</option>
+          <option value="draft">Borrador</option>
+          <option value="posted">Contabilizado</option>
+          <option value="cancelled">Anulado</option>
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Acciones</label>
+        <div class="flex gap-2">
+          <button type="button" (click)="resetFilters()"
+                  class="px-3 py-2 text-sm text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </form>
+    
+    <!-- Date Range -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Fecha Desde</label>
+        <input type="date" formControlName="dateFrom"
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Fecha Hasta</label>
+        <input type="date" formControlName="dateTo"
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="bg-white rounded-xl border border-slate-200 p-12 text-center">
+      <div class="animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto"></div>
+      <p class="text-sm text-slate-500 mt-2">Cargando comprobantes...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (hasError()) {
+    <div class="bg-white rounded-xl border border-slate-200 p-12 text-center">
+      <div class="text-red-500 mb-4">
+        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-slate-900 mb-2">Error al cargar</h3>
+      <p class="text-sm text-slate-500">No se pudieron cargar los comprobantes. Intente nuevamente.</p>
+      <button (click)="loadComprobantes()"
+              class="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+        Reintentar
+      </button>
+    </div>
+  }
+
+  <!-- Entries Table -->
+  @else {
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Referencia</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Descripción</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Asientos</th>
+              <th class="px-5 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Monto</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Tipo</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Estado</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (comprobante of pagedComprobantes(); track comprobante.id) {
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-5 py-3">
+                  <div class="text-sm text-slate-900">{{ comprobante.date | date:'dd/MM/yyyy' }}</div>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="text-sm font-mono text-slate-900">{{ comprobante.reference || comprobante.documentNumber || '-' }}</div>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="text-sm text-slate-900">{{ comprobante.description }}</div>
+                  @if (comprobante.issuer) {
+                    <div class="text-xs text-slate-500">{{ comprobante.issuer }}</div>
+                  }
+                </td>
+                <td class="px-5 py-3">
+                  <div class="text-sm text-slate-900">{{ comprobante.entries?.length || 0 }} asientos</div>
+                </td>
+                <td class="px-5 py-3 text-right">
+                  <div class="text-sm font-semibold text-blue-900">${{ comprobante.totalAmount.toFixed(2) }}</div>
+                </td>
+                <td class="px-5 py-3 text-center">
+                  <div class="text-sm text-slate-900">{{ getTypeLabel(comprobante.type) }}</div>
+                </td>
+                <td class="px-5 py-3 text-center">
+                  <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full" [class]="getStatusClass(comprobante.status)">
+                    {{ getStatusLabel(comprobante.status) }}
+                  </span>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="flex justify-center gap-1">
+                    <button (click)="viewEntries(comprobante)"
+                            class="p-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Ver asientos">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-4M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                      </svg>
+                    </button>
+                    @if (comprobante.status === 'draft') {
+                      <button (click)="postComprobante(comprobante)"
+                              class="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Contabilizar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                      </button>
+                    }
+                    @if (comprobante.status === 'draft' || comprobante.status === 'posted') {
+                      <button (click)="cancelComprobante(comprobante)"
+                              class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Anular">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    }
+                    <button (click)="editComprobante(comprobante)"
+                            class="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                    </button>
+                    <button (click)="deleteComprobante(comprobante)"
+                            class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+            @empty {
+              <tr>
+                <td colspan="8" class="px-5 py-16 text-center">
+                  <div class="flex flex-col items-center gap-2 text-slate-400">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p class="text-sm font-medium">No hay comprobantes registrados</p>
+                    <p class="text-xs">Crea tu primer comprobante contable</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (paginationConfig().totalPages > 1) {
+        <div class="mt-4 px-5 pb-4">
+          <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
+        </div>
+      }
+    </div>
+  }
+</div>
