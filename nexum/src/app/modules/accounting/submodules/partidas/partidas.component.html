@@ -1,4 +1,4 @@
-<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+<div class="p-6 bg-linear-to-br from-slate-50 to-slate-100 min-h-screen">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-3">
@@ -25,7 +25,7 @@
   </div>
 
   <!-- Statistics Cards -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
     <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4">
       <div class="text-2xl font-bold text-slate-800">{{ statistics().total }}</div>
       <div class="text-xs text-slate-500">Total Partidas</div>
@@ -39,10 +39,12 @@
       <div class="text-xs text-slate-500">Total Crédito</div>
     </div>
     <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4">
-      <div class="text-2xl font-bold" [class]="statistics().isBalanced ? 'text-green-600' : 'text-red-600'">
-        {{ formatCurrency(abs(statistics().balance)) }}
-      </div>
-      <div class="text-xs text-slate-500">Balance</div>
+      <div class="text-2xl font-bold text-emerald-600">{{ statistics().posted }}</div>
+      <div class="text-xs text-slate-500">Contabilizadas</div>
+    </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4">
+      <div class="text-2xl font-bold text-amber-600">{{ statistics().draft }}</div>
+      <div class="text-xs text-slate-500">En Borrador</div>
     </div>
   </div>
 
@@ -113,12 +115,12 @@
         <table class="w-full">
           <thead class="bg-slate-50/80 border-b border-slate-200/50">
             <tr>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Comprobante</th>
               <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Cuenta</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Descripción</th>
-              <th class="px-5 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Débito</th>
-              <th class="px-5 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Crédito</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Descripción de la cuenta</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Subcuenta</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Descripción de la subcuenta</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Partida</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Descripción de la partida</th>
               <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
@@ -126,48 +128,59 @@
             @for (partida of pagedPartidas(); track partida.id) {
               <tr class="hover:bg-slate-50/50 transition-colors">
                 <td class="px-5 py-3">
-                  <div class="text-sm text-slate-900">{{ formatDate(partida.createdAt) }}</div>
-                </td>
-                <td class="px-5 py-3">
-                  <div class="text-sm font-mono text-slate-900">{{ partida.voucherId }}</div>
-                </td>
-                <td class="px-5 py-3">
                   <div class="text-sm font-mono text-slate-900">{{ partida.accountCode }}</div>
-                  <div class="text-xs text-slate-500">{{ partida.accountName }}</div>
                 </td>
                 <td class="px-5 py-3">
-                  <div class="text-sm text-slate-900">{{ partida.description }}</div>
+                  <div class="text-sm text-slate-900">{{ partida.accountName }}</div>
                 </td>
-                <td class="px-5 py-3 text-right">
-                  @if (partida.debitAmount > 0) {
-                    <div class="text-sm font-semibold text-blue-600">{{ formatCurrency(partida.debitAmount) }}</div>
-                  } @else {
-                    <div class="text-sm text-slate-400">-</div>
-                  }
+                <td class="px-5 py-3">
+                  <div class="text-sm font-mono text-slate-900">{{ partida.subaccountCode || '-' }}</div>
                 </td>
-                <td class="px-5 py-3 text-right">
-                  @if (partida.creditAmount > 0) {
-                    <div class="text-sm font-semibold text-green-600">{{ formatCurrency(partida.creditAmount) }}</div>
-                  } @else {
-                    <div class="text-sm text-slate-400">-</div>
-                  }
+                <td class="px-5 py-3">
+                  <div class="text-sm text-slate-900">{{ partida.subaccountName || '-' }}</div>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="text-sm font-mono text-slate-900">{{ partida.entryNumber }}</div>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="text-sm text-slate-900">{{ getExpenseTypeName(partida.entryNumber) || '-' }}</div>
                 </td>
                 <td class="px-5 py-3">
                   <div class="flex justify-center gap-1">
-                    <button (click)="editPartida(partida)"
-                            class="p-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="Editar">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                    </button>
-                    <button (click)="deletePartida(partida)"
-                            class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Eliminar">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                      </svg>
-                    </button>
+                    @if (partida.status === 'draft') {
+                      <button (click)="postPartida(partida)"
+                              class="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Contabilizar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                      </button>
+                    }
+                    @if (partida.status === 'draft' || partida.status === 'posted') {
+                      <button (click)="cancelPartida(partida)"
+                              class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Anular">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    }
+                    @if (partida.status === 'draft') {
+                      <button (click)="editPartida(partida)"
+                              class="p-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Editar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                      </button>
+                      <button (click)="deletePartida(partida)"
+                              class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Eliminar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    }
                   </div>
                 </td>
               </tr>
@@ -196,4 +209,93 @@
       }
     }
   </div>
+
+  <!-- Modal Create/Edit Partida -->
+@if (showModal()) {
+  <div class="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/50" (click)="closeModal()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 rounded-t-2xl">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold text-slate-900">
+            {{ editingPartida() ? 'Editar Partida' : 'Nueva Partida' }}
+          </h2>
+          <button (click)="closeModal()" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <form [formGroup]="partidaForm" (ngSubmit)="savePartida()" class="p-6 space-y-5">
+        <!-- Partida Fields -->
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-600 uppercase">Cuenta *</label>
+          <select formControlName="accountCode"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <option value="">Seleccionar cuenta...</option>
+            @for (acc of accounts(); track acc.id) {
+              <option [value]="acc.code">{{ acc.code }} - {{ acc.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-600 uppercase">Subcuenta</label>
+          <select formControlName="subaccountCode"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  [class.opacity-50]="subaccounts().length === 0">
+            <option value="">{{ subaccounts().length === 0 ? 'No hay subcuentas disponibles' : 'Seleccionar subcuenta...' }}</option>
+            @for (subacc of subaccounts(); track subacc.id) {
+              <option [value]="subacc.code">{{ subacc.code }} - {{ subacc.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-600 uppercase">Partida *</label>
+          <input type="text" formControlName="entryNumber"
+                 placeholder="Escriba o seleccione una partida..."
+                 list="partidas-datalist"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+          <datalist id="partidas-datalist">
+            @for (expType of expenseTypes(); track expType.id) {
+              <option value="{{ expType.code }}">{{ expType.code }} - {{ expType.name }}</option>
+            }
+          </datalist>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-600 uppercase">Descripción</label>
+          <input type="text" formControlName="description" placeholder="Descripción opcional de la partida"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" (click)="closeModal()"
+                  class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="isSaving()"
+                  class="px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+            @if (isSaving()) {
+              <div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+            }
+            {{ editingPartida() ? 'Actualizar' : 'Crear Partida' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Toast -->
+  @if (toast()) {
+    <div class="fixed bottom-4 right-4 z-50">
+      <div class="px-4 py-3 rounded-xl shadow-lg text-sm font-medium"
+           [class]="toast()?.type === 'success' ? 'bg-green-600 text-white' : toast()?.type === 'error' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'">
+        {{ toast()?.message }}
+      </div>
+    </div>
+  }
 </div>

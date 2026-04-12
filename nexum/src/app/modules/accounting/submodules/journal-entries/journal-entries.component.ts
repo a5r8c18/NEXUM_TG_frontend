@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AccountingService, ComprobanteOperacion, JournalEntryComprobante } from '../../../../core/services/accounting.service';
+import { AccountingService, Voucher, Account, ExpenseType, CostCenter, JournalEntry } from '../../../../core/services/accounting.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -15,9 +15,10 @@ export class JournalEntriesComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   // Signals
-  comprobantes = signal<ComprobanteOperacion[]>([]);
+  comprobantes = signal<Voucher[]>([]);
   isLoading = signal(false);
   hasError = signal(false);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   currentPage = signal(1);
   pageSize = 10;
   searchTerm = signal('');
@@ -25,25 +26,32 @@ export class JournalEntriesComponent implements OnInit {
   dateFromFilter = signal('');
   dateToFilter = signal('');
   statusFilter = signal('');
-  selectedComprobante = signal<ComprobanteOperacion | null>(null);
+  selectedComprobante = signal<Voucher | null>(null);
   showEntriesDetail = signal(false);
+  showModal = signal(false);
+  editingVoucher = signal<Voucher | null>(null);
+  isSaving = signal(false);
+  accounts = signal<Account[]>([]);
+  subaccounts = signal<Account[]>([]);
+  expenseTypes = signal<ExpenseType[]>([]);
+  costCenters = signal<CostCenter[]>([]);
+  elementos = signal<JournalEntry[]>([]);
 
-  // Form for filters
+  // Forms
   filterForm: FormGroup;
+  voucherForm: FormGroup;
 
   // Computed properties
   filteredComprobantes = computed(() => {
     let filtered = this.comprobantes();
-    
+
     // Search filter
     const term = this.searchTerm().toLowerCase();
     if (term) {
-      filtered = filtered.filter(comp => 
+      filtered = filtered.filter(comp =>
         comp.description.toLowerCase().includes(term) ||
-        comp.reference?.toLowerCase().includes(term) ||
-        comp.documentNumber?.toLowerCase().includes(term) ||
-        comp.issuer?.toLowerCase().includes(term) ||
-        comp.receiver?.toLowerCase().includes(term)
+        comp.voucherNumber.toLowerCase().includes(term) ||
+        comp.reference?.toLowerCase().includes(term)
       );
     }
 
@@ -84,7 +92,7 @@ export class JournalEntriesComponent implements OnInit {
   // Statistics
   statistics = computed(() => {
     const comps = this.comprobantes();
-    const totalAmount = comps.reduce((sum, comp) => sum + comp.totalAmount, 0);
+    const totalAmount = comps.reduce((sum, comp) => sum + Number(comp.totalAmount), 0);
 
     return {
       total: comps.length,
@@ -95,6 +103,8 @@ export class JournalEntriesComponent implements OnInit {
     };
   });
 
+  // No longer using line-based totals; single debit/credit fields in form
+
   constructor() {
     this.filterForm = this.fb.group({
       search: [''],
@@ -102,6 +112,29 @@ export class JournalEntriesComponent implements OnInit {
       status: [''],
       dateFrom: [''],
       dateTo: ['']
+    });
+
+    this.voucherForm = this.fb.group({
+      date: [new Date().toISOString().split('T')[0], Validators.required],
+      primaryDocument: ['', Validators.required],
+      accountCode: ['', Validators.required],
+      subaccountCode: [''],
+      entryNumber: ['', Validators.required],
+      element: [''],
+      costCenterId: [''],
+      debit: [0, [Validators.required, Validators.min(0)]],
+      credit: [0, [Validators.required, Validators.min(0)]],
+    });
+
+    // Watch accountCode changes to load subaccounts
+    this.voucherForm.get('accountCode')?.valueChanges.subscribe(code => {
+      if (code) {
+        this.loadSubaccounts(code);
+        this.voucherForm.get('subaccountCode')?.setValue('');
+      } else {
+        this.subaccounts.set([]);
+        this.voucherForm.get('subaccountCode')?.setValue('');
+      }
     });
 
     // Watch form changes
@@ -117,67 +150,70 @@ export class JournalEntriesComponent implements OnInit {
 
   ngOnInit() {
     this.loadComprobantes();
+    this.loadAccounts();
+    this.loadExpenseTypes();
+    this.loadCostCenters();
+    this.loadElementos();
   }
+
+  loadAccounts() {
+    this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
+      next: (data) => this.accounts.set(data),
+      error: () => {},
+    });
+  }
+
+  loadSubaccounts(parentCode: string) {
+    this.accountingService.getAccountsByParentCode(parentCode).subscribe({
+      next: (data) => this.subaccounts.set(data),
+      error: () => this.subaccounts.set([]),
+    });
+  }
+
+  loadExpenseTypes() {
+    this.accountingService.getExpenseTypes().subscribe({
+      next: (data) => this.expenseTypes.set(data),
+      error: () => {},
+    });
+  }
+
+  loadCostCenters() {
+    this.accountingService.getCostCenters({ activeOnly: 'true' }).subscribe({
+      next: (data) => this.costCenters.set(data),
+      error: () => {},
+    });
+  }
+
+  loadElementos() {
+    this.accountingService.getJournalEntries({}).subscribe({
+      next: (data) => this.elementos.set(data.filter(e => !!e.element)),
+      error: () => {},
+    });
+  }
+
+  uniqueElementos = computed(() => {
+    const seen = new Set<string>();
+    return this.elementos().filter(e => {
+      if (seen.has(e.element!)) return false;
+      seen.add(e.element!);
+      return true;
+    });
+  });
 
   loadComprobantes() {
     this.isLoading.set(true);
     this.hasError.set(false);
-    
-    // TODO: Implement getComprobantes method in AccountingService
-    // this.accountingService.getComprobantes().subscribe({
-    //   next: (data) => {
-    //     this.comprobantes.set(data);
-    //     this.isLoading.set(false);
-    //   },
-    //   error: () => {
-    //     this.hasError.set(true);
-    //     this.isLoading.set(false);
-    //   }
-    // });
-    
-    // Mock data for now
-    setTimeout(() => {
-      this.comprobantes.set([
-        {
-          id: '1',
-          companyId: 1,
-          date: '2024-01-15',
-          reference: 'FAC-001',
-          description: 'Venta de mercancías',
-          type: 'factura',
-          status: 'posted',
-          totalAmount: 1500.00,
-          documentNumber: 'FAC-001',
-          issuer: 'Cliente A',
-          receiver: 'Mi Empresa',
-          entries: [
-            {
-              id: '1',
-              voucherId: '1',
-              accountCode: '101',
-              accountName: 'Caja',
-              debitAmount: 1500.00,
-              creditAmount: 0,
-              description: 'Venta de mercancías',
-              createdAt: '2024-01-15'
-            },
-            {
-              id: '2',
-              voucherId: '1',
-              accountCode: '401',
-              accountName: 'Ventas',
-              debitAmount: 0,
-              creditAmount: 1500.00,
-              description: 'Venta de mercancías',
-              createdAt: '2024-01-15'
-            }
-          ],
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15'
-        }
-      ]);
-      this.isLoading.set(false);
-    }, 1000);
+
+    this.accountingService.getVouchers().subscribe({
+      next: (data) => {
+        this.comprobantes.set(data);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.hasError.set(true);
+        this.isLoading.set(false);
+      },
+    });
   }
 
   onPageChange(page: number) {
@@ -196,12 +232,24 @@ export class JournalEntriesComponent implements OnInit {
       'nota_debito': 'Nota Débito',
       'nota_credito': 'Nota Crédito',
       'nomina': 'Nómina',
-      'contrato': 'Contrato',
-      'certificado': 'Certificado',
-      'informe': 'Informe',
+      'depreciacion': 'Depreciación',
+      'ajuste': 'Ajuste',
+      'apertura': 'Apertura',
+      'cierre': 'Cierre',
       'otro': 'Otro'
     };
     return labels[type] || type;
+  }
+
+  getSourceLabel(source: string): string {
+    const labels: Record<string, string> = {
+      'manual': 'Manual',
+      'inventory': 'Inventario',
+      'invoices': 'Facturación',
+      'fixed-assets': 'Activos Fijos',
+      'hr': 'Nómina'
+    };
+    return labels[source] || source;
   }
 
   getStatusClass(status: string): string {
@@ -223,35 +271,146 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   createComprobante() {
-    // TODO: Implement create comprobante modal
-    console.log('Create comprobante clicked');
+    this.editingVoucher.set(null);
+    this.voucherForm.reset({
+      date: new Date().toISOString().split('T')[0],
+      primaryDocument: '',
+      accountCode: '',
+      subaccountCode: '',
+      entryNumber: '',
+      element: '',
+      costCenterId: '',
+      debit: 0,
+      credit: 0,
+    });
+    this.subaccounts.set([]);
+    this.showModal.set(true);
   }
 
-  editComprobante(comprobante: ComprobanteOperacion) {
-    // TODO: Implement edit comprobante modal
-    console.log('Edit comprobante:', comprobante);
+  editComprobante(comprobante: Voucher) {
+    if (comprobante.status !== 'draft') {
+      this.showToast('Solo se pueden editar comprobantes en borrador', 'error');
+      return;
+    }
+    this.editingVoucher.set(comprobante);
+    // For edit, populate from first line if available
+    const firstLine = comprobante.lines?.[0];
+    this.voucherForm.patchValue({
+      date: comprobante.date,
+      primaryDocument: comprobante.reference || '',
+      accountCode: firstLine?.accountCode || '',
+      subaccountCode: '',
+      entryNumber: '',
+      element: '',
+      costCenterId: firstLine?.costCenterId || '',
+      debit: firstLine ? Number(firstLine.debit) : 0,
+      credit: firstLine ? Number(firstLine.credit) : 0,
+    });
+    if (firstLine?.accountCode) {
+      this.loadSubaccounts(firstLine.accountCode);
+    }
+    this.showModal.set(true);
   }
 
-  deleteComprobante(comprobante: ComprobanteOperacion) {
-    if (!confirm(`¿Eliminar el comprobante ${comprobante.reference || comprobante.id}?`)) return;
-    
-    // TODO: Implement deleteComprobante method
-    console.log('Delete comprobante:', comprobante);
+  closeModal() {
+    this.showModal.set(false);
+    this.editingVoucher.set(null);
   }
 
-  postComprobante(comprobante: ComprobanteOperacion) {
-    // TODO: Implement postComprobante method
-    console.log('Post comprobante:', comprobante);
+  getExpenseTypeName(code: string): string {
+    const et = this.expenseTypes().find(e => e.code === code);
+    return et?.name || '';
   }
 
-  cancelComprobante(comprobante: ComprobanteOperacion) {
-    if (!confirm(`¿Anular el comprobante ${comprobante.reference || comprobante.id}?`)) return;
-    
-    // TODO: Implement cancelComprobante method
-    console.log('Cancel comprobante:', comprobante);
+  saveVoucher() {
+    if (this.voucherForm.invalid) {
+      this.showToast('Complete todos los campos requeridos', 'error');
+      return;
+    }
+
+    const val = this.voucherForm.value;
+    const debit = Number(val.debit) || 0;
+    const credit = Number(val.credit) || 0;
+
+    if (debit === 0 && credit === 0) {
+      this.showToast('Debe ingresar un monto en Debe o Haber', 'error');
+      return;
+    }
+
+    const payload = {
+      date: val.date,
+      type: 'otro' as const,
+      description: val.primaryDocument,
+      reference: val.primaryDocument || undefined,
+      sourceModule: 'manual',
+      lines: [
+        {
+          accountCode: val.accountCode,
+          debit,
+          credit,
+          description: val.element || val.primaryDocument || undefined,
+          costCenterId: val.costCenterId || undefined,
+          lineOrder: 1,
+        },
+      ],
+    };
+
+    this.isSaving.set(true);
+    this.accountingService.createVoucher(payload).subscribe({
+      next: () => {
+        this.showToast('Comprobante creado correctamente', 'success');
+        this.closeModal();
+        this.loadComprobantes();
+        this.isSaving.set(false);
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al guardar comprobante', 'error');
+        this.isSaving.set(false);
+      },
+    });
   }
 
-  viewEntries(comprobante: ComprobanteOperacion) {
+  deleteComprobante(comprobante: Voucher) {
+    if (!confirm(`¿Eliminar el comprobante ${comprobante.voucherNumber}?`)) return;
+
+    this.accountingService.deleteVoucher(comprobante.id).subscribe({
+      next: () => {
+        this.showToast('Comprobante eliminado correctamente', 'success');
+        this.loadComprobantes();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al eliminar comprobante', 'error');
+      },
+    });
+  }
+
+  postComprobante(comprobante: Voucher) {
+    this.accountingService.updateVoucherStatus(comprobante.id, 'posted').subscribe({
+      next: () => {
+        this.showToast('Comprobante contabilizado correctamente', 'success');
+        this.loadComprobantes();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al contabilizar', 'error');
+      },
+    });
+  }
+
+  cancelComprobante(comprobante: Voucher) {
+    if (!confirm(`¿Anular el comprobante ${comprobante.voucherNumber}?`)) return;
+
+    this.accountingService.updateVoucherStatus(comprobante.id, 'cancelled').subscribe({
+      next: () => {
+        this.showToast('Comprobante anulado correctamente', 'success');
+        this.loadComprobantes();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al anular', 'error');
+      },
+    });
+  }
+
+  viewEntries(comprobante: Voucher) {
     this.selectedComprobante.set(comprobante);
     this.showEntriesDetail.set(true);
   }
@@ -259,5 +418,10 @@ export class JournalEntriesComponent implements OnInit {
   closeEntriesDetail() {
     this.showEntriesDetail.set(false);
     this.selectedComprobante.set(null);
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info') {
+    this.toast.set({ message, type });
+    setTimeout(() => this.toast.set(null), 3000);
   }
 }

@@ -8,14 +8,24 @@ export interface JournalEntry {
   entryNumber: string;
   date: string;
   description: string;
+  accountId: string;
   accountCode: string;
   accountName: string;
+  subaccountCode?: string | null;
+  subaccountName?: string | null;
+  element?: string | null;
+  elementDescription?: string | null;
   debit: number;
   credit: number;
-  reference: string | null;
+  lineDescription?: string | null;
+  costCenterId?: string | null;
+  costCenter?: CostCenter;
+  reference?: string | null;
+  type: 'manual' | 'adjustment' | 'opening' | 'closing' | 'correction';
   status: 'draft' | 'posted' | 'cancelled';
   createdBy: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Account {
@@ -45,6 +55,17 @@ export interface AccountFilters {
   level?: string;
   groupNumber?: string;
   activeOnly?: string;
+}
+
+export interface ExpenseType {
+  id: string;
+  companyId: number;
+  code: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AccountStatistics {
@@ -111,30 +132,124 @@ export interface CostCenterStatistics {
   totalBudget: number;
 }
 
-export interface AccountingReport {
+export interface Voucher {
   id: string;
-  type: string;
-  title: string;
+  companyId: number;
+  voucherNumber: string;
   date: string;
   description: string;
-  generatedBy: string;
-  generatedAt: string;
-  fileSize: string;
-  downloadUrl: string;
-  data: any[];
+  type: 'factura' | 'recibo' | 'nota_debito' | 'nota_credito' | 'nomina' | 'depreciacion' | 'ajuste' | 'apertura' | 'cierre' | 'otro';
+  status: 'draft' | 'posted' | 'cancelled';
+  totalAmount: number;
+  sourceModule: 'inventory' | 'invoices' | 'fixed-assets' | 'hr' | 'manual';
+  sourceDocumentId: string | null;
+  reference: string | null;
+  periodId: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lines: VoucherLineItem[];
+}
+
+export interface VoucherLineItem {
+  id: string;
+  voucherId: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  description: string | null;
+  costCenterId: string | null;
+  costCenter?: CostCenter;
+  reference: string | null;
+  lineOrder: number;
+  voucher?: Voucher;
+}
+
+export interface VoucherFilters {
+  status?: string;
+  type?: string;
+  fromDate?: string;
+  toDate?: string;
+  sourceModule?: string;
+  search?: string;
+}
+
+export interface VoucherLineFilters {
+  accountCode?: string;
+  costCenterId?: string;
+  fromDate?: string;
+  toDate?: string;
+  voucherId?: string;
+  search?: string;
+}
+
+export interface VoucherStatistics {
+  total: number;
+  totalAmount: number;
+  byStatus: Record<string, number>;
+  byType: Record<string, number>;
+  bySource: Record<string, number>;
+}
+
+export interface VoucherLineStatistics {
+  totalLines: number;
+  totalDebit: number;
+  totalCredit: number;
+  balance: number;
+}
+
+export interface FiscalYear {
+  id: string;
+  companyId: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: 'open' | 'closed';
+  periods: AccountingPeriod[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountingPeriod {
+  id: string;
+  companyId: number;
+  fiscalYearId: string;
+  name: string;
+  month: number;
+  year: number;
+  startDate: string;
+  endDate: string;
+  status: 'open' | 'closed';
+  closedAt: string | null;
+  closedBy: string | null;
+}
+
+export interface AccountElement {
+  type: string;
+  label: string;
+  nature: string;
+  accountCount: number;
+  activeCount: number;
+  totalBalance: number;
+  accounts: Account[];
 }
 
 export interface ReportFilters {
   type?: string;
-  dateFrom?: string;
-  dateTo?: string;
+  fromDate?: string;
+  toDate?: string;
   accountCode?: string;
+  asOfDate?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AccountingService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/accounting`;
+
+  // ── Journal Entries (Legacy) ──
 
   getEntries(filters?: { status?: string; fromDate?: string; toDate?: string }) {
     const params: any = {};
@@ -160,7 +275,17 @@ export class AccountingService {
     return this.http.delete(`${this.baseUrl}/entries/${id}`);
   }
 
-  getAccounts(filters?: AccountFilters) {
+  // ── Accounts (Chart of Accounts) ──
+
+  getAccounts(filters?: {
+    type?: string;
+    search?: string;
+    nature?: string;
+    level?: string;
+    groupNumber?: string;
+    activeOnly?: string;
+    allowsMovements?: string;
+  }) {
     const params: any = {};
     if (filters?.type) params.type = filters.type;
     if (filters?.search) params.search = filters.search;
@@ -168,7 +293,12 @@ export class AccountingService {
     if (filters?.level) params.level = filters.level;
     if (filters?.groupNumber) params.groupNumber = filters.groupNumber;
     if (filters?.activeOnly) params.activeOnly = filters.activeOnly;
+    if (filters?.allowsMovements) params.allowsMovements = filters.allowsMovements;
     return this.http.get<Account[]>(`${this.baseUrl}/accounts`, { params });
+  }
+
+  getAccountsByParentCode(parentCode: string) {
+    return this.http.get<Account[]>(`${this.baseUrl}/accounts/${parentCode}/subaccounts`);
   }
 
   getAccountStatistics() {
@@ -187,7 +317,58 @@ export class AccountingService {
     return this.http.delete(`${this.baseUrl}/accounts/${id}`);
   }
 
-  // Cost Centers
+  // ── Vouchers (Comprobantes) ──
+
+  getVouchers(filters?: VoucherFilters) {
+    const params: any = {};
+    if (filters?.status) params.status = filters.status;
+    if (filters?.type) params.type = filters.type;
+    if (filters?.fromDate) params.fromDate = filters.fromDate;
+    if (filters?.toDate) params.toDate = filters.toDate;
+    if (filters?.sourceModule) params.sourceModule = filters.sourceModule;
+    if (filters?.search) params.search = filters.search;
+    return this.http.get<Voucher[]>(`${this.baseUrl}/vouchers`, { params });
+  }
+
+  getVoucherStatistics() {
+    return this.http.get<VoucherStatistics>(`${this.baseUrl}/vouchers/statistics`);
+  }
+
+  getVoucher(id: string) {
+    return this.http.get<Voucher>(`${this.baseUrl}/vouchers/${id}`);
+  }
+
+  createVoucher(data: any) {
+    return this.http.post<Voucher>(`${this.baseUrl}/vouchers`, data);
+  }
+
+  updateVoucherStatus(id: string, status: string) {
+    return this.http.put<Voucher>(`${this.baseUrl}/vouchers/${id}/status`, { status });
+  }
+
+  deleteVoucher(id: string) {
+    return this.http.delete(`${this.baseUrl}/vouchers/${id}`);
+  }
+
+  // ── Voucher Lines (Partidas) ──
+
+  getVoucherLines(filters?: VoucherLineFilters) {
+    const params: any = {};
+    if (filters?.accountCode) params.accountCode = filters.accountCode;
+    if (filters?.costCenterId) params.costCenterId = filters.costCenterId;
+    if (filters?.fromDate) params.fromDate = filters.fromDate;
+    if (filters?.toDate) params.toDate = filters.toDate;
+    if (filters?.voucherId) params.voucherId = filters.voucherId;
+    if (filters?.search) params.search = filters.search;
+    return this.http.get<VoucherLineItem[]>(`${this.baseUrl}/voucher-lines`, { params });
+  }
+
+  getVoucherLineStatistics() {
+    return this.http.get<VoucherLineStatistics>(`${this.baseUrl}/voucher-lines/statistics`);
+  }
+
+  // ── Cost Centers ──
+
   getCostCenters(filters?: CostCenterFilters) {
     const params: any = {};
     if (filters?.type) params.type = filters.type;
@@ -210,5 +391,173 @@ export class AccountingService {
 
   deleteCostCenter(id: string) {
     return this.http.delete(`${this.baseUrl}/cost-centers/${id}`);
+  }
+
+  // ── Fiscal Years ──
+
+  getFiscalYears() {
+    return this.http.get<FiscalYear[]>(`${this.baseUrl}/fiscal-years`);
+  }
+
+  getFiscalYear(id: string) {
+    return this.http.get<FiscalYear>(`${this.baseUrl}/fiscal-years/${id}`);
+  }
+
+  createFiscalYear(data: { name: string; startDate: string; endDate: string }) {
+    return this.http.post<FiscalYear>(`${this.baseUrl}/fiscal-years`, data);
+  }
+
+  closeFiscalYear(id: string) {
+    return this.http.patch<FiscalYear>(`${this.baseUrl}/fiscal-years/${id}/close`, {});
+  }
+
+  // ── Accounting Periods ──
+
+  getPeriods(fiscalYearId?: string) {
+    const params: any = {};
+    if (fiscalYearId) params.fiscalYearId = fiscalYearId;
+    return this.http.get<AccountingPeriod[]>(`${this.baseUrl}/periods`, { params });
+  }
+
+  closePeriod(id: string) {
+    return this.http.patch<AccountingPeriod>(`${this.baseUrl}/periods/${id}/close`, {});
+  }
+
+  reopenPeriod(id: string) {
+    return this.http.patch<AccountingPeriod>(`${this.baseUrl}/periods/${id}/reopen`, {});
+  }
+
+  // ── Elements (Agrupación por Tipo) ──
+
+  getElements() {
+    return this.http.get<AccountElement[]>(`${this.baseUrl}/elements`);
+  }
+
+  // ── Reports (Informes Contables) ──
+
+  getTrialBalance(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get<any[]>(`${this.baseUrl}/reports/trial-balance`, { params });
+  }
+
+  getBalanceSheet(asOfDate?: string) {
+    const params: any = {};
+    if (asOfDate) params.asOfDate = asOfDate;
+    return this.http.get<any>(`${this.baseUrl}/reports/balance-sheet`, { params });
+  }
+
+  getIncomeStatement(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get<any>(`${this.baseUrl}/reports/income-statement`, { params });
+  }
+
+  getGeneralLedger(accountCode: string, fromDate?: string, toDate?: string) {
+    const params: any = { accountCode };
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get<any>(`${this.baseUrl}/reports/general-ledger`, { params });
+  }
+
+  getGeneralJournal(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get<any>(`${this.baseUrl}/reports/general-journal`, { params });
+  }
+
+  getCostCenterAnalysis(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get<any[]>(`${this.baseUrl}/reports/cost-center-analysis`, { params });
+  }
+
+  getFinancialKPIs() {
+    return this.http.get<any>(`${this.baseUrl}/kpis`);
+  }
+
+  // ================================
+  // JOURNAL ENTRIES (Partidas Independientes)
+  // ================================
+
+  getJournalEntries(filters?: {
+    status?: string;
+    type?: string;
+    fromDate?: string;
+    toDate?: string;
+    accountCode?: string;
+    search?: string;
+  }) {
+    const params: any = {};
+    if (filters?.status) params.status = filters.status;
+    if (filters?.type) params.type = filters.type;
+    if (filters?.fromDate) params.fromDate = filters.fromDate;
+    if (filters?.toDate) params.toDate = filters.toDate;
+    if (filters?.accountCode) params.accountCode = filters.accountCode;
+    if (filters?.search) params.search = filters.search;
+    return this.http.get<JournalEntry[]>(`${this.baseUrl}/journal-entries`, { params });
+  }
+
+  getJournalEntry(id: string) {
+    return this.http.get<JournalEntry>(`${this.baseUrl}/journal-entries/${id}`);
+  }
+
+  getJournalEntryStatistics() {
+    return this.http.get<any>(`${this.baseUrl}/journal-entries/statistics`);
+  }
+
+  createJournalEntry(data: {
+    date: string;
+    description: string;
+    accountCode: string;
+    debit?: number;
+    credit?: number;
+    lineDescription?: string;
+    costCenterId?: string;
+    reference?: string;
+    type?: string;
+    createdBy?: string;
+  }) {
+    return this.http.post<JournalEntry>(`${this.baseUrl}/journal-entries`, data);
+  }
+
+  updateJournalEntry(id: string, data: {
+    date?: string;
+    description?: string;
+    debit?: number;
+    credit?: number;
+    lineDescription?: string;
+    costCenterId?: string;
+    reference?: string;
+  }) {
+    return this.http.put<JournalEntry>(`${this.baseUrl}/journal-entries/${id}`, data);
+  }
+
+  updateJournalEntryStatus(id: string, status: 'posted' | 'cancelled') {
+    return this.http.patch<JournalEntry>(`${this.baseUrl}/journal-entries/${id}/status`, { status });
+  }
+
+  deleteJournalEntry(id: string) {
+    return this.http.delete(`${this.baseUrl}/journal-entries/${id}`);
+  }
+
+  // ================================
+  // EXPENSE TYPES (Tipos de Partidas)
+  // ================================
+
+  getExpenseTypes() {
+    return this.http.get<ExpenseType[]>(`${this.baseUrl}/expense-types`);
+  }
+
+  seedExpenseTypes() {
+    return this.http.post(`${this.baseUrl}/expense-types/seed`, {});
+  }
+
+  createExpenseType(data: { code: string; name: string; description?: string }) {
+    return this.http.post<ExpenseType>(`${this.baseUrl}/expense-types`, data);
   }
 }

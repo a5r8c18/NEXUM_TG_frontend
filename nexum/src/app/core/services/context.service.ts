@@ -82,6 +82,21 @@ export class ContextService {
     this.persistToStorage(STORAGE_KEYS.WAREHOUSE, warehouse);
   }
 
+  // Dynamic company switching
+  switchCompany(company: Company): void {
+    // Clear warehouse when switching companies
+    this.setCurrentWarehouse(null);
+    // Set new company
+    this.setCurrentCompany(company);
+  }
+
+  // Get available companies for current user
+  getAvailableCompanies(): Company[] {
+    // This would typically come from user data or API
+    // For now, return empty array - should be populated from AuthService
+    return [];
+  }
+
   // Métodos de utilidad
   hasActiveTenant(): boolean {
     return this.currentTenantSignal() !== null;

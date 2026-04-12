@@ -118,6 +118,10 @@ export const routes: Routes = [
         path: 'accounting/cost-centers',
         loadComponent: () => import('./modules/accounting/submodules/cost-centers/cost-centers.component').then(m => m.CostCentersComponent)
       },
+      {
+        path: 'accounting/fiscal-years',
+        loadComponent: () => import('./modules/accounting/submodules/fiscal-years/fiscal-years.component').then(m => m.FiscalYearsComponent)
+      },
       // HR Module
       {
         path: 'hr/employees',

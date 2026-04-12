@@ -18,7 +18,8 @@ export interface NexumUser {
   tenantType: 'MULTI_COMPANY' | 'SINGLE_COMPANY';
   avatarUrl?: string;
   currentCompanyId?: number;
-  companyId?: number; // ✅ Añadir companyId para compatibilidad con backend
+  companyId?: number; // For compatibility
+  companies?: any[]; // Available companies for multi-company users
 }
 
 @Injectable({
@@ -202,7 +203,28 @@ export class AuthService {
   }
 
   isMultiCompany(): boolean {
-    return this.currentUser()?.tenantType === 'MULTI_COMPANY';
+    const user = this.currentUser();
+    return user?.tenantType === 'MULTI_COMPANY' || false;
+  }
+
+  async getUserCompanies(): Promise<any[]> {
+    try {
+      const user = this.currentUser();
+      if (!user) return [];
+
+      // If user has companies in user object, return them
+      if (user.companies && user.companies.length > 0) {
+        return user.companies;
+      }
+
+      // Otherwise fetch from API
+      return await firstValueFrom(
+        this.http.get<any[]>(`${this.apiUrl}/users/${user.id}/companies`)
+      );
+    } catch (error) {
+      console.error('Error fetching user companies:', error);
+      return [];
+    }
   }
 
   isSingleCompany(): boolean {

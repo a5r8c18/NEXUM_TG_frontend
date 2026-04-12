@@ -1,7 +1,7 @@
 <div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
   <!-- Toast -->
   @if (toast()) {
-    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+    <div class="fixed top-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
          [class.bg-green-50]="toast()!.type === 'success'"
          [class.text-green-800]="toast()!.type === 'success'"
          [class.border-green-200]="toast()!.type === 'success'"
@@ -243,73 +243,121 @@
               </span>
             </div>
 
-            <!-- Acciones -->
+            <!-- Acciones (solo para level 3+) -->
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <!-- Crear subcuenta (dropdown) -->
-              @if (canHaveSubaccounts(group)) {
-                <div class="relative subaccount-dropdown">
-                  <button (click)="toggleSubaccountActions(group.code, $event)"
-                          class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
-                          title="Gestionar subcuentas">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                    </svg>
-                  </button>
-                  @if (showSubaccountActions() === group.code) {
-                    <div class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-10">
-                      <div class="py-1">
-                        <button (click)="openSubaccountModal(group); toggleSubaccountActions(group.code, $event)"
-                                class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2">
-                          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                          </svg>
-                          Crear Subcuenta
-                        </button>
-                        @if (hasSubaccounts(group)) {
-                          <div class="px-3 py-2 text-xs text-slate-500 border-t border-slate-100">
-                            {{ getSubaccounts(group).length }} subcuenta(s) existente(s)
-                          </div>
-                        }
+              @if (group.level >= 3) {
+                <!-- Crear subcuenta (dropdown) -->
+                @if (canHaveSubaccounts(group)) {
+                  <div class="relative subaccount-dropdown">
+                    <button (click)="toggleSubaccountActions(group.code, $event)"
+                            class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                            title="Gestionar {{ getChildTypeLabel(group).toLowerCase() }}s">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                      </svg>
+                    </button>
+                    @if (showSubaccountActions() === group.code) {
+                      <div class="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-slate-200 z-10 max-h-96 overflow-y-auto">
+                        <div class="py-1">
+                          <!-- Botón crear nuevo hijo -->
+                          <button (click)="openSubaccountModal(group); toggleSubaccountActions(group.code, $event)"
+                                  class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2 border-b border-slate-100">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Crear {{ getChildTypeLabel(group) }}
+                          </button>
+                          
+                          @if (hasSubaccounts(group)) {
+                            <div class="border-t border-slate-100 mt-1">
+                              <div class="px-3 py-2 text-xs font-medium text-slate-500 bg-slate-50">
+                                {{ getChildTypeLabel(group) }}s existentes ({{ getSubaccounts(group).length }})
+                              </div>
+                              @for (subaccount of getSubaccounts(group); track subaccount.id) {
+                                <div class="px-3 py-2 hover:bg-slate-50 group">
+                                  <div class="flex items-center justify-between gap-2">
+                                    <div class="flex-1 min-w-0">
+                                      <div class="text-sm font-medium text-slate-700 truncate">{{ subaccount.code }}</div>
+                                      <div class="text-xs text-slate-500 truncate">{{ subaccount.name }}</div>
+                                    </div>
+                                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button (click)="openViewModal(subaccount); toggleSubaccountActions(group.code, $event)"
+                                              class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                              title="Ver">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                      </button>
+                                      <button (click)="openEditModal(subaccount); toggleSubaccountActions(group.code, $event)"
+                                              class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                                              title="Editar">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                      </button>
+                                      <button (click)="deleteAccount(subaccount); toggleSubaccountActions(group.code, $event)"
+                                              class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                              title="Eliminar">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          } @else {
+                            <div class="px-3 py-3 text-xs text-slate-400 text-center border-t border-slate-100">
+                              No hay {{ getChildTypeLabel(group).toLowerCase() }}s creados
+                            </div>
+                          }
+                        </div>
                       </div>
-                    </div>
-                  }
-                </div>
+                    }
+                  </div>
+                }
+                
+                <button (click)="openEditModal(group); $event.stopPropagation()"
+                        class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                        title="Editar">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button (click)="toggleActive(group); $event.stopPropagation()"
+                        class="p-1 rounded-lg transition-colors"
+                        [class.text-orange-600]="group.isActive"
+                        [class.hover:bg-orange-50]="group.isActive"
+                        [class.text-green-600]="!group.isActive"
+                        [class.hover:bg-green-50]="!group.isActive"
+                        [title]="group.isActive ? 'Desactivar' : 'Activar'">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    @if (group.isActive) {
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    } @else {
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    }
+                  </svg>
+                </button>
+                <button (click)="deleteAccount(group); $event.stopPropagation()"
+                        class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Eliminar">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
               }
-              
-              <button (click)="openEditModal(group); $event.stopPropagation()"
-                      class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                      title="Editar">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-              </button>
-              <button (click)="toggleActive(group); $event.stopPropagation()"
-                      class="p-1 rounded-lg transition-colors"
-                      [class.text-orange-600]="group.isActive"
-                      [class.hover:bg-orange-50]="group.isActive"
-                      [class.text-green-600]="!group.isActive"
-                      [class.hover:bg-green-50]="!group.isActive"
-                      [title]="group.isActive ? 'Desactivar' : 'Activar'">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  @if (group.isActive) {
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                  } @else {
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  }
-                </svg>
-              </button>
-              <button (click)="deleteAccount(group); $event.stopPropagation()"
-                      class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                      title="Eliminar">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-              </button>
             </div>
           </div>
 
@@ -335,69 +383,117 @@
                     </div>
 
                     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      @if (canHaveSubaccounts(child)) {
-                        <div class="relative subaccount-dropdown">
-                          <button (click)="toggleSubaccountActions(child.code, $event)"
-                                  class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
-                                  title="Gestionar subcuentas">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                            </svg>
-                          </button>
-                          @if (showSubaccountActions() === child.code) {
-                            <div class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-10">
-                              <div class="py-1">
-                                <button (click)="openSubaccountModal(child); toggleSubaccountActions(child.code, $event)"
-                                        class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2">
-                                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                  </svg>
-                                  Crear Subcuenta
-                                </button>
-                                @if (hasSubaccounts(child)) {
-                                  <div class="px-3 py-2 text-xs text-slate-500 border-t border-slate-100">
-                                    {{ getSubaccounts(child).length }} subcuenta(s) existente(s)
-                                  </div>
-                                }
+                      @if (child.level >= 3) {
+                        @if (canHaveSubaccounts(child)) {
+                          <div class="relative subaccount-dropdown">
+                            <button (click)="toggleSubaccountActions(child.code, $event)"
+                                    class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                    title="Gestionar {{ getChildTypeLabel(child).toLowerCase() }}s">
+                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                              </svg>
+                            </button>
+                            @if (showSubaccountActions() === child.code) {
+                              <div class="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-slate-200 z-10 max-h-96 overflow-y-auto">
+                                <div class="py-1">
+                                  <!-- Botón crear nuevo hijo -->
+                                  <button (click)="openSubaccountModal(child); toggleSubaccountActions(child.code, $event)"
+                                          class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2 border-b border-slate-100">
+                                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Crear {{ getChildTypeLabel(child) }}
+                                  </button>
+                                  
+                                  @if (hasSubaccounts(child)) {
+                                    <div class="border-t border-slate-100 mt-1">
+                                      <div class="px-3 py-2 text-xs font-medium text-slate-500 bg-slate-50">
+                                        {{ getChildTypeLabel(child) }}s existentes ({{ getSubaccounts(child).length }})
+                                      </div>
+                                      @for (subaccount of getSubaccounts(child); track subaccount.id) {
+                                        <div class="px-3 py-2 hover:bg-slate-50 group">
+                                          <div class="flex items-center justify-between gap-2">
+                                            <div class="flex-1 min-w-0">
+                                              <div class="text-sm font-medium text-slate-700 truncate">{{ subaccount.code }}</div>
+                                              <div class="text-xs text-slate-500 truncate">{{ subaccount.name }}</div>
+                                            </div>
+                                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <button (click)="openViewModal(subaccount); toggleSubaccountActions(child.code, $event)"
+                                                      class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                                      title="Ver">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                </svg>
+                                              </button>
+                                              <button (click)="openEditModal(subaccount); toggleSubaccountActions(child.code, $event)"
+                                                      class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                                                      title="Editar">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                              </button>
+                                              <button (click)="deleteAccount(subaccount); toggleSubaccountActions(child.code, $event)"
+                                                      class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                                      title="Eliminar">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      }
+                                    </div>
+                                  } @else {
+                                    <div class="px-3 py-3 text-xs text-slate-400 text-center border-t border-slate-100">
+                                      No hay {{ getChildTypeLabel(child).toLowerCase() }}s creados
+                                    </div>
+                                  }
+                                </div>
                               </div>
-                            </div>
-                          }
-                        </div>
+                            }
+                          </div>
+                        }
+                        <button (click)="openEditModal(child); $event.stopPropagation()"
+                                class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                                title="Editar">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                          </svg>
+                        </button>
+                        <button (click)="toggleActive(child); $event.stopPropagation()"
+                                class="p-1 rounded-lg transition-colors"
+                                [class.text-orange-600]="child.isActive"
+                                [class.hover:bg-orange-50]="child.isActive"
+                                [class.text-green-600]="!child.isActive"
+                                [class.hover:bg-green-50]="!child.isActive"
+                                [title]="child.isActive ? 'Desactivar' : 'Activar'">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            @if (child.isActive) {
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                            } @else {
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            }
+                          </svg>
+                        </button>
+                        <button (click)="deleteAccount(child); $event.stopPropagation()"
+                                class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                title="Eliminar">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                          </svg>
+                        </button>
                       }
-                      <button (click)="openEditModal(child); $event.stopPropagation()"
-                              class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                              title="Editar">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                      </button>
-                      <button (click)="toggleActive(child); $event.stopPropagation()"
-                              class="p-1 rounded-lg transition-colors"
-                              [class.text-orange-600]="child.isActive"
-                              [class.hover:bg-orange-50]="child.isActive"
-                              [class.text-green-600]="!child.isActive"
-                              [class.hover:bg-green-50]="!child.isActive"
-                              [title]="child.isActive ? 'Desactivar' : 'Activar'">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          @if (child.isActive) {
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                          } @else {
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                          }
-                        </svg>
-                      </button>
-                      <button (click)="deleteAccount(child); $event.stopPropagation()"
-                              class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                              title="Eliminar">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                      </button>
                     </div>
                   </div>
 
@@ -427,25 +523,71 @@
                                 <div class="relative subaccount-dropdown">
                                   <button (click)="toggleSubaccountActions(grandchild.code, $event)"
                                           class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
-                                          title="Gestionar subcuentas">
+                                          title="Gestionar {{ getChildTypeLabel(grandchild).toLowerCase() }}s">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                                     </svg>
                                   </button>
                                   @if (showSubaccountActions() === grandchild.code) {
-                                    <div class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-10">
+                                    <div class="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-slate-200 z-10 max-h-96 overflow-y-auto">
                                       <div class="py-1">
+                                        <!-- Botón crear nuevo hijo (según nivel) -->
                                         <button (click)="openSubaccountModal(grandchild); toggleSubaccountActions(grandchild.code, $event)"
-                                                class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2">
+                                                class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2 border-b border-slate-100">
                                           <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                           </svg>
-                                          Crear Subcuenta
+                                          Crear {{ getChildTypeLabel(grandchild) }}
                                         </button>
+                                        
                                         @if (hasSubaccounts(grandchild)) {
-                                          <div class="px-3 py-2 text-xs text-slate-500 border-t border-slate-100">
-                                            {{ getSubaccounts(grandchild).length }} subcuenta(s) existente(s)
+                                          <div class="border-t border-slate-100 mt-1">
+                                            <div class="px-3 py-2 text-xs font-medium text-slate-500 bg-slate-50">
+                                              {{ getChildTypeLabel(grandchild) }}s existentes ({{ getSubaccounts(grandchild).length }})
+                                            </div>
+                                            @for (subaccount of getSubaccounts(grandchild); track subaccount.id) {
+                                              <div class="px-3 py-2 hover:bg-slate-50 group">
+                                                <div class="flex items-center justify-between gap-2">
+                                                  <div class="flex-1 min-w-0">
+                                                    <div class="text-sm font-medium text-slate-700 truncate">{{ subaccount.code }}</div>
+                                                    <div class="text-xs text-slate-500 truncate">{{ subaccount.name }}</div>
+                                                  </div>
+                                                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button (click)="openViewModal(subaccount); toggleSubaccountActions(grandchild.code, $event)"
+                                                            class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                                            title="Ver">
+                                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                      </svg>
+                                                    </button>
+                                                    <button (click)="openEditModal(subaccount); toggleSubaccountActions(grandchild.code, $event)"
+                                                            class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                                                            title="Editar">
+                                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                      </svg>
+                                                    </button>
+                                                    <button (click)="deleteAccount(subaccount); toggleSubaccountActions(grandchild.code, $event)"
+                                                            class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                                            title="Eliminar">
+                                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                      </svg>
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            }
+                                          </div>
+                                        } @else {
+                                          <div class="px-3 py-3 text-xs text-slate-400 text-center border-t border-slate-100">
+                                            No hay {{ getChildTypeLabel(grandchild).toLowerCase() }}s creados
                                           </div>
                                         }
                                       </div>
@@ -514,7 +656,6 @@
               <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Naturaleza</th>
               <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Nivel</th>
               <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Movimientos</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Subcuentas</th>
               <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Estado</th>
               <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
             </tr>
@@ -575,17 +716,6 @@
                   }
                 </td>
                 <td class="px-5 py-3 text-center">
-                  <div class="flex items-center justify-center gap-1">
-                    @if (hasSubaccounts(account)) {
-                      <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                        {{ getSubaccounts(account).length }} subcuentas
-                      </span>
-                    } @else {
-                      <span class="text-slate-400 text-xs">Sin subcuentas</span>
-                    }
-                  </div>
-                </td>
-                <td class="px-5 py-3 text-center">
                   @if (account.isActive) {
                     <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">Activa</span>
                   } @else {
@@ -594,30 +724,76 @@
                 </td>
                 <td class="px-5 py-3">
                   <div class="flex justify-center gap-1">
-                    <!-- Subaccount button -->
+                    <!-- Subaccount button (solo para cuentas level 3+) -->
                     @if (canHaveSubaccounts(account)) {
                       <div class="relative subaccount-dropdown">
                         <button (click)="toggleSubaccountActions(account.code, $event)"
                                 class="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                                title="Gestionar Subcuentas">
+                                title="Gestionar {{ getChildTypeLabel(account).toLowerCase() }}s">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                           </svg>
                         </button>
                         @if (showSubaccountActions() === account.code) {
-                          <div class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-10">
+                          <div class="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-slate-200 z-10 max-h-96 overflow-y-auto">
                             <div class="py-1">
+                              <!-- Botón crear nuevo hijo -->
                               <button (click)="openSubaccountModal(account); toggleSubaccountActions(account.code, $event)"
-                                      class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2">
+                                      class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2 border-b border-slate-100">
                                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
-                                Crear Subcuenta
+                                Crear {{ getChildTypeLabel(account) }}
                               </button>
+                              
                               @if (hasSubaccounts(account)) {
-                                <div class="px-3 py-2 text-xs text-slate-500 border-t border-slate-100">
-                                  {{ getSubaccounts(account).length }} subcuenta(s) existente(s)
+                                <div class="border-t border-slate-100 mt-1">
+                                  <div class="px-3 py-2 text-xs font-medium text-slate-500 bg-slate-50">
+                                    {{ getChildTypeLabel(account) }}s existentes ({{ getSubaccounts(account).length }})
+                                  </div>
+                                  @for (subaccount of getSubaccounts(account); track subaccount.id) {
+                                    <div class="px-3 py-2 hover:bg-slate-50 group">
+                                      <div class="flex items-center justify-between gap-2">
+                                        <div class="flex-1 min-w-0">
+                                          <div class="text-sm font-medium text-slate-700 truncate">{{ subaccount.code }}</div>
+                                          <div class="text-xs text-slate-500 truncate">{{ subaccount.name }}</div>
+                                        </div>
+                                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button (click)="openViewModal(subaccount); toggleSubaccountActions(account.code, $event)"
+                                                  class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                                  title="Ver">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                          </button>
+                                          <button (click)="openEditModal(subaccount); toggleSubaccountActions(account.code, $event)"
+                                                  class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                                                  title="Editar">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                          </button>
+                                          <button (click)="deleteAccount(subaccount); toggleSubaccountActions(account.code, $event)"
+                                                  class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                                  title="Eliminar">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  }
+                                </div>
+                              } @else {
+                                <div class="px-3 py-3 text-xs text-slate-400 text-center border-t border-slate-100">
+                                  No hay {{ getChildTypeLabel(account).toLowerCase() }}s creados
                                 </div>
                               }
                             </div>
@@ -625,46 +801,49 @@
                         }
                       </div>
                     }
-                    <button (click)="openEditModal(account)"
-                            class="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Editar">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                    </button>
-                    <button (click)="toggleActive(account)"
-                            class="p-1.5 rounded-lg transition-colors"
-                            [class.text-orange-600]="account.isActive"
-                            [class.hover:bg-orange-50]="account.isActive"
-                            [class.text-green-600]="!account.isActive"
-                            [class.hover:bg-green-50]="!account.isActive"
-                            [title]="account.isActive ? 'Desactivar' : 'Activar'">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        @if (account.isActive) {
+                    <!-- Editar y Eliminar solo para level 3+ (cuentas y subcuentas) -->
+                    @if (account.level >= 3) {
+                      <button (click)="openEditModal(account)"
+                              class="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Editar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                        } @else {
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                      </button>
+                      <button (click)="toggleActive(account)"
+                              class="p-1.5 rounded-lg transition-colors"
+                              [class.text-orange-600]="account.isActive"
+                              [class.hover:bg-orange-50]="account.isActive"
+                              [class.text-green-600]="!account.isActive"
+                              [class.hover:bg-green-50]="!account.isActive"
+                              [title]="account.isActive ? 'Desactivar' : 'Activar'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          @if (account.isActive) {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                          } @else {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          }
+                        </svg>
+                      </button>
+                      <button (click)="deleteAccount(account)"
+                              class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Eliminar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        }
-                      </svg>
-                    </button>
-                    <button (click)="deleteAccount(account)"
-                            class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Eliminar">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                      </svg>
-                    </button>
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    }
                   </div>
                 </td>
               </tr>
             }
             @empty {
               <tr>
-                <td colspan="9" class="px-5 py-16 text-center">
+                <td colspan="8" class="px-5 py-16 text-center">
                   <div class="flex flex-col items-center gap-2 text-slate-400">
                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -712,11 +891,6 @@
               @if (accountForm.get('code')?.touched && accountForm.get('code')?.invalid) {
                 <p class="text-xs text-red-500">Código requerido (solo dígitos)</p>
               }
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs font-medium text-slate-600">Nivel</label>
-              <input type="number" [formControl]="$any(accountForm.get('level'))" min="1" max="9"
-                     class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm focus:outline-none" readonly/>
             </div>
           </div>
 
@@ -821,11 +995,6 @@
               <input type="text" [formControl]="$any(accountForm.get('code'))" readonly
                      class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none"/>
             </div>
-            <div class="space-y-1">
-              <label class="text-xs font-medium text-slate-600">Nivel</label>
-              <input type="number" [formControl]="$any(accountForm.get('level'))" min="1" max="9"
-                     class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm focus:outline-none" readonly/>
-            </div>
           </div>
 
           <div class="space-y-1">
@@ -910,6 +1079,100 @@
     </div>
   }
 
+  <!-- VIEW MODAL -->
+  @if (showViewModal() && selectedAccount()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto mx-4">
+        <div class="flex items-center justify-between p-5 border-b border-slate-200">
+          <h3 class="text-lg font-semibold text-slate-800">Ver {{ getAccountTypeLabel(selectedAccount()!) }}</h3>
+          <button (click)="closeModals()"
+                  class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Código</label>
+              <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm font-mono text-slate-700">
+                {{ selectedAccount()!.code }}
+              </div>
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Nombre</label>
+              <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-700">
+                {{ selectedAccount()!.name }}
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-slate-600">Descripción</label>
+            <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-700">
+              {{ selectedAccount()!.description || 'Sin descripción' }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Tipo</label>
+              <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-700">
+                {{ typeLabels[selectedAccount()!.type] }}
+              </div>
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Naturaleza</label>
+              <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-700">
+                {{ natureLabels[selectedAccount()!.nature] }}
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Nivel</label>
+              <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-700">
+                {{ selectedAccount()!.level }}
+              </div>
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Grupo</label>
+              <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-700">
+                {{ selectedAccount()!.groupNumber || 'N/A' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-slate-600">Cuenta Padre</label>
+            <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-700">
+              {{ selectedAccount()!.parentCode || 'N/A' }}
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-slate-600">Estado</label>
+            <div class="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm">
+              @if (selectedAccount()!.isActive) {
+                <span class="text-green-700">Activa</span>
+              } @else {
+                <span class="text-red-700">Inactiva</span>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end p-5 border-t border-slate-200">
+          <button (click)="closeModals()"
+                  class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- Subaccount Modal -->
   @if (showSubaccountModal()) {
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -917,7 +1180,11 @@
         <div class="p-5 border-b border-slate-200">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-semibold text-slate-900">Crear Subcuenta</h3>
+              <h3 class="text-lg font-semibold text-slate-900">
+                @if (parentAccountForSubaccount()) {
+                  Crear {{ getChildTypeLabel(parentAccountForSubaccount()!) }}
+                }
+              </h3>
               <p class="text-sm text-slate-500 mt-1">
                 @if (parentAccountForSubaccount()) {
                   Bajo: {{ parentAccountForSubaccount()!.code }} - {{ parentAccountForSubaccount()!.name }}
@@ -947,7 +1214,7 @@
             <div class="space-y-1">
               <label class="text-xs font-medium text-slate-600">Nombre *</label>
               <input type="text" [formControl]="$any(accountForm.get('name'))"
-                     placeholder="Nombre de la subcuenta"
+                     placeholder="Nombre del {{ getChildTypeLabel(parentAccountForSubaccount()!).toLowerCase() }}"
                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
               @if (accountForm.get('name')?.invalid && accountForm.get('name')?.touched) {
                 <p class="text-xs text-red-600">Nombre requerido (mín. 2 caracteres)</p>
@@ -963,12 +1230,6 @@
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <label class="text-xs font-medium text-slate-600">Nivel</label>
-              <input type="number" [formControl]="$any(accountForm.get('level'))"
-                     readonly
-                     class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-600"/>
-            </div>
             <div class="space-y-1">
               <label class="text-xs font-medium text-slate-600">Cuenta Padre</label>
               <input type="text" [formControl]="$any(accountForm.get('parentCode'))"
@@ -1006,7 +1267,9 @@
                 Creando...
               </span>
             } @else {
-              Crear Subcuenta
+              @if (parentAccountForSubaccount()) {
+                Crear {{ getChildTypeLabel(parentAccountForSubaccount()!) }}
+              }
             }
           </button>
         </div>

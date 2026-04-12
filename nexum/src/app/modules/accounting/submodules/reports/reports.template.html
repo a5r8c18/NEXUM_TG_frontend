@@ -1,4 +1,4 @@
-<div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+<div class="p-6 bg-linear-to-br from-slate-50 to-slate-100 min-h-screen space-y-6">
   <!-- Toast -->
   @if (toast()) {
     <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
@@ -16,154 +16,296 @@
   }
 
   <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
+  <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="p-2 bg-indigo-100 rounded-xl">
         <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 17v1a1 1 0 001-1h4a1 1 0 001-1v-4a1 1 0 00-1-1H5a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001 1v1m0 0h6m-6-2h6m2 2H7m6 2H5a2 2 0 01-2-2V9a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h2a2 2 0 012-2v8a2 2 0 01-2 2z"/>
+                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
       </div>
       <div>
         <h2 class="text-xl font-semibold text-slate-800">Informes Contables</h2>
-        <p class="text-xs text-slate-500">Generación y gestión de informes financieros</p>
+        <p class="text-xs text-slate-500">Generación de informes financieros</p>
       </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <button (click)="openGenerateModal()"
-         class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        Generar Informe
-      </button>
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4 mb-6">
-    <div class="flex flex-wrap gap-3 items-end">
-      <div class="min-w-[200px] space-y-1">
-        <label class="text-xs font-medium text-slate-600">Tipo de Informe</label>
-        <select [value]="reportType()" (change)="reportType.set($any($event.target).value); applyFilters()"
-                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-          <option value="">Todos</option>
-          @for (type of reportTypes; track type.value) {
-            <option [value]="type.value">{{ type.label }}</option>
+  <!-- Report Type Tabs -->
+  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50">
+    <div class="flex border-b border-slate-200">
+      <button (click)="activeTab.set('trial-balance')"
+              class="flex-1 px-6 py-4 text-sm font-medium text-center transition-colors relative"
+              [class.text-indigo-600]="activeTab() === 'trial-balance'"
+              [class.text-slate-500]="activeTab() !== 'trial-balance'">
+        <div class="flex flex-col items-center gap-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+          </svg>
+          Comprobación de Saldos
+        </div>
+        @if (activeTab() === 'trial-balance') {
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>
+        }
+      </button>
+      <button (click)="activeTab.set('balance-sheet')"
+              class="flex-1 px-6 py-4 text-sm font-medium text-center transition-colors relative"
+              [class.text-indigo-600]="activeTab() === 'balance-sheet'"
+              [class.text-slate-500]="activeTab() !== 'balance-sheet'">
+        <div class="flex flex-col items-center gap-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+          </svg>
+          Estado de Situación
+        </div>
+        @if (activeTab() === 'balance-sheet') {
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>
+        }
+      </button>
+      <button (click)="activeTab.set('income-statement')"
+              class="flex-1 px-6 py-4 text-sm font-medium text-center transition-colors relative"
+              [class.text-indigo-600]="activeTab() === 'income-statement'"
+              [class.text-slate-500]="activeTab() !== 'income-statement'">
+        <div class="flex flex-col items-center gap-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+          Estado de Rendimiento Financiero
+        </div>
+        @if (activeTab() === 'income-statement') {
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>
+        }
+      </button>
+    </div>
+
+    <!-- Tab Content: Filters -->
+    <div class="p-6">
+      <!-- Comprobación de Saldos Filters -->
+      @if (activeTab() === 'trial-balance') {
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Opciones — Comprobación de Saldos</h3>
+          <div class="flex flex-wrap gap-6">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="includeDraftEntries()" (change)="includeDraftEntries.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Incluir asientos no contabilizados</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="beforeClosing()" (change)="beforeClosing.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Informe antes cierre contable</span>
+            </label>
+          </div>
+          <div class="flex flex-wrap gap-4 pt-2">
+            <div class="min-w-[150px] space-y-1">
+              <label class="text-xs font-medium text-slate-600">Año</label>
+              <select [value]="trialBalanceYear()" (change)="trialBalanceYear.set($any($event.target).value)"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                @for (y of years; track y.value) {
+                  <option [value]="y.value">{{ y.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="min-w-[180px] space-y-1">
+              <label class="text-xs font-medium text-slate-600">Mes</label>
+              <select [value]="trialBalanceMonth()" (change)="trialBalanceMonth.set($any($event.target).value)"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Todo el año</option>
+                @for (m of months; track m.value) {
+                  <option [value]="m.value">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Estado de Situación Filters -->
+      @if (activeTab() === 'balance-sheet') {
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Opciones — Estado de Situación</h3>
+          <div class="flex flex-wrap gap-6">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="includeDraftEntries()" (change)="includeDraftEntries.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Incluir asientos no contabilizados</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="beforeClosing()" (change)="beforeClosing.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Informe antes cierre contable</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="fullReport()" (change)="fullReport.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Informe completo</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="modelo5920()" (change)="modelo5920.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Modelo 5920-04</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="balanceSheetUpToMonth()" (change)="balanceSheetUpToMonth.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Hasta el mes</span>
+            </label>
+          </div>
+          <div class="flex flex-wrap gap-4 pt-2">
+            <div class="min-w-[150px] space-y-1">
+              <label class="text-xs font-medium text-slate-600">Año</label>
+              <select [value]="balanceSheetYear()" (change)="balanceSheetYear.set($any($event.target).value)"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                @for (y of years; track y.value) {
+                  <option [value]="y.value">{{ y.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="min-w-[180px] space-y-1">
+              <label class="text-xs font-medium text-slate-600">Mes</label>
+              <select [value]="balanceSheetMonth()" (change)="balanceSheetMonth.set($any($event.target).value)"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Todo el año</option>
+                @for (m of months; track m.value) {
+                  <option [value]="m.value">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Estado de Rendimiento Financiero Filters -->
+      @if (activeTab() === 'income-statement') {
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Opciones — Estado de Rendimiento Financiero</h3>
+          <div class="flex flex-wrap gap-6">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="includeDraftEntries()" (change)="includeDraftEntries.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Incluir asientos no contabilizados</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="beforeClosing()" (change)="beforeClosing.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Informe antes cierre contable</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="fullReport()" (change)="fullReport.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Informe completo</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="modelo5921()" (change)="modelo5921.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Modelo 5921-04</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" [checked]="incomeStatementUpToMonth()" (change)="incomeStatementUpToMonth.set($any($event.target).checked)"
+                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"/>
+              <span class="text-sm text-slate-700">Hasta el mes</span>
+            </label>
+          </div>
+          <div class="flex flex-wrap gap-4 pt-2">
+            <div class="min-w-[150px] space-y-1">
+              <label class="text-xs font-medium text-slate-600">Año</label>
+              <select [value]="incomeStatementYear()" (change)="incomeStatementYear.set($any($event.target).value)"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                @for (y of years; track y.value) {
+                  <option [value]="y.value">{{ y.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="min-w-[180px] space-y-1">
+              <label class="text-xs font-medium text-slate-600">Mes</label>
+              <select [value]="incomeStatementMonth()" (change)="incomeStatementMonth.set($any($event.target).value)"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Todo el año</option>
+                @for (m of months; track m.value) {
+                  <option [value]="m.value">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Generate Button -->
+      <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
+        <button (click)="generateReport()"
+                [disabled]="isLoading()"
+                class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+          @if (isLoading()) {
+            <div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+          } @else {
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
           }
-        </select>
+          Generar Informe
+        </button>
       </div>
-      <div class="min-w-[150px] space-y-1">
-        <label class="text-xs font-medium text-slate-600">Desde</label>
-        <input type="date"
-               [value]="dateFrom()"
-               (change)="dateFrom.set($any($event.target).value); applyFilters()"
-               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"/>
-      </div>
-      <div class="min-w-[150px] space-y-1">
-        <label class="text-xs font-medium text-slate-600">Hasta</label>
-        <input type="date"
-               [value]="dateTo()"
-               (change)="dateTo.set($any($event.target).value); applyFilters()"
-               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"/>
-      </div>
-      <div class="min-w-[200px] space-y-1">
-        <label class="text-xs font-medium text-slate-600">Cuenta</label>
-        <input type="text"
-               [value]="accountCode()"
-               (input)="accountCode.set($any($event.target).value); applyFilters()"
-               placeholder="Código de cuenta"
-               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"/>
-      </div>
-      <button (click)="resetFilters()"
-              class="px-3 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-        Limpiar
-      </button>
-    </div>
-    <div class="mt-2 text-xs text-slate-500">
-      {{ filteredReports().length }} informe(s) encontrado(s)
     </div>
   </div>
 
-  <!-- Reports List -->
-  <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full">
-        <thead class="bg-slate-50 border-b border-slate-200">
-          <tr>
-            <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Tipo</th>
-            <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Título</th>
-            <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
-            <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Generado por</th>
-            <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Tamaño</th>
-            <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200">
-          @for (report of filteredReports(); track report.id) {
-            <tr class="hover:bg-slate-50/50 transition-colors">
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-2">
-                  <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+  <!-- Generated Reports List -->
+  @if (reports().length > 0) {
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200">
+        <h3 class="text-sm font-semibold text-slate-700">Informes Generados</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Tipo</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Título</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
+              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (report of reports(); track report.id) {
+              <tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-5 py-3">
+                  <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full" [class]="getReportTypeColor(report.type)">
                     {{ getReportTypeLabel(report.type) }}
                   </span>
-                </div>
-              </td>
-              <td class="px-5 py-3">
-                <div class="text-sm font-medium text-slate-700">{{ report.title }}</div>
-                @if (report.description) {
-                  <div class="text-xs text-slate-500 mt-0.5">{{ report.description }}</div>
-                }
-              </td>
-              <td class="px-5 py-3">
-                <span class="text-sm text-slate-600">{{ formatDate(report.date) }}</span>
-              </td>
-              <td class="px-5 py-3">
-                <span class="text-sm text-slate-600">{{ report.generatedBy }}</span>
-                <div class="text-xs text-slate-500">{{ formatDate(report.generatedAt) }}</div>
-              </td>
-              <td class="px-5 py-3">
-                <span class="text-sm font-medium text-slate-600">{{ report.fileSize }}</span>
-              </td>
-              <td class="px-5 py-3">
-                <div class="flex justify-center gap-1">
-                  <button (click)="downloadReport(report)"
-                          class="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Descargar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 10v6m0 0l-3 3m3 3l-3-3m-9-1h6m6 0v6m0 0h6m-6-6h6"/>
-                    </svg>
-                  </button>
-                  <button (click)="deleteReport(report)"
-                          class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          }
-          @empty {
-            <tr>
-              <td colspan="7" class="px-5 py-16 text-center">
-                <div class="flex flex-col items-center gap-2 text-slate-400">
-                  <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M9 17v1a1 1 0 001-1h4a1 1 0 001-1v-4a1 1 0 00-1-1H5a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001 1v1m0 0h6m-6-2h6m2 2H7m6 2H5a2 2 0 01-2-2V9a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h2a2 2 0 012-2v8a2 2 0 01-2 2z"/>
-                  </svg>
-                  <p class="text-sm font-medium">No hay informes generados</p>
-                  <p class="text-xs">Genera tu primer informe contable</p>
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="text-sm font-medium text-slate-700">{{ report.title }}</div>
+                  @if (report.description) {
+                    <div class="text-xs text-slate-500 mt-0.5">{{ report.description }}</div>
+                  }
+                </td>
+                <td class="px-5 py-3">
+                  <span class="text-sm text-slate-600">{{ formatDate(report.generatedAt) }}</span>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="flex justify-center gap-1">
+                    <button (click)="downloadReport(report)"
+                            class="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Descargar">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                      </svg>
+                    </button>
+                    <button (click)="deleteReport(report)"
+                            class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-
+  }
 </div>

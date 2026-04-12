@@ -19,7 +19,7 @@
 
   <!-- Stats Overview -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    @for (card of cards; track card.title) {
+    @for (card of cards(); track card.title) {
       <div class="bg-white/80 backdrop-blur-sm p-5 rounded-xl border border-slate-200/50 hover:shadow-lg transition-all duration-300 hover:border-slate-300/50">
         <div class="flex items-center justify-between mb-3">
           <div class="w-10 h-10 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center">

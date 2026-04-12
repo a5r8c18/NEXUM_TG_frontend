@@ -38,6 +38,7 @@ export class AccountsComponent implements OnInit {
   showCreateModal = signal(false);
   showEditModal = signal(false);
   showSubaccountModal = signal(false);
+  showViewModal = signal(false);
   selectedAccount = signal<Account | null>(null);
   parentAccountForSubaccount = signal<Account | null>(null);
 
@@ -90,6 +91,39 @@ export class AccountsComponent implements OnInit {
     return this.sortHierarchically(filtered);
   });
 
+  // Cuentas para vista de tabla (solo level 3+)
+  tableAccounts = computed(() => {
+    let filtered = this.accounts();
+    const term = this.searchTerm().toLowerCase();
+    if (term) {
+      filtered = filtered.filter(
+        (a) =>
+          a.name.toLowerCase().includes(term) ||
+          a.code.toLowerCase().includes(term) ||
+          (a.description && a.description.toLowerCase().includes(term))
+      );
+    }
+    if (this.typeFilter()) {
+      filtered = filtered.filter((a) => a.type === this.typeFilter());
+    }
+    if (this.natureFilter()) {
+      filtered = filtered.filter((a) => a.nature === this.natureFilter());
+    }
+    if (this.levelFilter()) {
+      filtered = filtered.filter((a) => a.level === parseInt(this.levelFilter()));
+    }
+    if (this.activeOnly()) {
+      filtered = filtered.filter((a) => a.isActive);
+    }
+    
+    // En vista de tabla, solo mostrar cuentas (level 3) y subcuentas (level 4+)
+    // Excluir grupos (level 1) y subgrupos (level 2)
+    filtered = filtered.filter((a) => a.level >= 3);
+    
+    // Ordenar por código (sin jerarquía)
+    return filtered.sort((a, b) => a.code.localeCompare(b.code));
+  });
+
   sortHierarchically(accounts: Account[]): Account[] {
     // Crear mapa de hijos por padre
     const childrenMap = new Map<string, Account[]>();
@@ -132,7 +166,9 @@ export class AccountsComponent implements OnInit {
   }
 
   pagedAccounts = computed(() => {
-    const filtered = this.filteredAccounts();
+    // En vista de tabla, usar tableAccounts (solo level 3+)
+    // En vista de árbol, usar filteredAccounts (toda la jerarquía)
+    const filtered = this.viewMode() === 'table' ? this.tableAccounts() : this.filteredAccounts();
     const start = (this.currentPage() - 1) * this.pageSize;
     return filtered.slice(start, start + this.pageSize);
   });
@@ -189,7 +225,7 @@ export class AccountsComponent implements OnInit {
 
   constructor() {
     this.accountForm = this.fb.group({
-      code: ['', [Validators.required, Validators.pattern(/^\d{1,10}$/)]],
+      code: ['', [Validators.required, Validators.pattern(/^[\d.]{1,20}$/)]],
       name: ['', [Validators.required, Validators.minLength(2)]],
       description: [''],
       type: ['asset', Validators.required],
@@ -317,9 +353,16 @@ export class AccountsComponent implements OnInit {
     this.showEditModal.set(true);
   }
 
+  openViewModal(account: Account) {
+    this.selectedAccount.set(account);
+    this.showViewModal.set(true);
+  }
+
   closeModals() {
     this.showCreateModal.set(false);
     this.showEditModal.set(false);
+    this.showSubaccountModal.set(false);
+    this.showViewModal.set(false);
     this.showSubaccountModal.set(false);
     this.selectedAccount.set(null);
     this.parentAccountForSubaccount.set(null);
@@ -335,16 +378,19 @@ export class AccountsComponent implements OnInit {
     if (!data.groupNumber && data.code) {
       data.groupNumber = data.code.charAt(0);
     }
+    // Calcular nivel automáticamente basándose en el código
+    data.level = this.calculateLevelFromCode(data.code);
     this.isLoading.set(true);
     this.accountingService.createAccount(data).subscribe({
       next: () => {
-        this.showToast('Cuenta creada exitosamente', 'success');
+        const accountType = data.level === 1 ? 'Grupo' : data.level === 2 ? 'Subgrupo' : data.level === 3 ? 'Cuenta' : 'Subcuenta';
+        this.showToast(`${accountType} creado exitosamente`, 'success');
         this.closeModals();
         this.loadAccounts();
         this.loadStatistics();
       },
       error: (err) => {
-        this.showToast(err.error?.message || 'Error al crear la cuenta', 'error');
+        this.showToast(err.error?.message || 'Error al crear', 'error');
         this.isLoading.set(false);
       },
     });
@@ -362,29 +408,32 @@ export class AccountsComponent implements OnInit {
     this.isLoading.set(true);
     this.accountingService.updateAccount(account.id, data).subscribe({
       next: () => {
-        this.showToast('Cuenta actualizada exitosamente', 'success');
+        const accountType = this.getAccountTypeLabel(account);
+        this.showToast(`${accountType} actualizada exitosamente`, 'success');
         this.closeModals();
         this.loadAccounts();
         this.loadStatistics();
       },
       error: (err) => {
-        this.showToast(err.error?.message || 'Error al actualizar la cuenta', 'error');
+        const accountType = this.getAccountTypeLabel(account);
+        this.showToast(err.error?.message || `Error al actualizar ${accountType.toLowerCase()}`, 'error');
         this.isLoading.set(false);
       },
     });
   }
 
   deleteAccount(account: Account) {
-    // Validar si tiene subcuentas
+    // Validar si tiene hijos
     const hasChildren = this.accounts().some(a => a.parentCode === account.code);
     if (hasChildren) {
-      this.showToast('No se puede eliminar una cuenta que tiene subcuentas. Elimine primero las subcuentas.', 'error');
+      this.showToast(`No se puede eliminar ${this.getAccountTypeLabel(account).toLowerCase()} que tiene ${this.getChildTypeLabel(account).toLowerCase()}s. Elimine primero los ${this.getChildTypeLabel(account).toLowerCase()}s.`, 'error');
       return;
     }
-    if (!confirm(`¿Eliminar la cuenta ${account.code} - ${account.name}?`)) return;
+    if (!confirm(`¿Eliminar ${this.getAccountTypeLabel(account).toLowerCase()} ${account.code} - ${account.name}?`)) return;
     this.accountingService.deleteAccount(account.id).subscribe({
       next: () => {
-        this.showToast('Cuenta eliminada', 'success');
+        const accountType = this.getAccountTypeLabel(account);
+        this.showToast(`${accountType} eliminada`, 'success');
         this.loadAccounts();
         this.loadStatistics();
       },
@@ -399,8 +448,9 @@ export class AccountsComponent implements OnInit {
       .updateAccount(account.id, { isActive: !account.isActive } as any)
       .subscribe({
         next: () => {
+          const accountType = this.getAccountTypeLabel(account);
           this.showToast(
-            account.isActive ? 'Cuenta desactivada' : 'Cuenta activada',
+            account.isActive ? `${accountType} desactivada` : `${accountType} activada`,
             'success'
           );
           this.loadAccounts();
@@ -428,6 +478,10 @@ export class AccountsComponent implements OnInit {
       '8': 'asset',
       '9': 'asset',
     };
+    if (typeMap[firstDigit]) {
+      this.accountForm.patchValue({ type: typeMap[firstDigit] });
+    }
+
     const natureMap: Record<string, string> = {
       '1': 'deudora',
       '2': 'acreedora',
@@ -547,25 +601,24 @@ export class AccountsComponent implements OnInit {
     if (!parent) return;
 
     if (!data.code.startsWith(parent.code)) {
-      this.showToast('El código de subcuenta debe comenzar con el código de la cuenta padre', 'error');
+      this.showToast(`El código de ${this.getChildTypeLabel(parent).toLowerCase()} debe comenzar con el código de ${this.getChildTypeLabel(parent).toLowerCase()} padre`, 'error');
       return;
     }
-    if (data.level <= parent.level) {
-      this.showToast('El nivel de subcuenta debe ser mayor que el nivel de la cuenta padre', 'error');
-      return;
-    }
+
+    // Calcular nivel automáticamente basándose en el código
+    data.level = this.calculateLevelFromCode(data.code);
 
     this.isLoading.set(true);
     this.accountingService.createAccount(data).subscribe({
       next: () => {
-        this.showToast(`Subcuenta creada bajo ${parent.name}`, 'success');
+        this.showToast(`${this.getChildTypeLabel(parent)} creada bajo ${parent.name}`, 'success');
         this.closeModals();
         this.loadAccounts();
         this.loadStatistics();
         this.toggleNode(parent.code);
       },
       error: (err) => {
-        this.showToast(err.error?.message || 'Error al crear subcuenta', 'error');
+        this.showToast(err.error?.message || `Error al crear ${this.getChildTypeLabel(parent).toLowerCase()}`, 'error');
         this.isLoading.set(false);
       },
     });
@@ -580,7 +633,68 @@ export class AccountsComponent implements OnInit {
   }
 
   canHaveSubaccounts(account: Account): boolean {
-    return account.level < 9 && account.isActive;
+    // Jerarquía: Grupo (1) → Subgrupo (2) → Cuenta (3) → Subcuenta (4+)
+    // Grupos (level 1) y Subgrupos (level 2) NO pueden tener hijos (son fijos)
+    // Solo Cuentas (level 3) pueden tener subcuentas (level 4+)
+    // Subcuentas (level 4+) pueden tener más subcuentas
+    return account.level >= 3 && account.level < 9 && account.isActive;
+  }
+
+  getChildTypeLabel(account: Account): string {
+    // Solo cuentas (level 3) pueden tener subcuentas
+    if (account.level >= 3) return 'Subcuenta';
+    return '';
+  }
+
+  getAccountTypeLabel(account: Account): string {
+    if (account.level === 1) return 'Grupo';
+    if (account.level === 2) return 'Subgrupo';
+    if (account.level === 3) return 'Cuenta';
+    return 'Subcuenta';
+  }
+
+  getChildLevel(account: Account): number {
+    return account.level + 1;
+  }
+
+  calculateLevelFromCode(code: string): number {
+    // Calcular nivel basándose en el código según el nomenclador cubano 2016
+    // 10 = nivel 1 (grupo)
+    // 10.1 = nivel 2 (subgrupo)
+    // 101 = nivel 3 (cuenta)
+    // 101.1 = nivel 4 (subcuenta)
+    // 101.2.3 = nivel 5 (sub-subcuenta)
+    
+    // Si el código está vacío, retornar 1 por defecto
+    if (!code) return 1;
+    
+    const dotCount = (code.match(/\./g) || []).length;
+    
+    // Si no tiene puntos
+    if (dotCount === 0) {
+      if (code.length <= 2) return 1; // 10, 20, etc. son grupos (nivel 1)
+      if (code.length === 3) return 3; // 101, 102, etc. son cuentas (nivel 3)
+      return 1; // Por defecto
+    }
+    
+    // Si tiene puntos, obtener la parte antes del primer punto
+    const firstPart = code.split('.')[0];
+    
+    // Si la parte antes del primer punto tiene 2 dígitos (ej: 10.1)
+    if (firstPart.length === 2) {
+      return 2; // 10.1, 10.2, etc. son subgrupos (nivel 2)
+    }
+    
+    // Si la parte antes del primer punto tiene 3 o más dígitos (ej: 101.1, 101.2.3)
+    if (firstPart.length >= 3) {
+      // Verificar si el código termina con un punto (el usuario está escribiendo)
+      if (code.endsWith('.')) {
+        return firstPart.length + 1; // 101. → nivel 4
+      }
+      return firstPart.length + dotCount; // 101.1 → nivel 4, 101.2.3 → nivel 5
+    }
+    
+    return 1; // Por defecto
   }
 
   toggleSubaccountActions(accountCode: string, event?: Event) {

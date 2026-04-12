@@ -1,8 +1,8 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AccountingService, JournalEntryComprobante } from '../../../../core/services/accounting.service';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
+import { AccountingService, JournalEntry, Account, ExpenseType } from '../../../../core/services/accounting.service';
 
 @Component({
   selector: 'app-partidas',
@@ -15,9 +15,13 @@ export class PartidasComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   // Signals
-  partidas = signal<JournalEntryComprobante[]>([]);
+  partidas = signal<JournalEntry[]>([]);
+  accounts = signal<Account[]>([]);
+  subaccounts = signal<Account[]>([]);
+  expenseTypes = signal<ExpenseType[]>([]);
   isLoading = signal(false);
   hasError = signal(false);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   currentPage = signal(1);
   pageSize = 10;
   searchTerm = signal('');
@@ -27,16 +31,20 @@ export class PartidasComponent implements OnInit {
 
   // Form for filters
   filterForm: FormGroup;
+  partidaForm: FormGroup;
+  showModal = signal(false);
+  editingPartida = signal<JournalEntry | null>(null);
+  isSaving = signal(false);
 
   // Computed properties
   filteredPartidas = computed(() => {
     let filtered = this.partidas();
-    
+
     // Search filter
     const term = this.searchTerm().toLowerCase();
     if (term) {
-      filtered = filtered.filter(partida => 
-        partida.description.toLowerCase().includes(term) ||
+      filtered = filtered.filter(partida =>
+        (partida.description || '').toLowerCase().includes(term) ||
         partida.accountName.toLowerCase().includes(term) ||
         partida.accountCode.toLowerCase().includes(term)
       );
@@ -45,14 +53,6 @@ export class PartidasComponent implements OnInit {
     // Account filter
     if (this.accountFilter()) {
       filtered = filtered.filter(partida => partida.accountCode === this.accountFilter());
-    }
-
-    // Date filters
-    if (this.dateFromFilter()) {
-      filtered = filtered.filter(partida => partida.createdAt >= this.dateFromFilter());
-    }
-    if (this.dateToFilter()) {
-      filtered = filtered.filter(partida => partida.createdAt <= this.dateToFilter());
     }
 
     return filtered;
@@ -74,8 +74,8 @@ export class PartidasComponent implements OnInit {
   // Statistics
   statistics = computed(() => {
     const partidas = this.partidas();
-    const totalDebit = partidas.reduce((sum, partida) => sum + partida.debitAmount, 0);
-    const totalCredit = partidas.reduce((sum, partida) => sum + partida.creditAmount, 0);
+    const totalDebit = partidas.reduce((sum, p) => sum + Number(p.debit), 0);
+    const totalCredit = partidas.reduce((sum, p) => sum + Number(p.credit), 0);
     const balance = totalDebit - totalCredit;
 
     return {
@@ -83,13 +83,16 @@ export class PartidasComponent implements OnInit {
       totalDebit,
       totalCredit,
       balance,
-      isBalanced: Math.abs(balance) < 0.01
+      isBalanced: Math.abs(balance) < 0.01,
+      posted: partidas.filter(p => p.status === 'posted').length,
+      draft: partidas.filter(p => p.status === 'draft').length,
+      cancelled: partidas.filter(p => p.status === 'cancelled').length
     };
   });
 
   // Unique accounts for filter
   uniqueAccounts = computed(() => {
-    const accounts = new Map();
+    const accounts = new Map<string, string>();
     this.partidas().forEach(partida => {
       if (!accounts.has(partida.accountCode)) {
         accounts.set(partida.accountCode, partida.accountName);
@@ -106,6 +109,13 @@ export class PartidasComponent implements OnInit {
       dateTo: ['']
     });
 
+    this.partidaForm = this.fb.group({
+      accountCode: ['', Validators.required],
+      subaccountCode: [''],
+      entryNumber: ['', Validators.required],
+      description: ['']
+    });
+
     // Watch form changes
     this.filterForm.valueChanges.subscribe(values => {
       this.searchTerm.set(values.search || '');
@@ -114,74 +124,179 @@ export class PartidasComponent implements OnInit {
       this.dateToFilter.set(values.dateTo || '');
       this.currentPage.set(1);
     });
+
+    // Watch account changes to load subaccounts
+    this.partidaForm.get('accountCode')?.valueChanges.subscribe(accountCode => {
+      if (accountCode) {
+        this.loadSubaccounts(accountCode);
+        this.partidaForm.get('subaccountCode')?.setValue('');
+      } else {
+        this.subaccounts.set([]);
+        this.partidaForm.get('subaccountCode')?.setValue('');
+      }
+    });
+  }
+
+  closeModal() {
+    this.showModal.set(false);
+    this.editingPartida.set(null);
+  }
+
+  savePartida() {
+    if (this.partidaForm.invalid) {
+      this.showToast('Complete todos los campos requeridos', 'error');
+      return;
+    }
+
+    const val = this.partidaForm.value;
+    
+    const payload = {
+      date: new Date().toISOString().split('T')[0],
+      description: val.entryNumber,
+      accountCode: val.accountCode,
+      subaccountCode: val.subaccountCode || undefined,
+      entryNumber: val.entryNumber,
+      lineDescription: val.description || undefined,
+      type: 'manual'
+    };
+
+    this.isSaving.set(true);
+    
+    if (this.editingPartida()) {
+      this.accountingService.updateJournalEntry(this.editingPartida()!.id, payload).subscribe({
+        next: () => {
+          this.showToast('Partida actualizada correctamente', 'success');
+          this.closeModal();
+          this.loadPartidas();
+          this.isSaving.set(false);
+        },
+        error: (err) => {
+          this.showToast(err.error?.message || 'Error al actualizar partida', 'error');
+          this.isSaving.set(false);
+        },
+      });
+    } else {
+      this.accountingService.createJournalEntry(payload).subscribe({
+        next: () => {
+          this.showToast('Partida creada correctamente', 'success');
+          this.closeModal();
+          this.loadPartidas();
+          this.isSaving.set(false);
+        },
+        error: (err) => {
+          this.showToast(err.error?.message || 'Error al crear partida', 'error');
+          this.isSaving.set(false);
+        },
+      });
+    }
+  }
+
+  postPartida(partida: JournalEntry) {
+    this.accountingService.updateJournalEntryStatus(partida.id, 'posted').subscribe({
+      next: () => {
+        this.showToast('Partida contabilizada correctamente', 'success');
+        this.loadPartidas();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al contabilizar', 'error');
+      },
+    });
+  }
+
+  cancelPartida(partida: JournalEntry) {
+    if (!confirm(`¿Anular la partida ${partida.entryNumber}?`)) return;
+
+    this.accountingService.updateJournalEntryStatus(partida.id, 'cancelled').subscribe({
+      next: () => {
+        this.showToast('Partida anulada correctamente', 'success');
+        this.loadPartidas();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al anular', 'error');
+      },
+    });
+  }
+
+  getTypeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      'manual': 'Manual',
+      'adjustment': 'Ajuste',
+      'opening': 'Apertura',
+      'closing': 'Cierre',
+      'correction': 'Corrección'
+    };
+    return labels[type] || type;
+  }
+
+  getStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      'draft': 'bg-gray-100 text-gray-800',
+      'posted': 'bg-green-100 text-green-800',
+      'cancelled': 'bg-red-100 text-red-800'
+    };
+    return classes[status] || 'bg-gray-100 text-gray-800';
+  }
+
+  getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      'draft': 'Borrador',
+      'posted': 'Contabilizado',
+      'cancelled': 'Anulado'
+    };
+    return labels[status] || status;
   }
 
   ngOnInit() {
     this.loadPartidas();
+    this.loadAccounts();
+    this.loadExpenseTypes();
+  }
+
+  loadAccounts() {
+    this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
+      next: (data) => this.accounts.set(data),
+      error: () => {},
+    });
+  }
+
+  loadSubaccounts(parentCode: string) {
+    this.accountingService.getAccountsByParentCode(parentCode).subscribe({
+      next: (data) => this.subaccounts.set(data),
+      error: () => this.subaccounts.set([]),
+    });
+  }
+
+  loadExpenseTypes() {
+    this.accountingService.getExpenseTypes().subscribe({
+      next: (data) => this.expenseTypes.set(data),
+      error: () => {},
+    });
+  }
+
+  getExpenseTypeName(code: string): string {
+    const expType = this.expenseTypes().find(et => et.code === code);
+    return expType?.name || '';
   }
 
   loadPartidas() {
     this.isLoading.set(true);
     this.hasError.set(false);
-    
-    // TODO: Implement getPartidas method in AccountingService
-    // this.accountingService.getPartidas().subscribe({
-    //   next: (data) => {
-    //     this.partidas.set(data);
-    //     this.isLoading.set(false);
-    //   },
-    //   error: () => {
-    //     this.hasError.set(true);
-    //     this.isLoading.set(false);
-    //   }
-    // });
-    
-    // Mock data for now
-    setTimeout(() => {
-      this.partidas.set([
-        {
-          id: '1',
-          voucherId: '1',
-          accountCode: '101',
-          accountName: 'Caja',
-          debitAmount: 1500.00,
-          creditAmount: 0,
-          description: 'Venta de mercancías',
-          createdAt: '2024-01-15'
-        },
-        {
-          id: '2',
-          voucherId: '1',
-          accountCode: '401',
-          accountName: 'Ventas',
-          debitAmount: 0,
-          creditAmount: 1500.00,
-          description: 'Venta de mercancías',
-          createdAt: '2024-01-15'
-        },
-        {
-          id: '3',
-          voucherId: '2',
-          accountCode: '201',
-          accountName: 'Proveedores',
-          debitAmount: 0,
-          creditAmount: 800.00,
-          description: 'Compra de insumos',
-          createdAt: '2024-01-16'
-        },
-        {
-          id: '4',
-          voucherId: '2',
-          accountCode: '601',
-          accountName: 'Compras',
-          debitAmount: 800.00,
-          creditAmount: 0,
-          description: 'Compra de insumos',
-          createdAt: '2024-01-16'
-        }
-      ]);
-      this.isLoading.set(false);
-    }, 100);
+
+    const filters: any = {};
+    if (this.dateFromFilter()) filters.fromDate = this.dateFromFilter();
+    if (this.dateToFilter()) filters.toDate = this.dateToFilter();
+    if (this.accountFilter()) filters.accountCode = this.accountFilter();
+
+    this.accountingService.getJournalEntries(filters).subscribe({
+      next: (data) => {
+        this.partidas.set(data);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.hasError.set(true);
+        this.isLoading.set(false);
+      },
+    });
   }
 
   onPageChange(page: number) {
@@ -194,20 +309,53 @@ export class PartidasComponent implements OnInit {
   }
 
   createPartida() {
-    // TODO: Implement create partida modal
-    console.log('Create partida clicked');
+    this.editingPartida.set(null);
+    this.partidaForm.reset({
+      accountCode: '',
+      subaccountCode: '',
+      entryNumber: '',
+      description: ''
+    });
+    this.subaccounts.set([]);
+    this.showModal.set(true);
   }
 
-  editPartida(partida: JournalEntryComprobante) {
-    // TODO: Implement edit partida modal
-    console.log('Edit partida:', partida);
-  }
-
-  deletePartida(partida: JournalEntryComprobante) {
-    if (!confirm(`¿Eliminar la partida ${partida.accountCode} - ${partida.accountName}?`)) return;
+  editPartida(partida: JournalEntry) {
+    if (partida.status !== 'draft') {
+      this.showToast('Solo se pueden editar partidas en borrador', 'error');
+      return;
+    }
+    this.editingPartida.set(partida);
+    this.partidaForm.patchValue({
+      accountCode: partida.accountCode,
+      subaccountCode: partida.subaccountCode || '',
+      entryNumber: partida.entryNumber,
+      description: partida.lineDescription || ''
+    });
     
-    // TODO: Implement deletePartida method
-    console.log('Delete partida:', partida);
+    // Load subaccounts if account has them
+    if (partida.accountCode) {
+      this.loadSubaccounts(partida.accountCode);
+    }
+    this.showModal.set(true);
+  }
+
+  deletePartida(partida: JournalEntry) {
+    if (partida.status !== 'draft') {
+      this.showToast('Solo se pueden eliminar partidas en borrador', 'error');
+      return;
+    }
+    if (!confirm(`¿Eliminar la partida ${partida.entryNumber}?`)) return;
+
+    this.accountingService.deleteJournalEntry(partida.id).subscribe({
+      next: () => {
+        this.showToast('Partida eliminada correctamente', 'success');
+        this.loadPartidas();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al eliminar partida', 'error');
+      },
+    });
   }
 
   formatDate(date: string): string {
@@ -224,5 +372,10 @@ export class PartidasComponent implements OnInit {
   // Helper methods for template
   abs(value: number): number {
     return Math.abs(value);
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info') {
+    this.toast.set({ message, type });
+    setTimeout(() => this.toast.set(null), 3000);
   }
 }

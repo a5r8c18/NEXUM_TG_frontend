@@ -14,6 +14,12 @@ export const companySelectedGuard: CanActivateFn = (route, state) => {
     return false;
   }
 
+  // Superadmin no necesita empresa seleccionada (gestiona la plataforma)
+  const currentUser = authService.currentUser();
+  if (currentUser?.role === 'superadmin') {
+    return true;
+  }
+
   // Obtener el tenant del usuario actual
   const userTenant = authService.getCurrentUserTenant();
   
