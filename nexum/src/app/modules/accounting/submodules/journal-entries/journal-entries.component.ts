@@ -158,7 +158,11 @@ export class JournalEntriesComponent implements OnInit {
 
   loadAccounts() {
     this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
-      next: (data) => this.accounts.set(data),
+      next: (data) => {
+        // Filtrar solo cuentas de nivel 3 (Cuentas), excluir subcuentas (level 4+)
+        const accountsOnly = data.filter(acc => acc.level === 3);
+        this.accounts.set(accountsOnly);
+      },
       error: () => {},
     });
   }

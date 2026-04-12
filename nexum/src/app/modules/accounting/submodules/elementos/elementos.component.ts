@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AccountingService, JournalEntry, Account, ExpenseType } from '../../../../core/services/accounting.service';
+import { AccountingService, Elemento, Account, ExpenseType } from '../../../../core/services/accounting.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -15,7 +15,7 @@ export class ElementosComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   // Signals
-  elementos = signal<JournalEntry[]>([]);
+  elementos = signal<Elemento[]>([]);
   accounts = signal<Account[]>([]);
   subaccounts = signal<Account[]>([]);
   expenseTypes = signal<ExpenseType[]>([]);
@@ -29,7 +29,7 @@ export class ElementosComponent implements OnInit {
 
   // Modal
   showModal = signal(false);
-  editingElemento = signal<JournalEntry | null>(null);
+  editingElemento = signal<Elemento | null>(null);
   isSaving = signal(false);
 
   // Forms
@@ -131,7 +131,7 @@ export class ElementosComponent implements OnInit {
     this.isLoading.set(true);
     this.hasError.set(false);
 
-    this.accountingService.getJournalEntries({}).subscribe({
+    this.accountingService.getElementos({}).subscribe({
       next: (data) => {
         this.elementos.set(data);
         this.isLoading.set(false);
@@ -145,7 +145,11 @@ export class ElementosComponent implements OnInit {
 
   loadAccounts() {
     this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
-      next: (data) => this.accounts.set(data),
+      next: (data) => {
+        // Filtrar solo cuentas de nivel 3 (Cuentas) y tipo expense (gastos)
+        const accountsOnly = data.filter(acc => acc.level === 3 && acc.type === 'expense');
+        this.accounts.set(accountsOnly);
+      },
       error: () => {},
     });
   }
@@ -201,7 +205,7 @@ export class ElementosComponent implements OnInit {
     this.showModal.set(true);
   }
 
-  editElemento(el: JournalEntry) {
+  editElemento(el: Elemento) {
     if (el.status !== 'draft') {
       this.showToast('Solo se pueden editar elementos en borrador', 'error');
       return;
@@ -246,7 +250,7 @@ export class ElementosComponent implements OnInit {
     this.isSaving.set(true);
 
     if (this.editingElemento()) {
-      this.accountingService.updateJournalEntry(this.editingElemento()!.id, payload).subscribe({
+      this.accountingService.updateElemento(this.editingElemento()!.id, payload).subscribe({
         next: () => {
           this.showToast('Elemento actualizado correctamente', 'success');
           this.closeModal();
@@ -259,7 +263,7 @@ export class ElementosComponent implements OnInit {
         },
       });
     } else {
-      this.accountingService.createJournalEntry(payload).subscribe({
+      this.accountingService.createElemento(payload).subscribe({
         next: () => {
           this.showToast('Elemento creado correctamente', 'success');
           this.closeModal();
@@ -274,14 +278,14 @@ export class ElementosComponent implements OnInit {
     }
   }
 
-  deleteElemento(el: JournalEntry) {
+  deleteElemento(el: Elemento) {
     if (el.status !== 'draft') {
       this.showToast('Solo se pueden eliminar elementos en borrador', 'error');
       return;
     }
     if (!confirm(`¿Eliminar el elemento "${el.element}"?`)) return;
 
-    this.accountingService.deleteJournalEntry(el.id).subscribe({
+    this.accountingService.deleteElemento(el.id).subscribe({
       next: () => {
         this.showToast('Elemento eliminado correctamente', 'success');
         this.loadElementos();

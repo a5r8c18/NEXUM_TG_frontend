@@ -1,8 +1,8 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AccountingService, Partida, Account, ExpenseType } from '../../../../core/services/accounting.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
-import { AccountingService, JournalEntry, Account, ExpenseType } from '../../../../core/services/accounting.service';
 
 @Component({
   selector: 'app-partidas',
@@ -15,7 +15,7 @@ export class PartidasComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   // Signals
-  partidas = signal<JournalEntry[]>([]);
+  partidas = signal<Partida[]>([]);
   accounts = signal<Account[]>([]);
   subaccounts = signal<Account[]>([]);
   expenseTypes = signal<ExpenseType[]>([]);
@@ -33,7 +33,7 @@ export class PartidasComponent implements OnInit {
   filterForm: FormGroup;
   partidaForm: FormGroup;
   showModal = signal(false);
-  editingPartida = signal<JournalEntry | null>(null);
+  editingPartida = signal<Partida | null>(null);
   isSaving = signal(false);
 
   // Computed properties
@@ -149,7 +149,7 @@ export class PartidasComponent implements OnInit {
     }
 
     const val = this.partidaForm.value;
-    
+
     const payload = {
       date: new Date().toISOString().split('T')[0],
       description: val.entryNumber,
@@ -161,9 +161,9 @@ export class PartidasComponent implements OnInit {
     };
 
     this.isSaving.set(true);
-    
+
     if (this.editingPartida()) {
-      this.accountingService.updateJournalEntry(this.editingPartida()!.id, payload).subscribe({
+      this.accountingService.updatePartida(this.editingPartida()!.id, payload).subscribe({
         next: () => {
           this.showToast('Partida actualizada correctamente', 'success');
           this.closeModal();
@@ -176,7 +176,7 @@ export class PartidasComponent implements OnInit {
         },
       });
     } else {
-      this.accountingService.createJournalEntry(payload).subscribe({
+      this.accountingService.createPartida(payload).subscribe({
         next: () => {
           this.showToast('Partida creada correctamente', 'success');
           this.closeModal();
@@ -191,8 +191,12 @@ export class PartidasComponent implements OnInit {
     }
   }
 
-  postPartida(partida: JournalEntry) {
-    this.accountingService.updateJournalEntryStatus(partida.id, 'posted').subscribe({
+  postPartida(partida: Partida) {
+    if (partida.status !== 'draft') {
+      this.showToast('Solo se pueden contabilizar partidas en borrador', 'error');
+      return;
+    }
+    this.accountingService.updatePartidaStatus(partida.id, 'posted').subscribe({
       next: () => {
         this.showToast('Partida contabilizada correctamente', 'success');
         this.loadPartidas();
@@ -203,10 +207,32 @@ export class PartidasComponent implements OnInit {
     });
   }
 
-  cancelPartida(partida: JournalEntry) {
-    if (!confirm(`¿Anular la partida ${partida.entryNumber}?`)) return;
+  deletePartida(partida: Partida) {
+    if (partida.status !== 'draft') {
+      this.showToast('Solo se pueden eliminar partidas en borrador', 'error');
+      return;
+    }
+    if (!confirm(`¿Eliminar la partida "${partida.entryNumber}"?`)) return;
 
-    this.accountingService.updateJournalEntryStatus(partida.id, 'cancelled').subscribe({
+    this.accountingService.deletePartida(partida.id).subscribe({
+      next: () => {
+        this.showToast('Partida eliminada correctamente', 'success');
+        this.loadPartidas();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al eliminar partida', 'error');
+      },
+    });
+  }
+
+  cancelPartida(partida: Partida) {
+    if (partida.status !== 'draft') {
+      this.showToast('Solo se pueden anular partidas en borrador', 'error');
+      return;
+    }
+    if (!confirm(`¿Anular la partida "${partida.entryNumber}"?`)) return;
+
+    this.accountingService.updatePartidaStatus(partida.id, 'cancelled').subscribe({
       next: () => {
         this.showToast('Partida anulada correctamente', 'success');
         this.loadPartidas();
@@ -254,7 +280,11 @@ export class PartidasComponent implements OnInit {
 
   loadAccounts() {
     this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
-      next: (data) => this.accounts.set(data),
+      next: (data) => {
+        // Filtrar solo cuentas de nivel 3 (Cuentas) y tipo expense (gastos)
+        const accountsOnly = data.filter(acc => acc.level === 3 && acc.type === 'expense');
+        this.accounts.set(accountsOnly);
+      },
       error: () => {},
     });
   }
@@ -287,7 +317,7 @@ export class PartidasComponent implements OnInit {
     if (this.dateToFilter()) filters.toDate = this.dateToFilter();
     if (this.accountFilter()) filters.accountCode = this.accountFilter();
 
-    this.accountingService.getJournalEntries(filters).subscribe({
+    this.accountingService.getPartidas(filters).subscribe({
       next: (data) => {
         this.partidas.set(data);
         this.isLoading.set(false);
@@ -320,7 +350,7 @@ export class PartidasComponent implements OnInit {
     this.showModal.set(true);
   }
 
-  editPartida(partida: JournalEntry) {
+  editPartida(partida: Partida) {
     if (partida.status !== 'draft') {
       this.showToast('Solo se pueden editar partidas en borrador', 'error');
       return;
@@ -338,24 +368,6 @@ export class PartidasComponent implements OnInit {
       this.loadSubaccounts(partida.accountCode);
     }
     this.showModal.set(true);
-  }
-
-  deletePartida(partida: JournalEntry) {
-    if (partida.status !== 'draft') {
-      this.showToast('Solo se pueden eliminar partidas en borrador', 'error');
-      return;
-    }
-    if (!confirm(`¿Eliminar la partida ${partida.entryNumber}?`)) return;
-
-    this.accountingService.deleteJournalEntry(partida.id).subscribe({
-      next: () => {
-        this.showToast('Partida eliminada correctamente', 'success');
-        this.loadPartidas();
-      },
-      error: (err) => {
-        this.showToast(err.error?.message || 'Error al eliminar partida', 'error');
-      },
-    });
   }
 
   formatDate(date: string): string {

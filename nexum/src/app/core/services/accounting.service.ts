@@ -28,6 +28,56 @@ export interface JournalEntry {
   updatedAt: string;
 }
 
+export interface Partida {
+  id: string;
+  companyId: number;
+  entryNumber: string;
+  date: string;
+  description: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  subaccountCode?: string | null;
+  subaccountName?: string | null;
+  debit: number;
+  credit: number;
+  lineDescription?: string | null;
+  costCenterId?: string | null;
+  costCenter?: CostCenter;
+  reference?: string | null;
+  type: string;
+  status: 'draft' | 'posted' | 'cancelled';
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Elemento {
+  id: string;
+  companyId: number;
+  entryNumber: string;
+  date: string;
+  description: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  subaccountCode?: string | null;
+  subaccountName?: string | null;
+  element: string;
+  elementDescription?: string | null;
+  debit: number;
+  credit: number;
+  lineDescription?: string | null;
+  costCenterId?: string | null;
+  costCenter?: CostCenter;
+  reference?: string | null;
+  type: string;
+  status: 'draft' | 'posted' | 'cancelled';
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Account {
   id: string;
   companyId: number;
@@ -543,6 +593,146 @@ export class AccountingService {
 
   deleteJournalEntry(id: string) {
     return this.http.delete(`${this.baseUrl}/journal-entries/${id}`);
+  }
+
+  // ================================
+  // PARTIDAS (Partidas de Gastos)
+  // ================================
+
+  getPartidas(filters?: {
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+    accountCode?: string;
+    search?: string;
+  }) {
+    const params: any = {};
+    if (filters?.status) params.status = filters.status;
+    if (filters?.fromDate) params.fromDate = filters.fromDate;
+    if (filters?.toDate) params.toDate = filters.toDate;
+    if (filters?.accountCode) params.accountCode = filters.accountCode;
+    if (filters?.search) params.search = filters.search;
+    return this.http.get<Partida[]>(`${this.baseUrl}/partidas`, { params });
+  }
+
+  getPartida(id: string) {
+    return this.http.get<Partida>(`${this.baseUrl}/partidas/${id}`);
+  }
+
+  getPartidaStatistics() {
+    return this.http.get<any>(`${this.baseUrl}/partidas/statistics`);
+  }
+
+  createPartida(data: {
+    date: string;
+    description: string;
+    accountCode: string;
+    subaccountCode?: string;
+    entryNumber?: string;
+    debit?: number;
+    credit?: number;
+    lineDescription?: string;
+    costCenterId?: string;
+    reference?: string;
+    type?: string;
+    createdBy?: string;
+  }) {
+    return this.http.post<Partida>(`${this.baseUrl}/partidas`, data);
+  }
+
+  updatePartida(id: string, data: {
+    date?: string;
+    description?: string;
+    accountCode?: string;
+    subaccountCode?: string;
+    entryNumber?: string;
+    debit?: number;
+    credit?: number;
+    lineDescription?: string;
+    costCenterId?: string;
+    reference?: string;
+  }) {
+    return this.http.put<Partida>(`${this.baseUrl}/partidas/${id}`, data);
+  }
+
+  updatePartidaStatus(id: string, status: 'posted' | 'cancelled') {
+    return this.http.patch<Partida>(`${this.baseUrl}/partidas/${id}/status`, { status });
+  }
+
+  deletePartida(id: string) {
+    return this.http.delete(`${this.baseUrl}/partidas/${id}`);
+  }
+
+  // ================================
+  // ELEMENTOS (Elementos de Gastos)
+  // ================================
+
+  getElementos(filters?: {
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+    accountCode?: string;
+    search?: string;
+  }) {
+    const params: any = {};
+    if (filters?.status) params.status = filters.status;
+    if (filters?.fromDate) params.fromDate = filters.fromDate;
+    if (filters?.toDate) params.toDate = filters.toDate;
+    if (filters?.accountCode) params.accountCode = filters.accountCode;
+    if (filters?.search) params.search = filters.search;
+    return this.http.get<Elemento[]>(`${this.baseUrl}/elementos`, { params });
+  }
+
+  getElemento(id: string) {
+    return this.http.get<Elemento>(`${this.baseUrl}/elementos/${id}`);
+  }
+
+  getElementoStatistics() {
+    return this.http.get<any>(`${this.baseUrl}/elementos/statistics`);
+  }
+
+  createElemento(data: {
+    date: string;
+    description: string;
+    accountCode: string;
+    subaccountCode?: string;
+    entryNumber?: string;
+    element: string;
+    elementDescription?: string;
+    debit?: number;
+    credit?: number;
+    lineDescription?: string;
+    costCenterId?: string;
+    reference?: string;
+    type?: string;
+    createdBy?: string;
+  }) {
+    return this.http.post<Elemento>(`${this.baseUrl}/elementos`, data);
+  }
+
+  updateElemento(id: string, data: {
+    date?: string;
+    description?: string;
+    accountCode?: string;
+    subaccountCode?: string;
+    entryNumber?: string;
+    element?: string;
+    elementDescription?: string;
+    debit?: number;
+    credit?: number;
+    lineDescription?: string;
+    costCenterId?: string;
+    reference?: string;
+  }) {
+    return this.http.put<Elemento>(`${this.baseUrl}/elementos/${id}`, data);
+  }
+
+  updateElementoStatus(id: string, status: 'posted' | 'cancelled') {
+    return this.http.patch<Elemento>(`${this.baseUrl}/elementos/${id}/status`, { status });
+  }
+
+  deleteElemento(id: string) {
+    return this.http.delete(`${this.baseUrl}/elementos/${id}`);
   }
 
   // ================================
