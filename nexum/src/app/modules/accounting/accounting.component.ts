@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { AccountingService, JournalEntry } from '../../core/services/accounting.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-accounting',
@@ -13,6 +14,7 @@ import { AccountingService, JournalEntry } from '../../core/services/accounting.
 })
 export class AccountingComponent implements OnInit {
   private accountingService = inject(AccountingService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   entries = signal<JournalEntry[]>([]);
   isLoading = signal(false);
@@ -92,8 +94,14 @@ export class AccountingComponent implements OnInit {
     });
   }
 
-  deleteEntry(entry: JournalEntry) {
-    if (!confirm(`¿Eliminar asiento ${entry.entryNumber}?`)) return;
+  async deleteEntry(entry: JournalEntry) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar asiento',
+      message: `¿Eliminar asiento ${entry.entryNumber}?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.accountingService.deleteEntry(entry.id).subscribe({
       next: () => { this.showToast('Asiento eliminado', 'success'); this.loadEntries(); },
       error: () => this.showToast('Error al eliminar', 'error')

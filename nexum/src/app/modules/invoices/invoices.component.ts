@@ -5,6 +5,7 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { InvoicesService, Invoice, InvoiceFilters } from '../../core/services/invoices.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { signal, computed } from '@angular/core';
 
 @Component({
@@ -16,6 +17,7 @@ import { signal, computed } from '@angular/core';
 export class InvoicesComponent implements OnInit, OnDestroy {
   private invoicesService = inject(InvoicesService);
   private notificationService = inject(NotificationService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   // Signals
   invoices = signal<Invoice[]>([]);
@@ -118,8 +120,14 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteInvoice(invoice: Invoice) {
-    if (!confirm(`¿Eliminar factura ${invoice.invoiceNumber}?`)) return;
+  async deleteInvoice(invoice: Invoice) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar factura',
+      message: `¿Eliminar factura ${invoice.invoiceNumber}?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
 
     this.invoicesService.deleteInvoice(invoice.id).subscribe({
       next: () => {

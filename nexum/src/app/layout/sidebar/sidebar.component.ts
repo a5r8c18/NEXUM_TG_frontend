@@ -1,8 +1,7 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { SidebarService } from '../../core/services/sidebar.service';
 import { AuthService } from '../../core/services/auth.service';
-import { ContextService } from '../../core/services/context.service';
 
 interface NavItem {
   icon: string;
@@ -22,23 +21,8 @@ interface NavItem {
 export class SidebarComponent {
   private sidebarService = inject(SidebarService);
   private authService = inject(AuthService);
-  private contextService = inject(ContextService);
-  private router = inject(Router);
 
   isCollapsed = this.sidebarService.isCollapsed;
-
-  get companyName(): string {
-    return this.contextService.currentCompany()?.name || '';
-  }
-
-  get companyInitial(): string {
-    const name = this.contextService.currentCompany()?.name;
-    return name ? name.charAt(0).toUpperCase() : 'N';
-  }
-
-  get isMultiCompany(): boolean {
-    return this.authService.isMultiCompany();
-  }
 
   get currentUser() {
     return this.authService.currentUser();
@@ -139,10 +123,6 @@ export class SidebarComponent {
         item.submenu = this.getSettingsSubmenu();
       }
     }
-  }
-
-  switchCompany(): void {
-    this.router.navigate(['/company-selection']);
   }
 
   getSettingsSubmenu(): NavItem[] {

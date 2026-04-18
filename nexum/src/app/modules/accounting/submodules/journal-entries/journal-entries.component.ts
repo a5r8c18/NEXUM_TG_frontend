@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AccountingService, Voucher, Account, ExpenseType, CostCenter, JournalEntry } from '../../../../core/services/accounting.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -13,6 +14,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 export class JournalEntriesComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
 
   // Signals
   comprobantes = signal<Voucher[]>([]);
@@ -374,8 +376,14 @@ export class JournalEntriesComponent implements OnInit {
     });
   }
 
-  deleteComprobante(comprobante: Voucher) {
-    if (!confirm(`¿Eliminar el comprobante ${comprobante.voucherNumber}?`)) return;
+  async deleteComprobante(comprobante: Voucher) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar comprobante',
+      message: `¿Eliminar el comprobante ${comprobante.voucherNumber}?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
 
     this.accountingService.deleteVoucher(comprobante.id).subscribe({
       next: () => {
@@ -400,8 +408,14 @@ export class JournalEntriesComponent implements OnInit {
     });
   }
 
-  cancelComprobante(comprobante: Voucher) {
-    if (!confirm(`¿Anular el comprobante ${comprobante.voucherNumber}?`)) return;
+  async cancelComprobante(comprobante: Voucher) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Anular comprobante',
+      message: `¿Anular el comprobante ${comprobante.voucherNumber}?`,
+      confirmText: 'Anular',
+      type: 'warning'
+    });
+    if (!confirmed) return;
 
     this.accountingService.updateVoucherStatus(comprobante.id, 'cancelled').subscribe({
       next: () => {

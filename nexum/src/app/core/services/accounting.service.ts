@@ -530,6 +530,27 @@ export class AccountingService {
     return this.http.get<any>(`${this.baseUrl}/kpis`);
   }
 
+  // ── Modelos SIEN (5920 / 5921) ──
+
+  exportModelo5920Excel(asOfDate?: string) {
+    const params: any = {};
+    if (asOfDate) params.asOfDate = asOfDate;
+    return this.http.get(`${this.baseUrl}/reports/modelo-5920/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportModelo5921Excel(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get(`${this.baseUrl}/reports/modelo-5921/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
   // ================================
   // JOURNAL ENTRIES (Partidas Independientes)
   // ================================

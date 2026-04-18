@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { MessagesService, Message } from '../../core/services/messages.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-messages',
@@ -12,6 +13,7 @@ import { MessagesService, Message } from '../../core/services/messages.service';
 })
 export class MessagesComponent implements OnInit {
   private messagesService = inject(MessagesService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   messages = signal<Message[]>([]);
   isLoading = signal(false);
@@ -65,8 +67,14 @@ export class MessagesComponent implements OnInit {
 
   backToList() { this.selectedMessage.set(null); }
 
-  deleteMessage(msg: Message) {
-    if (!confirm('¿Eliminar este mensaje?')) return;
+  async deleteMessage(msg: Message) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar mensaje',
+      message: '¿Eliminar este mensaje?',
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.messagesService.remove(msg.id).subscribe({
       next: () => {
         this.showToast('Mensaje eliminado', 'success');

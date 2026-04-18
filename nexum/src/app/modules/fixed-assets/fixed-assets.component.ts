@@ -10,6 +10,7 @@ import {
   DepreciationGroup 
 } from '../../core/services/fixed-assets.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { signal, computed } from '@angular/core';
 
 @Component({
@@ -22,6 +23,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   private fixedAssetsService = inject(FixedAssetsService);
   private notificationService = inject(NotificationService);
   private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
 
   // Signals
   assets = signal<FixedAsset[]>([]);
@@ -182,7 +184,13 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   }
 
   async deleteAsset(asset: FixedAsset) {
-    if (!confirm(`¿Eliminar el activo "${asset.name}"?`)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar activo fijo',
+      message: `¿Eliminar el activo "${asset.name}"?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
 
     try {
       await this.fixedAssetsService.deleteFixedAsset(asset.id).toPromise();

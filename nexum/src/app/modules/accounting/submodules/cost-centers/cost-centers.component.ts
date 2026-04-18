@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AccountingService, CostCenter, CostCenterFilters, CostCenterStatistics } from '../../../../core/services/accounting.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -13,6 +14,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 export class CostCentersComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
 
   costCenters = signal<CostCenter[]>([]);
   statistics = signal<CostCenterStatistics | null>(null);
@@ -200,19 +202,24 @@ export class CostCentersComponent implements OnInit {
     });
   }
 
-  deleteCostCenter(costCenter: CostCenter) {
-    if (confirm(`¿Está seguro de eliminar el centro de costo ${costCenter.name}?`)) {
-      this.accountingService.deleteCostCenter(costCenter.id).subscribe({
-        next: () => {
-          this.showToast('Centro de costo eliminado correctamente', 'success');
-          this.loadCostCenters();
-          this.loadStatistics();
-        },
-        error: () => {
-          this.showToast('Error al eliminar centro de costo', 'error');
-        },
-      });
-    }
+  async deleteCostCenter(costCenter: CostCenter) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar centro de costo',
+      message: `¿Está seguro de eliminar el centro de costo ${costCenter.name}?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
+    this.accountingService.deleteCostCenter(costCenter.id).subscribe({
+      next: () => {
+        this.showToast('Centro de costo eliminado correctamente', 'success');
+        this.loadCostCenters();
+        this.loadStatistics();
+      },
+      error: () => {
+        this.showToast('Error al eliminar centro de costo', 'error');
+      },
+    });
   }
 
   // Filters

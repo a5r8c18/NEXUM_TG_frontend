@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AccountingService, Elemento, Account, ExpenseType } from '../../../../core/services/accounting.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -13,6 +14,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 export class ElementosComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
 
   // Signals
   elementos = signal<Elemento[]>([]);
@@ -278,12 +280,18 @@ export class ElementosComponent implements OnInit {
     }
   }
 
-  deleteElemento(el: Elemento) {
+  async deleteElemento(el: Elemento) {
     if (el.status !== 'draft') {
       this.showToast('Solo se pueden eliminar elementos en borrador', 'error');
       return;
     }
-    if (!confirm(`¿Eliminar el elemento "${el.element}"?`)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar elemento',
+      message: `¿Eliminar el elemento "${el.element}"?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
 
     this.accountingService.deleteElemento(el.id).subscribe({
       next: () => {

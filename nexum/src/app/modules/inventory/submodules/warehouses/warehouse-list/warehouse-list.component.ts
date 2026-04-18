@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { WarehouseService } from '../../../../../core/services/warehouse.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { ContextService } from '../../../../../core/services/context.service';
+import { ConfirmDialogService } from '../../../../../core/services/confirm-dialog.service';
 import { Warehouse, CreateWarehouseRequest } from '../../../../../core/models/warehouse.model';
 import { PaginationComponent, PaginationConfig } from '../../../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
@@ -19,6 +20,7 @@ export class WarehouseListComponent implements OnInit, OnDestroy {
   private warehouseService = inject(WarehouseService);
   private notificationService = inject(NotificationService);
   private contextService = inject(ContextService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   warehouses = signal<Warehouse[]>([]);
   isLoading = signal(false);
@@ -175,8 +177,14 @@ export class WarehouseListComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteWarehouse(warehouse: Warehouse): void {
-    if (!confirm(`¿Está seguro de eliminar el almacén "${warehouse.name}"?`)) return;
+  async deleteWarehouse(warehouse: Warehouse): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar almacén',
+      message: `¿Está seguro de eliminar el almacén "${warehouse.name}"?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.warehouseService.deleteWarehouse(warehouse.id).subscribe({
       next: () => {
         this.showToast('Almacén eliminado exitosamente', 'success');
@@ -186,13 +194,19 @@ export class WarehouseListComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleWarehouseStatus(warehouse: Warehouse): void {
+  async toggleWarehouseStatus(warehouse: Warehouse): Promise<void> {
     const action = warehouse.isActive ? 'deactivateWarehouse' : 'activateWarehouse';
     const message = warehouse.isActive 
       ? '¿Está seguro de desactivar este almacén?' 
       : '¿Está seguro de activar este almacén?';
     
-    if (!confirm(message)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: warehouse.isActive ? 'Desactivar almacén' : 'Activar almacén',
+      message,
+      confirmText: warehouse.isActive ? 'Desactivar' : 'Activar',
+      type: 'warning'
+    });
+    if (!confirmed) return;
     
     this.warehouseService[action](warehouse.id).subscribe({
       next: () => {

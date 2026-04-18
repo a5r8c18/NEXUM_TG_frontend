@@ -220,25 +220,4 @@
       }
     </ul>
   </nav>
-
-  <!-- Company Context (bottom) -->
-  @if (companyName) {
-    <div class="border-t border-slate-700/50 p-4">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shrink-0">
-          <span class="text-xs font-bold text-white">{{ companyInitial }}</span>
-        </div>
-        @if (!isCollapsed()) {
-          <div class="flex-1 min-w-0">
-            <p class="text-xs font-medium text-white truncate">{{ companyName }}</p>
-            @if (isMultiCompany) {
-              <button (click)="switchCompany()" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                Cambiar empresa
-              </button>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  }
 </aside>

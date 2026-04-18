@@ -7,6 +7,7 @@ import { CompanyService } from '../../../core/services/company.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Company, CreateCompanyDto } from '../../../models/company.models';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -20,6 +21,7 @@ export class CompanyListComponent implements OnInit, OnDestroy {
   private companyService = inject(CompanyService);
   private notificationService = inject(NotificationService);
   private authService = inject(AuthService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   companies = signal<Company[]>([]);
   isLoading = signal(false);
@@ -185,8 +187,14 @@ export class CompanyListComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteCompany(company: Company): void {
-    if (!confirm(`¿Está seguro de eliminar la empresa "${company.name}"?`)) return;
+  async deleteCompany(company: Company): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar empresa',
+      message: `¿Está seguro de eliminar la empresa "${company.name}"?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.companyService.deleteCompany(company.id).subscribe({
       next: () => {
         this.showToast('Empresa eliminada exitosamente', 'success');

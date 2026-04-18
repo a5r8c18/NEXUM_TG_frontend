@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AccountingService, Account, AccountFilters, AccountStatistics } from '../../../../core/services/accounting.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -13,6 +14,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 export class AccountsComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
 
   accounts = signal<Account[]>([]);
   statistics = signal<AccountStatistics | null>(null);
@@ -422,14 +424,20 @@ export class AccountsComponent implements OnInit {
     });
   }
 
-  deleteAccount(account: Account) {
+  async deleteAccount(account: Account) {
     // Validar si tiene hijos
     const hasChildren = this.accounts().some(a => a.parentCode === account.code);
     if (hasChildren) {
       this.showToast(`No se puede eliminar ${this.getAccountTypeLabel(account).toLowerCase()} que tiene ${this.getChildTypeLabel(account).toLowerCase()}s. Elimine primero los ${this.getChildTypeLabel(account).toLowerCase()}s.`, 'error');
       return;
     }
-    if (!confirm(`¿Eliminar ${this.getAccountTypeLabel(account).toLowerCase()} ${account.code} - ${account.name}?`)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar cuenta',
+      message: `¿Eliminar ${this.getAccountTypeLabel(account).toLowerCase()} ${account.code} - ${account.name}?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.accountingService.deleteAccount(account.id).subscribe({
       next: () => {
         const accountType = this.getAccountTypeLabel(account);

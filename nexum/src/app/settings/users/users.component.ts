@@ -1,10 +1,11 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { UsersService, User, CreateUserRequest, UpdateUserRequest, UserCompany, AssignCompaniesRequest } from '../../core/services/users.service';
 import { CompanyService } from '../../core/services/company.service';
 import { ContextService } from '../../core/services/context.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -58,13 +59,14 @@ export class UsersComponent implements OnInit {
     return Math.ceil(this.filteredUsers().length / this.itemsPerPage());
   });
 
-  constructor(
-    private usersService: UsersService,
-    private companyService: CompanyService,
-    private contextService: ContextService,
-    private notificationService: NotificationService,
-    private fb: FormBuilder,
-  ) {
+  private usersService = inject(UsersService);
+  private companyService = inject(CompanyService);
+  private contextService = inject(ContextService);
+  private notificationService = inject(NotificationService);
+  private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
+
+  constructor() {
     this.userForm = this.fb.group({
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
@@ -205,21 +207,26 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  deleteUser(user: User) {
-    if (confirm(`¿Está seguro de eliminar al usuario ${user.firstName} ${user.lastName}?`)) {
-      this.loading.set(true);
-      this.usersService.deleteUser(user.id).subscribe({
-        next: () => {
-          this.notificationService.showSuccess('Usuario eliminado exitosamente');
-          this.loadUsers();
-          this.loading.set(false);
-        },
-        error: (error) => {
-          this.notificationService.showError('Error eliminando usuario: ' + error.message);
-          this.loading.set(false);
-        },
-      });
-    }
+  async deleteUser(user: User) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar usuario',
+      message: `¿Está seguro de eliminar al usuario ${user.firstName} ${user.lastName}?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
+    this.loading.set(true);
+    this.usersService.deleteUser(user.id).subscribe({
+      next: () => {
+        this.notificationService.showSuccess('Usuario eliminado exitosamente');
+        this.loadUsers();
+        this.loading.set(false);
+      },
+      error: (error) => {
+        this.notificationService.showError('Error eliminando usuario: ' + error.message);
+        this.loading.set(false);
+      },
+    });
   }
 
   reactivateUser(user: User) {

@@ -1,9 +1,10 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TenantRequestService } from '../../core/services/tenant-request.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { AuthService } from '../../core/services/auth.service';
 import { TenantRequest, TenantType } from '../../core/models/tenant-request.model';
 
@@ -13,9 +14,10 @@ import { TenantRequest, TenantType } from '../../core/models/tenant-request.mode
   imports: [CommonModule, FormsModule],
   templateUrl: './tenant-requests.component.html'
 })
-export class TenantRequestsComponent {
+export class TenantRequestsComponent implements OnInit {
   private tenantRequestService = inject(TenantRequestService);
   private router = inject(Router);
+  private confirmDialog = inject(ConfirmDialogService);
   private authService = inject(AuthService);
 
   requests = signal<TenantRequest[]>([]);
@@ -37,7 +39,10 @@ export class TenantRequestsComponent {
   statusFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'DENIED' = 'ALL';
   typeFilter: 'ALL' | 'MULTI_COMPANY' | 'SINGLE_COMPANY' = 'ALL';
 
-  constructor() {
+  private retryCount = 0;
+  private maxRetries = 2;
+
+  ngOnInit() {
     this.loadRequests();
   }
 
@@ -48,9 +53,15 @@ export class TenantRequestsComponent {
     try {
       const data = await firstValueFrom(this.tenantRequestService.getRequests()) as TenantRequest[];
       this.requests.set(data);
+      this.retryCount = 0;
     } catch (error) {
-      this.hasError.set(true);
       console.error('Error loading requests:', error instanceof Error ? error.message : String(error));
+      if (this.retryCount < this.maxRetries) {
+        this.retryCount++;
+        setTimeout(() => this.loadRequests(), 500 * this.retryCount);
+        return;
+      }
+      this.hasError.set(true);
     } finally {
       this.isLoading.set(false);
     }
@@ -122,12 +133,17 @@ export class TenantRequestsComponent {
         const frontendUrl = 'http://localhost:4200';
         const signupUrl = `${frontendUrl}/signup?token=${result.token}`;
         
-        alert(`✅ Solicitud aprobada exitosamente!
+        await this.confirmDialog.alert({
+          title: 'Solicitud aprobada',
+          message: `✅ Solicitud aprobada exitosamente!
 
 📧 Email: ${result.email}
 🔗 Enlace de registro: ${signupUrl}
 
-El usuario puede usar este enlace para completar su registro.`);
+El usuario puede usar este enlace para completar su registro.`,
+          confirmText: 'Aceptar',
+          type: 'success'
+        });
 
         await this.loadRequests(); // Recargar lista
         this.closeModals();

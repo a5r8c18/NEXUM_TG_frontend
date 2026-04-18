@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { HrService, Employee } from '../../../core/services/hr.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-employees',
@@ -13,6 +14,7 @@ import { HrService, Employee } from '../../../core/services/hr.service';
 })
 export class EmployeesComponent implements OnInit {
   private hrService = inject(HrService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   employees = signal<Employee[]>([]);
   isLoading = signal(false);
@@ -81,8 +83,14 @@ export class EmployeesComponent implements OnInit {
     this.closeCreate();
   }
 
-  deleteEmployee(emp: Employee) {
-    if (!confirm(`¿Eliminar empleado ${emp.firstName} ${emp.lastName}?`)) return;
+  async deleteEmployee(emp: Employee) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar empleado',
+      message: `¿Eliminar empleado ${emp.firstName} ${emp.lastName}?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.hrService.deleteEmployee(emp.id).subscribe({
       next: () => { this.showToast('Empleado eliminado', 'success'); this.loadEmployees(); },
       error: () => this.showToast('Error al eliminar', 'error')

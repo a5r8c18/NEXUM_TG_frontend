@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AccountingService, FiscalYear, AccountingPeriod } from '../../../../core/services/accounting.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-fiscal-years',
@@ -182,6 +183,7 @@ import { AccountingService, FiscalYear, AccountingPeriod } from '../../../../cor
 })
 export class FiscalYearsComponent implements OnInit {
   private accountingService = inject(AccountingService);
+  private confirmDialog = inject(ConfirmDialogService);
   private fb = inject(FormBuilder);
 
   fiscalYears = signal<FiscalYear[]>([]);
@@ -243,8 +245,14 @@ export class FiscalYearsComponent implements OnInit {
     });
   }
 
-  closeFiscalYear(id: string) {
-    if (!confirm('¿Está seguro de cerrar este año fiscal?')) return;
+  async closeFiscalYear(id: string) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Cerrar año fiscal',
+      message: '¿Está seguro de cerrar este año fiscal? Esta acción no se puede deshacer.',
+      confirmText: 'Cerrar',
+      type: 'warning'
+    });
+    if (!confirmed) return;
 
     this.accountingService.closeFiscalYear(id).subscribe({
       next: () => {
@@ -267,8 +275,14 @@ export class FiscalYearsComponent implements OnInit {
     this.selectedYear.set(null);
   }
 
-  closePeriod(id: string) {
-    if (!confirm('¿Está seguro de cerrar este período?')) return;
+  async closePeriod(id: string) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Cerrar período',
+      message: '¿Está seguro de cerrar este período?',
+      confirmText: 'Cerrar',
+      type: 'warning'
+    });
+    if (!confirmed) return;
 
     this.accountingService.closePeriod(id).subscribe({
       next: () => {
@@ -281,8 +295,14 @@ export class FiscalYearsComponent implements OnInit {
     });
   }
 
-  reopenPeriod(id: string) {
-    if (!confirm('¿Está seguro de reabrir este período?')) return;
+  async reopenPeriod(id: string) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Reabrir período',
+      message: '¿Está seguro de reabrir este período?',
+      confirmText: 'Reabrir',
+      type: 'info'
+    });
+    if (!confirmed) return;
 
     this.accountingService.reopenPeriod(id).subscribe({
       next: () => {

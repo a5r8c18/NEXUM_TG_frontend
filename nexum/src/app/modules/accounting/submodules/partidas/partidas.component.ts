@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AccountingService, Partida, Account, ExpenseType } from '../../../../core/services/accounting.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
@@ -13,6 +14,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 export class PartidasComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
 
   // Signals
   partidas = signal<Partida[]>([]);
@@ -207,12 +209,18 @@ export class PartidasComponent implements OnInit {
     });
   }
 
-  deletePartida(partida: Partida) {
+  async deletePartida(partida: Partida) {
     if (partida.status !== 'draft') {
       this.showToast('Solo se pueden eliminar partidas en borrador', 'error');
       return;
     }
-    if (!confirm(`¿Eliminar la partida "${partida.entryNumber}"?`)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar partida',
+      message: `¿Eliminar la partida "${partida.entryNumber}"?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
 
     this.accountingService.deletePartida(partida.id).subscribe({
       next: () => {
@@ -225,12 +233,18 @@ export class PartidasComponent implements OnInit {
     });
   }
 
-  cancelPartida(partida: Partida) {
+  async cancelPartida(partida: Partida) {
     if (partida.status !== 'draft') {
       this.showToast('Solo se pueden anular partidas en borrador', 'error');
       return;
     }
-    if (!confirm(`¿Anular la partida "${partida.entryNumber}"?`)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Anular partida',
+      message: `¿Anular la partida "${partida.entryNumber}"?`,
+      confirmText: 'Anular',
+      type: 'warning'
+    });
+    if (!confirmed) return;
 
     this.accountingService.updatePartidaStatus(partida.id, 'cancelled').subscribe({
       next: () => {

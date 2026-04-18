@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { StockLimitsService } from '../../../../../core/services/stock-limits.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { ContextService } from '../../../../../core/services/context.service';
+import { ConfirmDialogService } from '../../../../../core/services/confirm-dialog.service';
 import { StockLimit, CreateStockLimitRequest, StockLimitWarning } from '../../../../../core/models/stock-limits.model';
 import { PaginationComponent, PaginationConfig } from '../../../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
@@ -19,6 +20,7 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
   private stockLimitsService = inject(StockLimitsService);
   private notificationService = inject(NotificationService);
   private contextService = inject(ContextService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   stockLimits = signal<StockLimit[]>([]);
   warnings = signal<StockLimitWarning[]>([]);
@@ -249,8 +251,14 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteStockLimit(stockLimit: StockLimit): void {
-    if (!confirm(`¿Está seguro de eliminar el límite de stock para "${stockLimit.productName}"?`)) return;
+  async deleteStockLimit(stockLimit: StockLimit): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar límite de stock',
+      message: `¿Está seguro de eliminar el límite de stock para "${stockLimit.productName}"?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.stockLimitsService.deleteStockLimit(stockLimit.id).subscribe({
       next: () => {
         this.showToast('Límite de stock eliminado exitosamente', 'success');
@@ -261,11 +269,17 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleStockLimitStatus(stockLimit: StockLimit): void {
+  async toggleStockLimitStatus(stockLimit: StockLimit): Promise<void> {
     const newStatus = !stockLimit.isActive;
     const action = newStatus ? 'activar' : 'desactivar';
     
-    if (!confirm(`¿Está seguro de ${action} este límite de stock?`)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: `${action.charAt(0).toUpperCase() + action.slice(1)} límite de stock`,
+      message: `¿Está seguro de ${action} este límite de stock?`,
+      confirmText: action.charAt(0).toUpperCase() + action.slice(1),
+      type: 'warning'
+    });
+    if (!confirmed) return;
     
     this.stockLimitsService.updateStockLimit(stockLimit.id, { isActive: newStatus }).subscribe({
       next: () => {
