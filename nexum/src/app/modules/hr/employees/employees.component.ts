@@ -5,6 +5,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { HrService, Employee } from '../../../core/services/hr.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+import { OfflineFirstService } from '../../../core/offline/offline-first.service';
 
 @Component({
   selector: 'app-employees',
@@ -15,6 +16,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
 export class EmployeesComponent implements OnInit {
   private hrService = inject(HrService);
   private confirmDialog = inject(ConfirmDialogService);
+  private offlineFirst = inject(OfflineFirstService);
 
   employees = signal<Employee[]>([]);
   isLoading = signal(false);
@@ -66,7 +68,7 @@ export class EmployeesComponent implements OnInit {
   loadEmployees() {
     this.isLoading.set(true);
     this.hasError.set(false);
-    this.hrService.getEmployees().subscribe({
+    this.offlineFirst.getEmployees().subscribe({
       next: (data) => { this.employees.set(data); this.isLoading.set(false); },
       error: () => { this.hasError.set(true); this.isLoading.set(false); }
     });

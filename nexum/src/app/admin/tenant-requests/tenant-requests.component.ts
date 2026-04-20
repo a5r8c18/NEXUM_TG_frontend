@@ -1,8 +1,8 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { TenantRequestService } from '../../core/services/tenant-request.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -14,7 +14,7 @@ import { TenantRequest, TenantType } from '../../core/models/tenant-request.mode
   imports: [CommonModule, FormsModule],
   templateUrl: './tenant-requests.component.html'
 })
-export class TenantRequestsComponent implements OnInit {
+export class TenantRequestsComponent implements OnInit, OnDestroy {
   private tenantRequestService = inject(TenantRequestService);
   private router = inject(Router);
   private confirmDialog = inject(ConfirmDialogService);
@@ -41,9 +41,26 @@ export class TenantRequestsComponent implements OnInit {
 
   private retryCount = 0;
   private maxRetries = 2;
+  private authSubscription: Subscription | null = null;
 
   ngOnInit() {
-    this.loadRequests();
+    // Usar enfoque reactivo con RxJS en lugar de timeouts
+    this.authSubscription = this.authService.waitForAuth().subscribe({
+      next: (authState) => {
+        console.log('TenantRequests: Usuario autenticado, cargando solicitudes...');
+        this.loadRequests();
+      },
+      error: (error) => {
+        console.error('TenantRequests: Error esperando autenticación:', error);
+        this.hasError.set(true);
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
+    }
   }
 
   async loadRequests() {
@@ -58,6 +75,7 @@ export class TenantRequestsComponent implements OnInit {
       console.error('Error loading requests:', error instanceof Error ? error.message : String(error));
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
+        console.log(`TenantRequests: Reintentando carga (${this.retryCount}/${this.maxRetries}) en ${500 * this.retryCount}ms...`);
         setTimeout(() => this.loadRequests(), 500 * this.retryCount);
         return;
       }

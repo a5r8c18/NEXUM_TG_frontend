@@ -6,6 +6,7 @@ import { ExportComponentComponent, ExportData } from '../../shared/components/ex
 import { InventoryService } from '../../core/services/inventory.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { InventoryItem, InventoryFilters } from '../../models/inventory.models';
+import { OfflineFirstService } from '../../core/offline/offline-first.service';
 
 @Component({
   selector: 'app-inventory-table',
@@ -16,6 +17,7 @@ import { InventoryItem, InventoryFilters } from '../../models/inventory.models';
 export class InventoryTableComponent implements OnInit, OnDestroy {
   private inventoryService = inject(InventoryService);
   private notificationService = inject(NotificationService);
+  private offlineFirst = inject(OfflineFirstService);
 
   allItems = signal<InventoryItem[]>([]);
   filteredItems = signal<InventoryItem[]>([]);
@@ -47,7 +49,7 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
   loadInventory(filters?: InventoryFilters): void {
     this.isLoading.set(true);
     this.hasError.set(false);
-    this.inventoryService.getInventory(filters).subscribe({
+    this.offlineFirst.getInventory(filters).subscribe({
       next: (data) => {
         this.allItems.set(data);
         this.filteredItems.set(data);

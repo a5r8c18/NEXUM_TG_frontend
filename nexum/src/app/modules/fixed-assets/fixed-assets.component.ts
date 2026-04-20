@@ -11,6 +11,8 @@ import {
 } from '../../core/services/fixed-assets.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { OfflineFirstService } from '../../core/offline/offline-first.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
 import { signal, computed } from '@angular/core';
 
 @Component({
@@ -24,6 +26,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
   private fb = inject(FormBuilder);
   private confirmDialog = inject(ConfirmDialogService);
+  private offlineFirst = inject(OfflineFirstService);
+  private networkStatus = inject(NetworkStatusService);
 
   // Signals
   assets = signal<FixedAsset[]>([]);
@@ -105,18 +109,33 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
     this.hasError.set(false);
 
-    Promise.all([
-      this.fixedAssetsService.getFixedAssets().toPromise(),
-      this.fixedAssetsService.getDepreciationCatalog().toPromise()
-    ]).then(([assets, catalog]) => {
-      this.assets.set(assets || []);
-      this.catalog.set(catalog || []);
-    }).catch(() => {
-      this.hasError.set(true);
-      this.showToast('Error al cargar activos fijos', 'error');
-    }).finally(() => {
-      this.isLoading.set(false);
-    });
+    if (this.networkStatus.isOnline()) {
+      Promise.all([
+        this.fixedAssetsService.getFixedAssets().toPromise(),
+        this.fixedAssetsService.getDepreciationCatalog().toPromise()
+      ]).then(([assets, catalog]) => {
+        this.assets.set(assets || []);
+        this.catalog.set(catalog || []);
+      }).catch(async () => {
+        // Fallback to offline data
+        this.offlineFirst.getFixedAssets().subscribe(data => this.assets.set(data));
+        this.showToast('Cargando datos locales (sin conexión)', 'info');
+      }).finally(() => {
+        this.isLoading.set(false);
+      });
+    } else {
+      this.offlineFirst.getFixedAssets().subscribe({
+        next: (data) => {
+          this.assets.set(data);
+          this.isLoading.set(false);
+          this.showToast('Datos locales (modo offline)', 'info');
+        },
+        error: () => {
+          this.hasError.set(true);
+          this.isLoading.set(false);
+        }
+      });
+    }
   }
 
   openCreate() {
@@ -311,7 +330,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     return map[status] ?? 'bg-gray-100 text-gray-800';
   }
 
-  private showToast(message: string, type: 'success' | 'error'): void {
+  private showToast(message: string, type: 'success' | 'error' | 'info'): void {
     this.toast.set({ message, type });
     setTimeout(() => this.toast.set(null), 4000);
   }

@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SidebarService } from '../../core/services/sidebar.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 interface NavItem {
   icon: string;
@@ -21,11 +22,48 @@ interface NavItem {
 export class SidebarComponent {
   private sidebarService = inject(SidebarService);
   private authService = inject(AuthService);
+  public themeService = inject(ThemeService);
 
   isCollapsed = this.sidebarService.isCollapsed;
 
   get currentUser() {
     return this.authService.currentUser();
+  }
+
+  get sidebarThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900 border-r border-slate-200';
+    } else {
+      return 'bg-gradient-to-b from-slate-900 to-slate-800 text-white border-r border-slate-700';
+    }
+  }
+
+  get headerBorderClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'border-b border-slate-200/50';
+    } else {
+      return 'border-b border-slate-700/50';
+    }
+  }
+
+  get navItemClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-slate-900 rounded-lg transition-all duration-200 hover:bg-slate-200/50 hover:text-slate-950 group';
+    } else {
+      return 'text-slate-300 rounded-lg transition-all duration-200 hover:bg-slate-700/50 hover:text-white group';
+    }
+  }
+
+  get navSubItemClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-slate-900 rounded-lg transition-all duration-200 hover:bg-slate-100/50 hover:text-slate-950 text-sm';
+    } else {
+      return 'text-slate-400 rounded-lg transition-all duration-200 hover:bg-slate-700/30 hover:text-white text-sm';
+    }
   }
 
   get filteredNavItems(): NavItem[] {
@@ -42,13 +80,12 @@ export class SidebarComponent {
 
     let items = [...this.navItems];
 
-    // Solo superadmin ve "Solicitudes" (gestión de acceso al sistema)
+    // Solo superadmin ve "Solicitudes" y "Suscripciones"
     if (user.role === 'superadmin') {
-      items.splice(1, 0, { 
-        icon: 'ClipboardList', 
-        label: 'Solicitudes', 
-        route: '/admin/tenant-requests' 
-      });
+      items.splice(1, 0, 
+        { icon: 'ClipboardList', label: 'Solicitudes', route: '/admin/tenant-requests' },
+        { icon: 'CreditCard', label: 'Suscripciones', route: '/admin/subscriptions' }
+      );
     }
 
     return items;

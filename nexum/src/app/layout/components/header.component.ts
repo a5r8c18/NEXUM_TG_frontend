@@ -7,11 +7,15 @@ import { CompanyService } from '../../core/services/company.service';
 import { WebSocketService } from '../../core/services/websocket.service';
 import { Company } from '../../models/company.models';
 import { firstValueFrom } from 'rxjs';
+import { SubscriptionService } from '../../core/services/subscription.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
+import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, ThemeToggleComponent],
   templateUrl: './header.component.html'
 })
 export class HeaderComponent implements OnInit, OnDestroy {
@@ -20,6 +24,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private companyService = inject(CompanyService);
   wsService = inject(WebSocketService);
+  subscriptionService = inject(SubscriptionService);
+  networkStatus = inject(NetworkStatusService);
+  public themeService = inject(ThemeService);
 
   showUserMenu = signal(false);
   showNotifications = signal(false);
@@ -72,10 +79,145 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return (user.firstName.charAt(0) + user.lastName.charAt(0)).toUpperCase();
   }
 
+  get headerThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-gradient-to-b from-slate-50 to-slate-100 px-6 py-3 shadow-sm border-b border-slate-200 flex justify-between items-center';
+    } else {
+      return 'bg-gradient-to-b from-slate-900 to-slate-800 px-6 py-3 shadow-sm border-b border-slate-700 flex justify-between items-center';
+    }
+  }
+
+  get titleTextClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-lg font-light text-slate-900 tracking-tight';
+    } else {
+      return 'text-lg font-light text-white tracking-tight';
+    }
+  }
+
+  get companySelectorClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'hidden sm:flex items-center gap-2 bg-slate-200/50 hover:bg-slate-300/50 border border-slate-300 text-slate-700 hover:text-slate-900 px-4 py-2 rounded-lg text-sm transition-all duration-200 min-w-[200px] justify-between';
+    } else {
+      return 'hidden sm:flex items-center gap-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 min-w-[200px] justify-between';
+    }
+  }
+
+  get notificationButtonClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors';
+    } else {
+      return 'relative p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors';
+    }
+  }
+
+  get dropdownClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl shadow-black/10 overflow-hidden z-50';
+    } else {
+      return 'absolute right-0 top-full mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl shadow-black/30 overflow-hidden z-50';
+    }
+  }
+
+  get dropdownHeaderClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'px-4 py-3 border-b border-slate-200';
+    } else {
+      return 'px-4 py-3 border-b border-slate-700';
+    }
+  }
+
+  get dropdownHeaderTextClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-sm font-semibold text-slate-900';
+    } else {
+      return 'text-sm font-semibold text-white';
+    }
+  }
+
+  get dropdownItemClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3 border-b border-slate-100 last:border-b-0';
+    } else {
+      return 'w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors flex items-start gap-3 border-b border-slate-700/50 last:border-b-0';
+    }
+  }
+
+  get dropdownItemTextClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-sm font-medium text-slate-900';
+    } else {
+      return 'text-sm font-medium text-white';
+    }
+  }
+
+  get dropdownItemSubtextClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-xs text-slate-500 mt-1';
+    } else {
+      return 'text-xs text-slate-400 mt-1';
+    }
+  }
+
+  getUserMenuButtonClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'flex items-center gap-2 hover:bg-slate-200/50 rounded-lg p-1.5 pr-3 transition-colors';
+    } else {
+      return 'flex items-center gap-2 hover:bg-slate-700/50 rounded-lg p-1.5 pr-3 transition-colors';
+    }
+  }
+
+  getUserNameClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-sm font-medium text-slate-900 leading-tight';
+    } else {
+      return 'text-sm font-medium text-white leading-tight';
+    }
+  }
+
+  getUserRoleClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-xs text-slate-600 leading-tight';
+    } else {
+      return 'text-xs text-slate-400 leading-tight';
+    }
+  }
+
+  getUserChevronClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'w-4 h-4 text-slate-600 hidden sm:block transition-transform';
+    } else {
+      return 'w-4 h-4 text-slate-400 hidden sm:block transition-transform';
+    }
+  }
+
   ngOnInit(): void {
     this.wsService.connect();
     if (this.isMultiCompany) {
       this.loadCompanies();
+    }
+    this.checkSubscription();
+  }
+
+  private async checkSubscription(): Promise<void> {
+    try {
+      await this.subscriptionService.checkAccess();
+    } catch {
+      // Silently fail — offline or network error
     }
   }
 

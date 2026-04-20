@@ -8,6 +8,7 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
 import { MovementItem, MovementFilters, DirectEntryDto, ExitDto } from '../../../../models/inventory.models';
+import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 
 @Component({
   selector: 'app-movements-list',
@@ -19,6 +20,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   private movementsService = inject(MovementsService);
   private inventoryService = inject(InventoryService);
   private notificationService = inject(NotificationService);
+  private offlineFirst = inject(OfflineFirstService);
 
   movements = signal<MovementItem[]>([]);
   isLoading = signal(false);
@@ -111,7 +113,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       movement_type: this.selectedMovementType() || undefined
     };
     
-    this.movementsService.getMovements(enhancedFilters).subscribe({
+    this.offlineFirst.getMovements(enhancedFilters).subscribe({
       next: (data) => {
         this.movements.set(data);
         this.currentPage.set(1);
@@ -238,7 +240,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       this.notificationService.showError('La cantidad debe ser mayor a 0');
       return;
     }
-    this.movementsService.registerDirectEntry(this.directEntry).subscribe({
+    this.offlineFirst.registerDirectEntry(this.directEntry).subscribe({
       next: () => {
         this.notificationService.showSuccess('Entrada registrada correctamente');
         this.closeDirectEntry();
@@ -288,7 +290,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       reason: this.returnComment,
       warehouseId: this.selectedForReturn!.product.warehouseId || ''
     };
-    this.movementsService.createReturn(returnData).subscribe({
+    this.offlineFirst.createReturn(returnData).subscribe({
       next: () => {
         this.notificationService.showSuccess('Devolución registrada correctamente');
         this.closeReturn();
@@ -331,7 +333,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       entity: this.exitData.entity,
       warehouseId: this.exitData.warehouseId,
     };
-    this.movementsService.registerExit(payload).subscribe({
+    this.offlineFirst.registerExit(payload).subscribe({
       next: () => {
         this.notificationService.showSuccess('Salida registrada correctamente');
         this.closeExit();
@@ -343,7 +345,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   }
 
   private refreshStock(): void {
-    this.inventoryService.getInventory().subscribe({
+    this.offlineFirst.getInventory().subscribe({
       next: (inv) => this.notificationService.refreshNotifications(inv),
       error: () => {}
     });
@@ -370,7 +372,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   loadWarehouses(): void {
     // Cargar warehouses disponibles para transferencia
-    this.inventoryService.getInventory().subscribe(data => {
+    this.offlineFirst.getInventory().subscribe(data => {
       const uniqueWarehouses = [...new Map(data.map(item => [
         item.warehouse || 'default', 
         { 
@@ -396,7 +398,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.movementsService.createTransfer(this.transferData).subscribe({
+    this.offlineFirst.createTransfer(this.transferData).subscribe({
       next: () => {
         this.notificationService.showSuccess('Transferencia registrada correctamente');
         this.closeTransfer();

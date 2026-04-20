@@ -6,6 +6,7 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { InvoicesService, Invoice, InvoiceFilters } from '../../core/services/invoices.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { OfflineFirstService } from '../../core/offline/offline-first.service';
 import { signal, computed } from '@angular/core';
 
 @Component({
@@ -18,6 +19,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   private invoicesService = inject(InvoicesService);
   private notificationService = inject(NotificationService);
   private confirmDialog = inject(ConfirmDialogService);
+  private offlineFirst = inject(OfflineFirstService);
 
   // Signals
   invoices = signal<Invoice[]>([]);
@@ -82,7 +84,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
       status: this.statusFilter() || undefined
     };
 
-    this.invoicesService.getInvoices(filters).subscribe({
+    this.offlineFirst.getInvoices(filters).subscribe({
       next: (data: Invoice[]) => {
         this.invoices.set(data);
         this.currentPage.set(1);
@@ -129,7 +131,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     });
     if (!confirmed) return;
 
-    this.invoicesService.deleteInvoice(invoice.id).subscribe({
+    this.offlineFirst.deleteInvoice(invoice.id).subscribe({
       next: () => {
         this.showToast('Factura eliminada', 'success');
         this.loadInvoices();

@@ -1,0 +1,337 @@
+<div class="min-h-screen bg-slate-900">
+  <!-- Header -->
+  <div class="bg-slate-800 border-b border-slate-700">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-medium text-white">Gestión de Suscripciones</h1>
+          <p class="text-slate-400 text-sm mt-1">Administra los planes y pagos de los tenants del sistema NEXUM</p>
+        </div>
+        <button
+          (click)="goToDashboard()"
+          class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+        >
+          Volver al Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="max-w-7xl mx-auto px-6 mt-4">
+      <div
+        class="px-4 py-3 rounded-lg text-sm font-medium"
+        [class]="toast()!.type === 'success' ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                : toast()!.type === 'error' ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'"
+      >
+        {{ toast()!.message }}
+      </div>
+    </div>
+  }
+
+  <!-- Stats Cards -->
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="grid md:grid-cols-4 gap-6 mb-8">
+      <!-- Activas -->
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-400 text-sm">Activas</p>
+            <p class="text-2xl font-medium text-green-400 mt-1">{{ activeCount() }}</p>
+          </div>
+          <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trial -->
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-400 text-sm">En Trial</p>
+            <p class="text-2xl font-medium text-blue-400 mt-1">{{ trialCount() }}</p>
+          </div>
+          <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pago Pendiente -->
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-400 text-sm">Pago Pendiente</p>
+            <p class="text-2xl font-medium text-yellow-400 mt-1">{{ pastDueCount() }}</p>
+          </div>
+          <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suspendidas -->
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-400 text-sm">Suspendidas</p>
+            <p class="text-2xl font-medium text-red-400 mt-1">{{ suspendedCount() }}</p>
+          </div>
+          <div class="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 mb-8">
+      <div class="flex flex-wrap gap-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">Estado</label>
+          <select
+            [ngModel]="statusFilter()"
+            (ngModelChange)="statusFilter.set($event)"
+            class="bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">Todos</option>
+            <option value="active">Activas</option>
+            <option value="trial">Trial</option>
+            <option value="past_due">Pago Pendiente</option>
+            <option value="suspended">Suspendidas</option>
+            <option value="cancelled">Canceladas</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">Plan</label>
+          <select
+            [ngModel]="planFilter()"
+            (ngModelChange)="planFilter.set($event)"
+            class="bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">Todos</option>
+            <option value="trial">Trial</option>
+            <option value="basic">Básico</option>
+            <option value="professional">Profesional</option>
+            <option value="enterprise">Empresarial</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-sm font-medium text-slate-300 mb-2">Buscar tenant</label>
+          <input
+            type="text"
+            [ngModel]="searchTerm()"
+            (ngModelChange)="searchTerm.set($event)"
+            placeholder="Buscar por ID de tenant..."
+            class="w-full bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscriptions List -->
+    @if (isLoading()) {
+      <div class="flex justify-center py-12">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    } @else if (hasError()) {
+      <div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-center">
+        Error al cargar las suscripciones.
+        <button (click)="loadData()" class="underline ml-2 hover:text-red-300">Reintentar</button>
+      </div>
+    } @else if (filteredSubscriptions().length === 0) {
+      <div class="bg-slate-800 rounded-xl p-12 border border-slate-700 text-center">
+        <div class="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-white mb-2">No hay suscripciones</h3>
+        <p class="text-slate-400">No se encontraron suscripciones con los filtros seleccionados.</p>
+      </div>
+    } @else {
+      <div class="space-y-4">
+        @for (sub of filteredSubscriptions(); track sub.id) {
+          <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:border-slate-600 transition-colors duration-200">
+            <div class="p-6">
+              <div class="flex justify-between items-start">
+                <!-- Info -->
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-3">
+                    <h3 class="text-lg font-medium text-white">{{ sub.tenantId }}</h3>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-medium border {{ getStatusColor(sub.status) }}">
+                      {{ getStatusLabel(sub.status) }}
+                    </span>
+                    <span class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-400/30 rounded-full text-xs font-medium">
+                      {{ getPlanLabel(sub.plan) }}
+                    </span>
+                    @if (sub.priceUsd > 0) {
+                      <span class="text-slate-400 text-sm">${{ sub.priceUsd }}/mes</span>
+                    }
+                  </div>
+
+                  <div class="grid md:grid-cols-3 gap-4 text-sm">
+                    <div class="space-y-1">
+                      <p class="text-slate-400">Usuarios: <span class="text-white">máx {{ sub.maxUsers }}</span></p>
+                      <p class="text-slate-400">Empresas: <span class="text-white">máx {{ sub.maxCompanies }}</span></p>
+                    </div>
+                    <div class="space-y-1">
+                      @if (sub.trialEndsAt) {
+                        <p class="text-slate-400">Trial termina: <span class="text-white">{{ formatDate(sub.trialEndsAt) }}</span></p>
+                      }
+                      @if (sub.currentPeriodEnd) {
+                        <p class="text-slate-400">Período hasta: <span class="text-white">{{ formatDate(sub.currentPeriodEnd) }}</span></p>
+                      }
+                      @if (sub.lastPaymentDate) {
+                        <p class="text-slate-400">Último pago: <span class="text-white">{{ formatDate(sub.lastPaymentDate) }}</span></p>
+                      }
+                    </div>
+                    <div class="space-y-1">
+                      <p class="text-slate-400">Creada: <span class="text-white">{{ formatDate(sub.createdAt) }}</span></p>
+                      @if (sub.suspendedAt) {
+                        <p class="text-red-400">Suspendida: <span class="text-red-300">{{ formatDate(sub.suspendedAt) }}</span></p>
+                      }
+                      @if (sub.suspensionReason) {
+                        <p class="text-red-400">Motivo: <span class="text-red-300">{{ sub.suspensionReason }}</span></p>
+                      }
+                    </div>
+                  </div>
+
+                  @if (sub.adminNotes) {
+                    <div class="mt-3 p-2.5 bg-slate-700/50 rounded-lg border border-slate-600 text-sm">
+                      <span class="text-blue-400 font-medium">Notas:</span>
+                      <span class="text-slate-200 ml-1">{{ sub.adminNotes }}</span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col gap-2 ml-6 min-w-[140px]">
+                  @if (sub.status === 'trial' || sub.status === 'suspended') {
+                    <button
+                      (click)="openActivateModal(sub)"
+                      class="w-full px-3 py-2 text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/30 transition-colors"
+                    >
+                      Activar Plan
+                    </button>
+                  }
+                  @if (sub.status === 'active' || sub.status === 'past_due') {
+                    <button
+                      (click)="registerPayment(sub)"
+                      class="w-full px-3 py-2 text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors"
+                    >
+                      Registrar Pago
+                    </button>
+                  }
+                  @if (sub.status === 'active' || sub.status === 'trial' || sub.status === 'past_due') {
+                    <button
+                      (click)="openSuspendModal(sub)"
+                      class="w-full px-3 py-2 text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition-colors"
+                    >
+                      Suspender
+                    </button>
+                  }
+                  @if (sub.status !== 'cancelled') {
+                    <button
+                      (click)="cancelSubscription(sub)"
+                      class="w-full px-3 py-2 text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Activate Plan Modal -->
+  @if (showActivateModal()) {
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-md w-full">
+        <h3 class="text-lg font-medium text-white mb-4">Activar Plan</h3>
+        <p class="text-slate-300 mb-4">
+          Selecciona el plan para el tenant <strong class="text-white">{{ selectedSub()?.tenantId }}</strong>
+        </p>
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-slate-300 mb-2">Plan</label>
+          <select
+            [ngModel]="selectedPlan()"
+            (ngModelChange)="selectedPlan.set($event)"
+            class="w-full bg-slate-700 border border-slate-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="basic">Básico — $14.99/mes (3 usuarios, 1 empresa)</option>
+            <option value="professional">Profesional — $29.99/mes (10 usuarios, 3 empresas)</option>
+            <option value="enterprise">Empresarial — $59.99/mes (50 usuarios, 10 empresas)</option>
+          </select>
+        </div>
+        <div class="flex gap-3">
+          <button
+            (click)="confirmActivate()"
+            class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+          >
+            Activar
+          </button>
+          <button
+            (click)="closeModals()"
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Suspend Modal -->
+  @if (showSuspendModal()) {
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-md w-full">
+        <h3 class="text-lg font-medium text-white mb-4">Suspender Suscripción</h3>
+        <p class="text-slate-300 mb-4">
+          ¿Suspender la suscripción de <strong class="text-white">{{ selectedSub()?.tenantId }}</strong>?
+          El usuario perderá acceso al sistema.
+        </p>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-slate-300 mb-2">Motivo de suspensión *</label>
+          <textarea
+            [ngModel]="suspendReason()"
+            (ngModelChange)="suspendReason.set($event)"
+            rows="3"
+            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            placeholder="Explica por qué se suspende la suscripción..."
+          ></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button
+            (click)="confirmSuspend()"
+            [disabled]="!suspendReason()"
+            class="flex-1 bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors duration-200"
+          >
+            Suspender
+          </button>
+          <button
+            (click)="closeModals()"
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

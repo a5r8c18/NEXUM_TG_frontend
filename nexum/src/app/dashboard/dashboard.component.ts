@@ -4,6 +4,7 @@ import { AuthService } from '../core/services/auth.service';
 import { ContextService } from '../core/services/context.service';
 import { AccountingService } from '../core/services/accounting.service';
 import { CommonModule } from '@angular/common';
+import { ThemeService } from '../core/services/theme.service';
 
 interface DashboardCard {
   title: string;
@@ -34,6 +35,7 @@ export class DashboardComponent implements OnInit {
   private contextService = inject(ContextService);
   private router = inject(Router);
   private accountingService = inject(AccountingService);
+  public themeService = inject(ThemeService);
 
   // Financial KPIs signals
   totalAssets = signal<number>(0);
@@ -60,6 +62,141 @@ export class DashboardComponent implements OnInit {
 
   get tenantName(): string {
     return this.authService.getCurrentUserTenant()?.name || '';
+  }
+
+  get dashboardBackgroundClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'flex-1 p-6 bg-gradient-to-br from-slate-50 to-slate-100';
+    } else {
+      return 'flex-1 p-6 bg-gradient-to-br from-slate-900 to-slate-800';
+    }
+  }
+
+  get welcomeTitleClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-3xl font-light text-slate-900 mb-1 tracking-tight';
+    } else {
+      return 'text-3xl font-light text-white mb-1 tracking-tight';
+    }
+  }
+
+  get welcomeTextClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-slate-600 text-sm';
+    } else {
+      return 'text-slate-400 text-sm';
+    }
+  }
+
+  get companyNameClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'font-medium text-slate-800';
+    } else {
+      return 'font-medium text-slate-200';
+    }
+  }
+
+  get changeCompanyButtonClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-blue-600 hover:text-blue-700 font-medium';
+    } else {
+      return 'text-blue-400 hover:text-blue-300 font-medium';
+    }
+  }
+
+  get cardClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-white/80 backdrop-blur-sm p-5 rounded-xl border border-slate-200/50 hover:shadow-lg transition-all duration-300 hover:border-slate-300/50';
+    } else {
+      return 'bg-slate-800/80 backdrop-blur-sm p-5 rounded-xl border border-slate-700/50 hover:shadow-lg transition-all duration-300 hover:border-slate-600/50';
+    }
+  }
+
+  get cardIconContainerClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'w-10 h-10 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center';
+    } else {
+      return 'w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-600 rounded-xl flex items-center justify-center';
+    }
+  }
+
+  get cardTitleClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-sm font-medium text-slate-600 mb-1';
+    } else {
+      return 'text-sm font-medium text-slate-300 mb-1';
+    }
+  }
+
+  get cardValueClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-2xl font-bold text-slate-900 mb-2';
+    } else {
+      return 'text-2xl font-bold text-white mb-2';
+    }
+  }
+
+  get cardTrendClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-xs font-medium text-slate-500';
+    } else {
+      return 'text-xs font-medium text-slate-400';
+    }
+  }
+
+  get moduleCardClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-slate-200/50 hover:shadow-lg transition-all duration-300 hover:border-slate-300/50 hover:bg-white/80 cursor-pointer';
+    } else {
+      return 'bg-slate-800/60 backdrop-blur-sm p-6 rounded-xl border border-slate-700/50 hover:shadow-lg transition-all duration-300 hover:border-slate-600/50 hover:bg-slate-800/80 cursor-pointer';
+    }
+  }
+
+  get moduleIconContainerClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center mb-4';
+    } else {
+      return 'w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-600 rounded-xl flex items-center justify-center mb-4';
+    }
+  }
+
+  get moduleTitleClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-lg font-semibold text-slate-900 mb-2';
+    } else {
+      return 'text-lg font-semibold text-white mb-2';
+    }
+  }
+
+  get moduleDescriptionClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-sm text-slate-600 leading-relaxed';
+    } else {
+      return 'text-sm text-slate-400 leading-relaxed';
+    }
+  }
+
+  get modulesTitleClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-lg font-medium text-slate-800 mb-4';
+    } else {
+      return 'text-lg font-medium text-white mb-4';
+    }
   }
 
   cards = computed(() => [

@@ -4,6 +4,7 @@ import { tenantSelectedGuard } from './core/guards/tenant-selected.guard';
 import { companySelectedGuard } from './core/guards/company-selected.guard';
 import { permissionsGuard } from './core/guards/permissions.guard';
 import { RoleGuard, AdminOnlyGuard, SuperadminOnlyGuard } from './core/guards/role.guard';
+import { subscriptionGuard } from './core/guards/subscription.guard';
 
 export const routes: Routes = [
   // Rutas Principales
@@ -34,9 +35,14 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'subscription-blocked',
+    loadComponent: () => import('./auth/subscription-blocked/subscription-blocked.component').then(m => m.SubscriptionBlockedComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: '',
     loadComponent: () => import('./layout/main-layout.component').then(m => m.MainLayoutComponent),
-    canActivate: [authGuard, companySelectedGuard],
+    canActivate: [authGuard, companySelectedGuard, subscriptionGuard],
     children: [
       {
         path: 'dashboard',
@@ -142,6 +148,12 @@ export const routes: Routes = [
       {
         path: 'admin/tenant-requests',
         loadComponent: () => import('./admin/tenant-requests/tenant-requests.component').then(m => m.TenantRequestsComponent),
+        canActivate: [SuperadminOnlyGuard]
+      },
+      // Admin Subscriptions (solo superadmin)
+      {
+        path: 'admin/subscriptions',
+        loadComponent: () => import('./admin/subscriptions/subscriptions-admin.component').then(m => m.SubscriptionsAdminComponent),
         canActivate: [SuperadminOnlyGuard]
       },
       // Settings Module (configuración por compañía)

@@ -12,6 +12,7 @@ import { CommonModule } from '@angular/common';
 import { PurchasesService } from '../../../../core/services/purchases.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { CreatePurchasePayload } from '../../../../models/purchase.models';
+import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 
 @Component({
   selector: 'app-entry',
@@ -23,6 +24,7 @@ export class EntryComponent {
   private fb = inject(FormBuilder);
   private purchasesService = inject(PurchasesService);
   private notificationService = inject(NotificationService);
+  private offlineFirst = inject(OfflineFirstService);
 
   isSubmitting = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -114,7 +116,7 @@ export class EntryComponent {
       })),
     };
 
-    this.purchasesService.createPurchase(payload).subscribe({
+    this.offlineFirst.createPurchase(payload).subscribe({
       next: () => {
         this.showToast('Compra registrada exitosamente', 'success');
         this.notificationService.triggerRefresh();

@@ -1,7 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, BehaviorSubject, filter, take } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ContextService } from './context.service';
@@ -30,10 +30,17 @@ export class AuthService {
   private currentUserSignal = signal<NexumUser | null>(null);
   private currentCompanyIdSignal = signal<number>(1);
   private isDevMode = signal(false);
+  
+  // BehaviorSubject para manejar estado de autenticación de forma reactiva
+  private authStateSubject = new BehaviorSubject<{ isAuthenticated: boolean; user: NexumUser | null }>({
+    isAuthenticated: false,
+    user: null
+  });
 
   isAuthenticated = this.isAuthenticatedSignal.asReadonly();
   currentUser = this.currentUserSignal.asReadonly();
   currentCompanyId = this.currentCompanyIdSignal.asReadonly();
+  authState$ = this.authStateSubject.asObservable();
 
   private router = inject(Router);
   private http = inject(HttpClient);
@@ -53,11 +60,16 @@ export class AuthService {
     if (!email || !password) return false;
 
     try {
+      console.log('FRONTEND AUTH SERVICE - Login attempt for:', email);
       const response = await firstValueFrom(
-        this.http.post<{ user: any; token: string }>(`${this.apiUrl}/auth/login`, { email, password })
+        this.http.post<{ user: any; accessToken: string; refreshToken: string }>(`${this.apiUrl}/auth/login`, { email, password })
       );
 
-      if (response && response.token) {
+      console.log('FRONTEND AUTH SERVICE - Response from backend:', response);
+      console.log('FRONTEND AUTH SERVICE - Has accessToken:', !!response?.accessToken);
+      console.log('FRONTEND AUTH SERVICE - Has user:', !!response?.user);
+
+      if (response && response.accessToken) {
         const user: NexumUser = {
           id: response.user.id,
           email: response.user.email,
@@ -68,7 +80,7 @@ export class AuthService {
           tenantName: response.user.tenantName || 'Empresa Demo',
           tenantType: response.user.tenantType || 'MULTI_COMPANY'
         };
-        this.setSession(user, response.token);
+        this.setSession(user, response.accessToken);
         
         // Establecer la empresa en el ContextService
         if (response.user.companyId) {
@@ -87,8 +99,10 @@ export class AuthService {
         
         return true;
       }
+      console.log('FRONTEND AUTH SERVICE - Login failed - no accessToken in response');
       return false;
-    } catch {
+    } catch (error) {
+      console.log('FRONTEND AUTH SERVICE - Login error:', error);
       return false;
     }
   }
@@ -182,6 +196,13 @@ export class AuthService {
     this.isAuthenticatedSignal.set(false);
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
+    
+    // Emitir estado de no autenticación
+    this.authStateSubject.next({
+      isAuthenticated: false,
+      user: null
+    });
+    
     this.router.navigate(['/login']);
   }
 
@@ -261,15 +282,21 @@ export class AuthService {
   }
 
   private setSession(user: NexumUser, token: string): void {
-    console.log('🔐 AUTH: Setting session with token:', token.substring(0, 20) + '...');
-    console.log('👤 AUTH: User:', user.email, user.role);
+    console.log('Setting session with token:', token.substring(0, 20) + '...');
+    console.log('User:', user.email, user.role);
     
     this.currentUserSignal.set(user);
     this.isAuthenticatedSignal.set(true);
     localStorage.setItem('authToken', token);
     localStorage.setItem('currentUser', JSON.stringify(user));
     
-    console.log('✅ AUTH: Token saved to localStorage');
+    // Emitir nuevo estado de autenticación
+    this.authStateSubject.next({
+      isAuthenticated: true,
+      user
+    });
+    
+    console.log('Token saved to localStorage');
   }
 
   private async setCompanyContext(companyId: number): Promise<void> {
@@ -319,6 +346,12 @@ export class AuthService {
         this.currentUserSignal.set(user);
         this.isAuthenticatedSignal.set(true);
         
+        // Emitir estado de autenticación
+        this.authStateSubject.next({
+          isAuthenticated: true,
+          user
+        });
+        
         // Restaurar el contexto de la empresa si el usuario tiene companyId
         if (user.companyId) {
           this.setCompanyContext(user.companyId);
@@ -338,6 +371,20 @@ export class AuthService {
       } catch {
         this.logout();
       }
+    } else {
+      // Emitir estado de no autenticación si no hay token
+      this.authStateSubject.next({
+        isAuthenticated: false,
+        user: null
+      });
     }
+  }
+
+  // Método para esperar a que el usuario esté autenticado
+  waitForAuth(): Observable<{ isAuthenticated: boolean; user: NexumUser | null }> {
+    return this.authState$.pipe(
+      filter(state => state.isAuthenticated === true),
+      take(1)
+    );
   }
 }

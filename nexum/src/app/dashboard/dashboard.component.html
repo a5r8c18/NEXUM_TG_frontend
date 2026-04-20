@@ -1,15 +1,15 @@
-<section class="flex-1 p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+<section [class]="dashboardBackgroundClasses">
   <!-- Welcome Section -->
   <div class="mb-8">
-    <h1 class="text-3xl font-light text-slate-800 mb-1 tracking-tight">
+    <h1 [class]="welcomeTitleClasses">
       Hola, {{ userName }}
     </h1>
-    <p class="text-slate-500 text-sm">
+    <p [class]="welcomeTextClasses">
       @if (companyName) {
-        Trabajando en <span class="font-medium text-slate-700">{{ companyName }}</span>
+        Trabajando en <span [class]="companyNameClasses">{{ companyName }}</span>
         @if (isMultiCompany) {
           <span class="mx-1">·</span>
-          <button (click)="switchCompany()" class="text-blue-600 hover:text-blue-700 font-medium">Cambiar empresa</button>
+          <button (click)="switchCompany()" [class]="changeCompanyButtonClasses">Cambiar empresa</button>
         }
       } @else {
         Bienvenido al sistema de gestion empresarial NEXUM
@@ -20,9 +20,9 @@
   <!-- Stats Overview -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     @for (card of cards(); track card.title) {
-      <div class="bg-white/80 backdrop-blur-sm p-5 rounded-xl border border-slate-200/50 hover:shadow-lg transition-all duration-300 hover:border-slate-300/50">
+      <div [class]="cardClasses">
         <div class="flex items-center justify-between mb-3">
-          <div class="w-10 h-10 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center">
+          <div [class]="cardIconContainerClasses">
             @switch (card.icon) {
               @case ('Package') {
                 <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,16 +73,16 @@
             }
           }
         </div>
-        <div class="text-2xl font-light text-slate-900 mb-1">{{ card.value }}</div>
-        <h3 class="text-sm font-medium text-slate-700">{{ card.title }}</h3>
-        <p class="text-xs text-slate-500">{{ card.content }}</p>
+        <div [class]="cardValueClasses">{{ card.value }}</div>
+        <h3 [class]="cardTitleClasses">{{ card.title }}</h3>
+        <p [class]="cardTrendClasses">{{ card.content }}</p>
       </div>
     }
   </div>
 
   <!-- Modules Grid -->
   <div class="mb-8">
-    <h2 class="text-lg font-medium text-slate-800 mb-4">Modulos Disponibles</h2>
+    <h2 [class]="modulesTitleClasses">Modulos Disponibles</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       @for (mod of modules; track mod.title) {
         <div class="bg-white/80 backdrop-blur-sm p-5 rounded-xl border border-slate-200/50 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-slate-300/50"

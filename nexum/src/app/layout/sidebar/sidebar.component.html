@@ -1,15 +1,17 @@
-<aside class="bg-gradient-to-b from-slate-900 to-slate-800 text-white transition-all duration-300 ease-in-out flex flex-col overflow-hidden shadow-2xl fixed h-screen z-10 border-r border-slate-700"
+<aside class="sidebar-scroll transition-all duration-300 ease-in-out flex flex-col overflow-hidden shadow-2xl fixed h-screen z-10"
+     [class]="sidebarThemeClasses"
      [class.w-64]="!isCollapsed()"
      [class.w-16]="isCollapsed()">
   
   <!-- Header del Sidebar -->
-  <div class="flex items-center justify-between p-6 border-b border-slate-700/50">
+  <div class="flex items-center justify-between p-6" [class]="headerBorderClasses">
     <h3 class="font-semibold text-base tracking-wide transition-all duration-200"
         [class.opacity-0]="isCollapsed()"
         [class.hidden]="isCollapsed()">
       NEXUM
     </h3>
-    <button class="bg-slate-700/50 border border-slate-600 text-white p-2 rounded-lg hover:bg-slate-600/50 transition-all duration-200 shrink-0"
+    <button class="p-2 rounded-lg transition-all duration-200 shrink-0"
+            [class]="themeService.currentTheme() === 'light' ? 'bg-slate-200/50 border border-slate-300 text-slate-700 hover:bg-slate-300/50' : 'bg-slate-700/50 border border-slate-600 text-white hover:bg-slate-600/50'"
             (click)="toggleSidebar()">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -18,14 +20,14 @@
   </div>
 
   <!-- Menú de Navegación -->
-  <nav class="flex-1 p-4">
+  <nav class="flex-1 p-4 overflow-y-auto sidebar-scroll">
     <ul class="space-y-2">
       @for (item of filteredNavItems; track item.label) {
         <li>
           @if (item.hasSubmenu) {
             <!-- Menú con submenú -->
             <div>
-              <div class="w-full flex items-center gap-3 p-3 text-slate-300 rounded-lg transition-all duration-200 hover:bg-slate-700/50 hover:text-white group">
+              <div class="w-full flex items-center gap-3 p-3" [class]="navItemClasses">
                 
                 <!-- Icono principal y Label (navegación) -->
                 <a class="flex items-center gap-3 flex-1 text-inherit hover:text-inherit"
@@ -80,7 +82,7 @@
                 <ul class="ml-4 mt-2 space-y-1">
                   @for (subItem of item.submenu; track subItem.label) {
                     <li>
-                      <a class="flex items-center gap-3 p-2 text-slate-400 rounded-lg transition-all duration-200 hover:bg-slate-700/30 hover:text-white text-sm"
+                      <a class="flex items-center gap-3 p-2" [class]="navSubItemClasses"
                          [routerLink]="subItem.route || '#'">
                         
                         <!-- Iconos del submenú -->
@@ -151,7 +153,7 @@
             </div>
           } @else {
             <!-- Menú sin submenú -->
-            <a class="flex items-center gap-3 p-3 text-slate-300 rounded-lg transition-all duration-200 hover:bg-slate-700/50 hover:text-white group"
+            <a class="flex items-center gap-3 p-3" [class]="navItemClasses"
                [routerLink]="item.route || '#'">
               
               <!-- Iconos -->
@@ -205,6 +207,11 @@
                 @case ('ClipboardList') {
                   <svg class="w-5 h-5 text-center shrink-0 group-hover:text-yellow-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                  </svg>
+                }
+                @case ('CreditCard') {
+                  <svg class="w-5 h-5 text-center shrink-0 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                   </svg>
                 }
               }

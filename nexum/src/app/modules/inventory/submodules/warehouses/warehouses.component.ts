@@ -7,6 +7,7 @@ import { CompanyService } from '../../../../core/services/company.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { Company, CreateCompanyDto } from '../../../../models/company.models';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 
@@ -20,6 +21,7 @@ export class WarehousesComponent implements OnInit, OnDestroy {
   private companyService = inject(CompanyService);
   private notificationService = inject(NotificationService);
   private confirmDialog = inject(ConfirmDialogService);
+  private offlineFirst = inject(OfflineFirstService);
 
   companies = signal<Company[]>([]);
   isLoading = signal(false);
@@ -64,7 +66,7 @@ export class WarehousesComponent implements OnInit, OnDestroy {
   loadCompanies(): void {
     this.isLoading.set(true);
     this.hasError.set(false);
-    this.companyService.getCompanies().subscribe({
+    this.offlineFirst.getCompanies().subscribe({
       next: (data) => {
         this.companies.set(data);
         this.currentPage.set(1);

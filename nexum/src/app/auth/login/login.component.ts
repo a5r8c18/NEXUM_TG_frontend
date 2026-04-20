@@ -39,27 +39,42 @@ export class LoginComponent {
   }
 
   private async loadCompaniesForUser(email: string): Promise<void> {
-    console.log('🔍 Loading companies for user:', email);
+    console.log('Loading companies for user:', email);
     
     try {
       // Usar el método público que no requiere autenticación
-      console.log('🔍 Using public company search');
       const companies = await firstValueFrom(this.companyService.getCompaniesForLogin(email));
-      console.log('✅ Found companies:', companies.length);
+      console.log('Found companies:', companies.length);
       
-      this.availableCompanies.set(companies);
-      
-      // Seleccionar la primera empresa por defecto
-      if (companies.length > 0) {
-        console.log('✅ Selected first company:', companies[0].name);
-        this.selectedCompany.set(companies[0]);
+      // Verificar si es el email del superadmin
+      if (email === 'admin@teneduriagarcia.com') {
+        console.log('Detected superadmin user, filtering to show only Teneduria Garcia');
+        const superadminCompany = companies.find(c => c.name === 'Teneduria Garcia');
+        if (superadminCompany) {
+          this.availableCompanies.set([superadminCompany]);
+          this.selectedCompany.set(superadminCompany);
+          console.log('Selected superadmin company:', superadminCompany.name);
+        } else {
+          console.log('Teneduria Garcia not found for superadmin');
+          this.availableCompanies.set([]);
+          this.selectedCompany.set(null);
+        }
       } else {
-        console.log('❌ No companies found to select');
-        // Si no hay empresas, mostrar mensaje claro
-        this.errorMessage.set('No se encontraron empresas para este email. Contacte al administrador.');
+        // Para usuarios normales, mostrar todas las empresas
+        this.availableCompanies.set(companies);
+        
+        // Seleccionar la primera empresa por defecto
+        if (companies.length > 0) {
+          console.log('Selected first company:', companies[0].name);
+          this.selectedCompany.set(companies[0]);
+        } else {
+          console.log('No companies found to select');
+          // Si no hay empresas, mostrar mensaje claro
+          this.errorMessage.set('No se encontraron empresas para este email. Contacte al administrador.');
+        }
       }
     } catch (error) {
-      console.log('🚨 Error in loadCompaniesForUser:', error);
+      console.log('Error in loadCompaniesForUser:', error);
       // Si hay error, mostrar mensaje claro al usuario
       this.errorMessage.set('Error al cargar empresas. Verifique su conexión o contacte al administrador.');
       this.availableCompanies.set([]);
@@ -68,6 +83,11 @@ export class LoginComponent {
   }
 
   isMultiCompanyUser(): boolean {
+    // Durante el login, verificar si hay empresas disponibles (indica multi-empresa)
+    if (this.availableCompanies().length > 0) {
+      return true;
+    }
+    
     // Después del login, verificar el tenantType real del usuario
     const user = this.authService.currentUser();
     if (user) {
@@ -198,8 +218,8 @@ export class LoginComponent {
     this.email.set(email);
     this.errorMessage.set(''); // Limpiar error al cambiar el email
     
-    // Cargar empresas si el email parece ser de un usuario multi-empresa
-    if (email && this.isMultiCompanyUser()) {
+    // Cargar empresas siempre que haya email (para mostrar opciones disponibles)
+    if (email && email.includes('@')) {
       this.loadCompaniesForUser(email);
     }
   }
