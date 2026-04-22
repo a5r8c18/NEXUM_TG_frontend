@@ -127,8 +127,7 @@ export class SidebarComponent {
       submenu: [
         { icon: 'FileText', label: 'Informes', route: '/accounting/reports' },
         { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
-        { icon: 'BookOpen', label: 'Partidas', route: '/accounting/partidas' },
-        { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
+                { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
         { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' }
       ]
     },

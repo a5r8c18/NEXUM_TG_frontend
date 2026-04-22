@@ -25,8 +25,7 @@ export class OfflineDataService {
         this.syncWarehouses(companyId),
         this.syncInvoices(companyId),
         this.syncAccounts(companyId),
-        this.syncJournalEntries(companyId),
-        this.syncEmployees(companyId),
+                this.syncEmployees(companyId),
         this.syncFixedAssets(companyId),
         this.syncStockLimits(companyId),
         this.syncMovements(companyId),
@@ -218,12 +217,7 @@ export class OfflineDataService {
       );
       const now = new Date().toISOString();
 
-      await offlineDb.transaction('rw', offlineDb.journalEntries, async () => {
-        await offlineDb.journalEntries.where('companyId').equals(companyId).delete();
-        for (const item of items) {
-          await offlineDb.journalEntries.put({ ...item, companyId, lastSyncedAt: now });
-        }
-      });
+      // JournalEntries functionality removed
 
       await this.updateSyncMeta('journalEntries', companyId, items.length);
     } catch (error) {
@@ -231,10 +225,7 @@ export class OfflineDataService {
     }
   }
 
-  async getJournalEntriesOffline(companyId: number): Promise<any[]> {
-    return offlineDb.journalEntries.where('companyId').equals(companyId).toArray();
-  }
-
+  
   // ─── Empleados ───
 
   async syncEmployees(companyId: number): Promise<void> {
@@ -386,8 +377,7 @@ export class OfflineDataService {
         offlineDb.warehouses,
         offlineDb.companies,
         offlineDb.accounts,
-        offlineDb.journalEntries,
-        offlineDb.employees,
+                offlineDb.employees,
         offlineDb.fixedAssets,
         offlineDb.stockLimits,
         offlineDb.syncMetadata,
@@ -399,8 +389,7 @@ export class OfflineDataService {
         await offlineDb.warehouses.clear();
         await offlineDb.companies.clear();
         await offlineDb.accounts.clear();
-        await offlineDb.journalEntries.clear();
-        await offlineDb.employees.clear();
+                await offlineDb.employees.clear();
         await offlineDb.fixedAssets.clear();
         await offlineDb.stockLimits.clear();
         await offlineDb.syncMetadata.clear();

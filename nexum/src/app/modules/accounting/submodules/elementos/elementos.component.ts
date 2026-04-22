@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AccountingService, Elemento, Account, ExpenseType } from '../../../../core/services/accounting.service';
+import { SubelementsService, Subelement, SubelementCategory, SubelementFilters } from '../../../../core/services/subelements.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
@@ -12,294 +12,235 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
   templateUrl: './elementos.component.html',
 })
 export class ElementosComponent implements OnInit {
-  private accountingService = inject(AccountingService);
+  private subelementsService = inject(SubelementsService);
   private fb = inject(FormBuilder);
   private confirmDialog = inject(ConfirmDialogService);
 
   // Signals
-  elementos = signal<Elemento[]>([]);
-  accounts = signal<Account[]>([]);
-  subaccounts = signal<Account[]>([]);
-  expenseTypes = signal<ExpenseType[]>([]);
+  subelements = signal<Subelement[]>([]);
+  filteredSubelements = signal<Subelement[]>([]);
+  categories = signal<SubelementCategory[]>([]);
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   currentPage = signal(1);
   pageSize = 10;
   searchTerm = signal('');
-  accountFilter = signal('');
+  categoryFilter = signal<SubelementCategory | ''>('');
+  activeOnlyFilter = signal(true);
 
   // Modal
   showModal = signal(false);
-  editingElemento = signal<Elemento | null>(null);
+  editingSubelement = signal<Subelement | null>(null);
   isSaving = signal(false);
 
   // Forms
   filterForm: FormGroup;
-  elementoForm: FormGroup;
+  subelementForm: FormGroup;
 
   // Computed properties
-  filteredElementos = computed(() => {
-    let filtered = this.elementos();
+  filteredSubelementsList = computed(() => {
+    let filtered = this.subelements();
 
+    // Búsqueda textual
     const term = this.searchTerm().toLowerCase();
     if (term) {
-      filtered = filtered.filter(el =>
-        (el.element || '').toLowerCase().includes(term) ||
-        (el.elementDescription || '').toLowerCase().includes(term) ||
-        el.accountCode.toLowerCase().includes(term) ||
-        el.accountName.toLowerCase().includes(term)
+      filtered = filtered.filter(sub =>
+        sub.code.toLowerCase().includes(term) ||
+        sub.name.toLowerCase().includes(term) ||
+        (sub.description || '').toLowerCase().includes(term)
       );
     }
 
-    if (this.accountFilter()) {
-      filtered = filtered.filter(el => el.accountCode === this.accountFilter());
+    // Filtro por categoría
+    if (this.categoryFilter()) {
+      filtered = filtered.filter(sub => sub.category === this.categoryFilter());
+    }
+
+    // Filtro por estado activo
+    if (this.activeOnlyFilter()) {
+      filtered = filtered.filter(sub => sub.isActive);
     }
 
     return filtered;
   });
 
-  pagedElementos = computed(() => {
-    const filtered = this.filteredElementos();
+  pagedSubelements = computed(() => {
+    const filtered = this.filteredSubelementsList();
     const start = (this.currentPage() - 1) * this.pageSize;
     return filtered.slice(start, start + this.pageSize);
   });
 
   paginationConfig = computed(() => ({
     currentPage: this.currentPage(),
-    totalItems: this.filteredElementos().length,
+    totalItems: this.filteredSubelementsList().length,
     itemsPerPage: this.pageSize,
-    totalPages: Math.ceil(this.filteredElementos().length / this.pageSize),
+    totalPages: Math.ceil(this.filteredSubelementsList().length / this.pageSize),
   }));
 
-  statistics = computed(() => {
-    const items = this.elementos();
-    return {
-      total: items.length,
-      posted: items.filter(e => e.status === 'posted').length,
-      draft: items.filter(e => e.status === 'draft').length,
-      cancelled: items.filter(e => e.status === 'cancelled').length,
-    };
-  });
-
-  uniqueAccounts = computed(() => {
-    const accs = new Map<string, string>();
-    this.elementos().forEach(el => {
-      if (!accs.has(el.accountCode)) {
-        accs.set(el.accountCode, el.accountName);
-      }
-    });
-    return Array.from(accs.entries()).map(([code, name]) => ({ code, name }));
+  uniqueCategories = computed(() => {
+    const cats = new Set<SubelementCategory>();
+    this.subelements().forEach(sub => cats.add(sub.category));
+    return Array.from(cats);
   });
 
   constructor() {
     this.filterForm = this.fb.group({
       search: [''],
-      account: [''],
+      category: [''],
+      activeOnly: [true],
     });
 
-    this.elementoForm = this.fb.group({
-      accountCode: ['', Validators.required],
-      subaccountCode: [''],
-      entryNumber: ['', Validators.required],
-      element: ['', Validators.required],
-      elementDescription: [''],
+    this.subelementForm = this.fb.group({
+      code: ['', Validators.required],
+      name: ['', Validators.required],
+      category: ['', Validators.required],
+      description: [''],
+      isActive: [true],
     });
 
     this.filterForm.valueChanges.subscribe(values => {
       this.searchTerm.set(values.search || '');
-      this.accountFilter.set(values.account || '');
+      this.categoryFilter.set(values.category || '');
+      this.activeOnlyFilter.set(values.activeOnly !== false);
       this.currentPage.set(1);
-    });
-
-    this.elementoForm.get('accountCode')?.valueChanges.subscribe(accountCode => {
-      if (accountCode) {
-        this.loadSubaccounts(accountCode);
-        this.elementoForm.get('subaccountCode')?.setValue('');
-      } else {
-        this.subaccounts.set([]);
-        this.elementoForm.get('subaccountCode')?.setValue('');
-      }
     });
   }
 
   ngOnInit() {
-    this.loadElementos();
-    this.loadAccounts();
-    this.loadExpenseTypes();
+    this.loadSubelements();
+    this.loadCategories();
   }
 
-  loadElementos() {
+  loadSubelements() {
+    console.log('Loading subelements...');
     this.isLoading.set(true);
     this.hasError.set(false);
 
-    this.accountingService.getElementos({}).subscribe({
+    const filters: SubelementFilters = {
+      search: this.searchTerm() || undefined,
+      category: this.categoryFilter() || undefined,
+      activeOnly: this.activeOnlyFilter(),
+    };
+
+    this.subelementsService.findAll(filters).subscribe({
       next: (data) => {
-        this.elementos.set(data);
+        console.log('Subelements loaded:', data.length, 'items');
+        this.subelements.set(data);
         this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading subelements:', error);
+        this.subelements.set([]);
+        this.isLoading.set(false);
+        this.hasError.set(true);
+      },
+    });
+  }
+
+  loadCategories() {
+    this.subelementsService.getCategories().subscribe({
+      next: (data) => {
+        this.categories.set(data);
       },
       error: () => {
-        this.hasError.set(true);
-        this.isLoading.set(false);
+        this.categories.set([]);
       },
     });
-  }
-
-  loadAccounts() {
-    this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
-      next: (data) => {
-        // Filtrar solo cuentas de nivel 3 (Cuentas) y tipo expense (gastos)
-        const accountsOnly = data.filter(acc => acc.level === 3 && acc.type === 'expense');
-        this.accounts.set(accountsOnly);
-      },
-      error: () => {},
-    });
-  }
-
-  loadSubaccounts(parentCode: string) {
-    this.accountingService.getAccountsByParentCode(parentCode).subscribe({
-      next: (data) => this.subaccounts.set(data),
-      error: () => this.subaccounts.set([]),
-    });
-  }
-
-  loadExpenseTypes() {
-    this.accountingService.getExpenseTypes().subscribe({
-      next: (data) => this.expenseTypes.set(data),
-      error: () => {},
-    });
-  }
-
-  getExpenseTypeName(code: string): string {
-    const expType = this.expenseTypes().find(et => et.code === code);
-    return expType?.name || '';
-  }
-
-  getStatusClass(status: string): string {
-    const classes: Record<string, string> = {
-      'draft': 'bg-gray-100 text-gray-800',
-      'posted': 'bg-green-100 text-green-800',
-      'cancelled': 'bg-red-100 text-red-800',
-    };
-    return classes[status] || 'bg-gray-100 text-gray-800';
-  }
-
-  getStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      'draft': 'Borrador',
-      'posted': 'Contabilizado',
-      'cancelled': 'Anulado',
-    };
-    return labels[status] || status;
   }
 
   // Modal actions
-  createElemento() {
-    this.editingElemento.set(null);
-    this.elementoForm.reset({
-      accountCode: '',
-      subaccountCode: '',
-      entryNumber: '',
-      element: '',
-      elementDescription: '',
+  createSubelement() {
+    this.editingSubelement.set(null);
+    this.subelementForm.reset({
+      code: '',
+      name: '',
+      category: '',
+      description: '',
+      isActive: true,
     });
-    this.subaccounts.set([]);
     this.showModal.set(true);
   }
 
-  editElemento(el: Elemento) {
-    if (el.status !== 'draft') {
-      this.showToast('Solo se pueden editar elementos en borrador', 'error');
-      return;
-    }
-    this.editingElemento.set(el);
-    this.elementoForm.patchValue({
-      accountCode: el.accountCode,
-      subaccountCode: el.subaccountCode || '',
-      entryNumber: el.entryNumber,
-      element: el.element || '',
-      elementDescription: el.elementDescription || '',
+  editSubelement(subelement: Subelement) {
+    this.editingSubelement.set(subelement);
+    this.subelementForm.patchValue({
+      code: subelement.code,
+      name: subelement.name,
+      category: subelement.category,
+      description: subelement.description || '',
+      isActive: subelement.isActive,
     });
-    if (el.accountCode) {
-      this.loadSubaccounts(el.accountCode);
-    }
     this.showModal.set(true);
   }
 
   closeModal() {
     this.showModal.set(false);
-    this.editingElemento.set(null);
+    this.editingSubelement.set(null);
   }
 
-  saveElemento() {
-    if (this.elementoForm.invalid) {
+  saveSubelement() {
+    if (this.subelementForm.invalid) {
       this.showToast('Complete todos los campos requeridos', 'error');
       return;
     }
 
-    const val = this.elementoForm.value;
+    const val = this.subelementForm.value;
     const payload = {
-      date: new Date().toISOString().split('T')[0],
-      description: val.entryNumber,
-      accountCode: val.accountCode,
-      subaccountCode: val.subaccountCode || undefined,
-      entryNumber: val.entryNumber,
-      element: val.element,
-      elementDescription: val.elementDescription || undefined,
-      type: 'manual',
+      code: val.code,
+      name: val.name,
+      category: val.category,
+      description: val.description || undefined,
+      isActive: val.isActive,
     };
 
     this.isSaving.set(true);
 
-    if (this.editingElemento()) {
-      this.accountingService.updateElemento(this.editingElemento()!.id, payload).subscribe({
+    if (this.editingSubelement()) {
+      this.subelementsService.update(this.editingSubelement()!.id, payload).subscribe({
         next: () => {
-          this.showToast('Elemento actualizado correctamente', 'success');
+          this.showToast('Subelemento actualizado correctamente', 'success');
           this.closeModal();
-          this.loadElementos();
+          this.loadSubelements();
           this.isSaving.set(false);
         },
         error: (err) => {
-          this.showToast(err.error?.message || 'Error al actualizar elemento', 'error');
+          this.showToast(err.error?.message || 'Error al actualizar subelemento', 'error');
           this.isSaving.set(false);
         },
       });
     } else {
-      this.accountingService.createElemento(payload).subscribe({
+      this.subelementsService.create(payload).subscribe({
         next: () => {
-          this.showToast('Elemento creado correctamente', 'success');
+          this.showToast('Subelemento creado correctamente', 'success');
           this.closeModal();
-          this.loadElementos();
+          this.loadSubelements();
           this.isSaving.set(false);
         },
         error: (err) => {
-          this.showToast(err.error?.message || 'Error al crear elemento', 'error');
+          this.showToast(err.error?.message || 'Error al crear subelemento', 'error');
           this.isSaving.set(false);
         },
       });
     }
   }
 
-  async deleteElemento(el: Elemento) {
-    if (el.status !== 'draft') {
-      this.showToast('Solo se pueden eliminar elementos en borrador', 'error');
-      return;
-    }
+  async deleteSubelement(subelement: Subelement) {
     const confirmed = await this.confirmDialog.confirm({
-      title: 'Eliminar elemento',
-      message: `¿Eliminar el elemento "${el.element}"?`,
+      title: 'Eliminar subelemento',
+      message: `¿Eliminar el subelemento "${subelement.code} - ${subelement.name}"?`,
       confirmText: 'Eliminar',
       type: 'danger'
     });
     if (!confirmed) return;
 
-    this.accountingService.deleteElemento(el.id).subscribe({
+    this.subelementsService.delete(subelement.id).subscribe({
       next: () => {
-        this.showToast('Elemento eliminado correctamente', 'success');
-        this.loadElementos();
+        this.showToast('Subelemento eliminado correctamente', 'success');
+        this.loadSubelements();
       },
       error: (err) => {
-        this.showToast(err.error?.message || 'Error al eliminar elemento', 'error');
+        this.showToast(err.error?.message || 'Error al eliminar subelemento', 'error');
       },
     });
   }
@@ -309,8 +250,28 @@ export class ElementosComponent implements OnInit {
   }
 
   resetFilters() {
-    this.filterForm.reset();
+    this.filterForm.reset({
+      search: '',
+      category: '',
+      activeOnly: true,
+    });
     this.currentPage.set(1);
+  }
+
+  toggleSubelementStatus(subelement: Subelement) {
+    const newStatus = !subelement.isActive;
+    this.subelementsService.update(subelement.id, { isActive: newStatus }).subscribe({
+      next: () => {
+        this.showToast(
+          newStatus ? 'Subelemento activado correctamente' : 'Subelemento desactivado correctamente',
+          'success'
+        );
+        this.loadSubelements();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al cambiar estado', 'error');
+      },
+    });
   }
 
   formatCurrency(amount: number): string {

@@ -310,18 +310,7 @@ export class OfflineFirstService {
   //  ASIENTOS CONTABLES
   // ═══════════════════════════════════════════════════════
 
-  getJournalEntries(): Observable<any[]> {
-    if (this.network.isOnline()) {
-      return new Observable<any[]>(subscriber => {
-        this.offlineData.syncJournalEntries(this.companyId).then(() => {
-          from(this.offlineData.getJournalEntriesOffline(this.companyId)).subscribe(subscriber);
-        }).catch(() => {
-          from(this.offlineData.getJournalEntriesOffline(this.companyId)).subscribe(subscriber);
-        });
-      });
-    }
-    return from(this.offlineData.getJournalEntriesOffline(this.companyId));
-  }
+  // JournalEntries functionality removed
 
   // ═══════════════════════════════════════════════════════
   //  EMPLEADOS

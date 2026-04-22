@@ -112,11 +112,7 @@ export const routes: Routes = [
         path: 'accounting/accounts',
         loadComponent: () => import('./modules/accounting/submodules/accounts/accounts.component').then(m => m.AccountsComponent)
       },
-      {
-        path: 'accounting/partidas',
-        loadComponent: () => import('./modules/accounting/submodules/partidas/partidas.component').then(m => m.PartidasComponent)
-      },
-      {
+            {
         path: 'accounting/elementos',
         loadComponent: () => import('./modules/accounting/submodules/elementos/elementos.component').then(m => m.ElementosComponent)
       },

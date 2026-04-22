@@ -1,7 +1,8 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AccountingService, Voucher, Account, ExpenseType, CostCenter, JournalEntry } from '../../../../core/services/accounting.service';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
+import { AccountingService, Voucher, Account, ExpenseType, CostCenter } from '../../../../core/services/accounting.service';
+import { SubelementsService, Subelement } from '../../../../core/services/subelements.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
@@ -13,6 +14,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 })
 export class JournalEntriesComponent implements OnInit {
   private accountingService = inject(AccountingService);
+  private subelementsService = inject(SubelementsService);
   private fb = inject(FormBuilder);
   private confirmDialog = inject(ConfirmDialogService);
 
@@ -24,42 +26,61 @@ export class JournalEntriesComponent implements OnInit {
   currentPage = signal(1);
   pageSize = 10;
   searchTerm = signal('');
-  typeFilter = signal('');
+  accountCodeFilter = signal('');
+  subaccountCodeFilter = signal('');
   dateFromFilter = signal('');
   dateToFilter = signal('');
   statusFilter = signal('');
+
+  // Searchable dropdown data
+  accounts = signal<Account[]>([]);
+  subaccounts = signal<Account[]>([]);
+  costCenters = signal<CostCenter[]>([]);
+  expenseTypes = signal<ExpenseType[]>([]);
+  subelements = signal<Subelement[]>([]);
+  
+  // Filtered data for each line
+  filteredAccounts = signal<Map<number, Account[]>>(new Map());
+  filteredSubaccounts = signal<Map<number, Account[]>>(new Map());
+  filteredCostCenters = signal<Map<number, CostCenter[]>>(new Map());
+  filteredElements = signal<Map<number, any[]>>(new Map());
   selectedComprobante = signal<Voucher | null>(null);
   showEntriesDetail = signal(false);
   showModal = signal(false);
   editingVoucher = signal<Voucher | null>(null);
   isSaving = signal(false);
-  accounts = signal<Account[]>([]);
-  subaccounts = signal<Account[]>([]);
-  expenseTypes = signal<ExpenseType[]>([]);
-  costCenters = signal<CostCenter[]>([]);
-  elementos = signal<JournalEntry[]>([]);
-
+  
   // Forms
   filterForm: FormGroup;
   voucherForm: FormGroup;
+  linesFormArray: FormArray;
 
   // Computed properties
   filteredComprobantes = computed(() => {
     let filtered = this.comprobantes();
 
-    // Search filter
-    const term = this.searchTerm().toLowerCase();
-    if (term) {
+    // Voucher number filter (search field is now specifically for voucher number)
+    const voucherNumber = this.searchTerm().toLowerCase();
+    if (voucherNumber) {
       filtered = filtered.filter(comp =>
-        comp.description.toLowerCase().includes(term) ||
-        comp.voucherNumber.toLowerCase().includes(term) ||
-        comp.reference?.toLowerCase().includes(term)
+        comp.voucherNumber.toLowerCase().includes(voucherNumber)
       );
     }
 
-    // Type filter
-    if (this.typeFilter()) {
-      filtered = filtered.filter(comp => comp.type === this.typeFilter());
+    // Account filter
+    if (this.accountCodeFilter()) {
+      filtered = filtered.filter(comp =>
+        comp.lines?.some(line => line.accountCode.toLowerCase().includes(this.accountCodeFilter().toLowerCase()))
+      );
+    }
+
+    // Subaccount filter
+    if (this.subaccountCodeFilter()) {
+      filtered = filtered.filter(comp =>
+        comp.lines?.some(line => 
+          line.subaccountCode && line.subaccountCode.toLowerCase().includes(this.subaccountCodeFilter().toLowerCase())
+        )
+      );
     }
 
     // Status filter
@@ -110,44 +131,85 @@ export class JournalEntriesComponent implements OnInit {
   constructor() {
     this.filterForm = this.fb.group({
       search: [''],
-      type: [''],
+      accountCode: [''],
+      subaccountCode: [''],
       status: [''],
       dateFrom: [''],
       dateTo: ['']
     });
 
+    // Establecer fecha actual en formato YYYY-MM-DD para input type date
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const currentDate = `${year}-${month}-${day}`;
+
+    console.log('=== DEBUG FECHA ===');
+    console.log('Fecha actual (YYYY-MM-DD):', currentDate);
+
     this.voucherForm = this.fb.group({
-      date: [new Date().toISOString().split('T')[0], Validators.required],
-      primaryDocument: ['', Validators.required],
-      accountCode: ['', Validators.required],
-      subaccountCode: [''],
-      entryNumber: ['', Validators.required],
-      element: [''],
-      costCenterId: [''],
-      debit: [0, [Validators.required, Validators.min(0)]],
-      credit: [0, [Validators.required, Validators.min(0)]],
+      date: [currentDate, Validators.required],
+      description: [''],
+      type: ['otro'],
+      lines: this.fb.array([])
     });
 
-    // Watch accountCode changes to load subaccounts
-    this.voucherForm.get('accountCode')?.valueChanges.subscribe(code => {
-      if (code) {
-        this.loadSubaccounts(code);
-        this.voucherForm.get('subaccountCode')?.setValue('');
-      } else {
-        this.subaccounts.set([]);
-        this.voucherForm.get('subaccountCode')?.setValue('');
-      }
-    });
+    console.log('Valor en formulario:', this.voucherForm.get('date')?.value);
+    console.log('==================');
+    
+    this.linesFormArray = this.voucherForm.get('lines') as FormArray;
+    
+    // Initialize with one empty line
+    this.addLine();
 
-    // Watch form changes
+    // Watch form changes for filters
     this.filterForm.valueChanges.subscribe(values => {
       this.searchTerm.set(values.search || '');
-      this.typeFilter.set(values.type || '');
+      this.accountCodeFilter.set(values.accountCode || '');
+      this.subaccountCodeFilter.set(values.subaccountCode || '');
       this.statusFilter.set(values.status || '');
       this.dateFromFilter.set(values.dateFrom || '');
       this.dateToFilter.set(values.dateTo || '');
       this.currentPage.set(1);
+      // Reload vouchers with new filters
+      this.loadComprobantes();
     });
+  }
+
+  // Helper methods for form array
+  createLineFormGroup(): FormGroup {
+    return this.fb.group({
+      accountCode: ['', Validators.required],
+      subaccountCode: [''],
+      element: [''],
+      costCenterId: [''],
+      debit: [0, [Validators.required, Validators.min(0)]],
+      credit: [0, [Validators.required, Validators.min(0)]]
+    });
+  }
+
+  addLine() {
+    const newLine = this.createLineFormGroup();
+    
+    // Watch accountCode changes to load subaccounts for this line
+    newLine.get('accountCode')?.valueChanges.subscribe(code => {
+      if (code) {
+        this.loadSubaccounts(code);
+      }
+    });
+    
+    this.linesFormArray.push(newLine);
+  }
+
+  removeLine(index: number) {
+    if (this.linesFormArray.length > 1) {
+      this.linesFormArray.removeAt(index);
+    }
+  }
+
+  getLineControls() {
+    return this.linesFormArray.controls as FormGroup[];
   }
 
   ngOnInit() {
@@ -155,7 +217,7 @@ export class JournalEntriesComponent implements OnInit {
     this.loadAccounts();
     this.loadExpenseTypes();
     this.loadCostCenters();
-    this.loadElementos();
+    this.loadSubelements();
   }
 
   loadAccounts() {
@@ -190,32 +252,25 @@ export class JournalEntriesComponent implements OnInit {
     });
   }
 
-  loadElementos() {
-    this.accountingService.getJournalEntries({}).subscribe({
-      next: (data) => this.elementos.set(data.filter(e => !!e.element)),
-      error: () => {},
+  loadSubelements() {
+    this.subelementsService.findAll({ activeOnly: true }).subscribe({
+      next: (data) => this.subelements.set(data),
+      error: () => this.subelements.set([]),
     });
   }
-
-  uniqueElementos = computed(() => {
-    const seen = new Set<string>();
-    return this.elementos().filter(e => {
-      if (seen.has(e.element!)) return false;
-      seen.add(e.element!);
-      return true;
-    });
-  });
-
+  
   loadComprobantes() {
     this.isLoading.set(true);
     this.hasError.set(false);
 
-    this.accountingService.getVouchers().subscribe({
+    const filters = this.filterForm.value;
+    this.accountingService.getVouchers(filters).subscribe({
       next: (data) => {
         this.comprobantes.set(data);
         this.isLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error loading vouchers:', err);
         this.hasError.set(true);
         this.isLoading.set(false);
       },
@@ -278,17 +333,23 @@ export class JournalEntriesComponent implements OnInit {
 
   createComprobante() {
     this.editingVoucher.set(null);
+    
+    // Usar la misma lógica de fecha local que en el constructor (YYYY-MM-DD)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const currentDate = `${year}-${month}-${day}`;
+    
     this.voucherForm.reset({
-      date: new Date().toISOString().split('T')[0],
-      primaryDocument: '',
-      accountCode: '',
-      subaccountCode: '',
-      entryNumber: '',
-      element: '',
-      costCenterId: '',
-      debit: 0,
-      credit: 0,
+      date: currentDate,
+      description: '',
+      type: 'otro'
     });
+    
+    // Clear lines and add one empty line
+    this.linesFormArray.clear();
+    this.addLine();
     this.subaccounts.set([]);
     this.showModal.set(true);
   }
@@ -299,22 +360,44 @@ export class JournalEntriesComponent implements OnInit {
       return;
     }
     this.editingVoucher.set(comprobante);
-    // For edit, populate from first line if available
-    const firstLine = comprobante.lines?.[0];
+    
+    // Populate header fields
     this.voucherForm.patchValue({
       date: comprobante.date,
-      primaryDocument: comprobante.reference || '',
-      accountCode: firstLine?.accountCode || '',
-      subaccountCode: '',
-      entryNumber: '',
-      element: '',
-      costCenterId: firstLine?.costCenterId || '',
-      debit: firstLine ? Number(firstLine.debit) : 0,
-      credit: firstLine ? Number(firstLine.credit) : 0,
+      description: comprobante.description || '',
+      type: comprobante.type || 'otro'
     });
-    if (firstLine?.accountCode) {
-      this.loadSubaccounts(firstLine.accountCode);
+    
+    // Clear existing lines and populate with voucher lines
+    this.linesFormArray.clear();
+    
+    if (comprobante.lines && comprobante.lines.length > 0) {
+      comprobante.lines.forEach(line => {
+        const lineGroup = this.createLineFormGroup();
+        lineGroup.patchValue({
+          accountCode: line.accountCode || '',
+          subaccountCode: '',
+          entryNumber: '',
+          element: '',
+          costCenterId: line.costCenterId || '',
+          debit: Number(line.debit) || 0,
+          credit: Number(line.credit) || 0
+        });
+        
+        // Watch accountCode changes for this line
+        lineGroup.get('accountCode')?.valueChanges.subscribe(code => {
+          if (code) {
+            this.loadSubaccounts(code);
+          }
+        });
+        
+        this.linesFormArray.push(lineGroup);
+      });
+    } else {
+      // Add one empty line if no existing lines
+      this.addLine();
     }
+    
     this.showModal.set(true);
   }
 
@@ -329,48 +412,79 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   saveVoucher() {
-    if (this.voucherForm.invalid) {
+    if (this.voucherForm.invalid || this.linesFormArray.invalid) {
       this.showToast('Complete todos los campos requeridos', 'error');
       return;
     }
 
-    const val = this.voucherForm.value;
-    const debit = Number(val.debit) || 0;
-    const credit = Number(val.credit) || 0;
+    const headerValues = this.voucherForm.value;
+    const lines = this.linesFormArray.value;
 
-    if (debit === 0 && credit === 0) {
-      this.showToast('Debe ingresar un monto en Debe o Haber', 'error');
+    // Validate that at least one line has debit or credit
+    const hasValidLines = lines.some((line: any) => 
+      (Number(line.debit) > 0) || (Number(line.credit) > 0)
+    );
+
+    if (!hasValidLines) {
+      this.showToast('Al menos una línea debe tener un monto en Debe o Haber', 'error');
+      return;
+    }
+
+    // Calculate totals
+    const totalDebit = lines.reduce((sum: number, line: any) => sum + (Number(line.debit) || 0), 0);
+    const totalCredit = lines.reduce((sum: number, line: any) => sum + (Number(line.credit) || 0), 0);
+
+    // Validate that debits equal credits
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      this.showToast('El total del Debe debe ser igual al total del Haber', 'error');
       return;
     }
 
     const payload = {
-      date: val.date,
-      type: 'otro' as const,
-      description: val.primaryDocument,
-      reference: val.primaryDocument || undefined,
+      date: headerValues.date,
+      description: headerValues.description || 'Comprobante manual',
       sourceModule: 'manual',
-      lines: [
-        {
-          accountCode: val.accountCode,
-          debit,
-          credit,
-          description: val.element || val.primaryDocument || undefined,
-          costCenterId: val.costCenterId || undefined,
-          lineOrder: 1,
-        },
-      ],
+      lines: lines.map((line: any, index: number) => ({
+        accountCode: line.accountCode,
+        subaccountCode: line.subaccountCode || null,
+        element: line.element || null,
+        costCenterId: line.costCenterId || null,
+        debit: Number(line.debit) || 0,
+        credit: Number(line.credit) || 0,
+        lineOrder: index + 1,
+      })),
     };
 
+    // Logs para depuración
+    console.log('=== CREANDO COMPROBANTE ===');
+    console.log('Header Values:', headerValues);
+    console.log('Lines detalladas:', lines.map((line: any, index: number) => ({
+      index,
+      accountCode: line.accountCode,
+      subaccountCode: line.subaccountCode,
+      element: line.element,
+      costCenterId: line.costCenterId,
+      debit: line.debit,
+      credit: line.credit
+    })));
+    console.log('Payload enviado al backend:', JSON.stringify(payload, null, 2));
+    console.log('==========================');
+
     this.isSaving.set(true);
+    
+    // For now, both create and edit use createVoucher
+    // TODO: Implement proper update functionality when backend supports it
     this.accountingService.createVoucher(payload).subscribe({
       next: () => {
-        this.showToast('Comprobante creado correctamente', 'success');
+        const message = this.editingVoucher() ? 'Comprobante actualizado correctamente' : 'Comprobante creado correctamente';
+        this.showToast(message, 'success');
         this.closeModal();
         this.loadComprobantes();
         this.isSaving.set(false);
       },
       error: (err) => {
-        this.showToast(err.error?.message || 'Error al guardar comprobante', 'error');
+        const errorMessage = this.editingVoucher() ? 'Error al actualizar comprobante' : 'Error al guardar comprobante';
+        this.showToast(err.error?.message || errorMessage, 'error');
         this.isSaving.set(false);
       },
     });
@@ -429,6 +543,12 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   viewEntries(comprobante: Voucher) {
+    // Logs para depuración del modal de detalles
+    console.log('=== MODAL DETALLES COMPROBANTE ===');
+    console.log('Comprobante seleccionado:', JSON.stringify(comprobante, null, 2));
+    console.log('Líneas del comprobante:', comprobante.lines);
+    console.log('================================');
+    
     this.selectedComprobante.set(comprobante);
     this.showEntriesDetail.set(true);
   }
@@ -438,8 +558,180 @@ export class JournalEntriesComponent implements OnInit {
     this.selectedComprobante.set(null);
   }
 
+  // Computed totals for validation display
+  totalDebit = computed(() => {
+    return this.linesFormArray.value.reduce((sum: number, line: any) => 
+      sum + (Number(line.debit) || 0), 0
+    );
+  });
+
+  totalCredit = computed(() => {
+    return this.linesFormArray.value.reduce((sum: number, line: any) => 
+      sum + (Number(line.credit) || 0), 0
+    );
+  });
+
+  isBalanced = computed(() => {
+    return Math.abs(this.totalDebit() - this.totalCredit()) < 0.01;
+  });
+
   private showToast(message: string, type: 'success' | 'error' | 'info') {
     this.toast.set({ message, type });
     setTimeout(() => this.toast.set(null), 3000);
+  }
+
+  // Searchable dropdown methods
+  filterAccounts(searchTerm: string, lineIndex: number) {
+    const filtered = this.accounts().filter(account =>
+      account.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      account.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    const currentMap = this.filteredAccounts();
+    currentMap.set(lineIndex, filtered);
+    this.filteredAccounts.set(new Map(currentMap));
+  }
+
+  filterSubaccounts(searchTerm: string, lineIndex: number) {
+    const filtered = this.subaccounts().filter(subaccount =>
+      subaccount.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      subaccount.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    const currentMap = this.filteredSubaccounts();
+    currentMap.set(lineIndex, filtered);
+    this.filteredSubaccounts.set(new Map(currentMap));
+  }
+
+  filterCostCenters(searchTerm: string, lineIndex: number) {
+    const filtered = this.costCenters().filter(costCenter =>
+      costCenter.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      costCenter.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    const currentMap = this.filteredCostCenters();
+    currentMap.set(lineIndex, filtered);
+    this.filteredCostCenters.set(new Map(currentMap));
+  }
+
+  filterElements(searchTerm: string, lineIndex: number) {
+    const filtered = this.subelements().filter(subelement =>
+      subelement.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      subelement.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    const currentMap = this.filteredElements();
+    currentMap.set(lineIndex, filtered);
+    this.filteredElements.set(new Map(currentMap));
+  }
+
+  getFilteredAccounts(lineIndex: number) {
+    return this.filteredAccounts().get(lineIndex) || [];
+  }
+
+  getFilteredSubaccounts(lineIndex: number) {
+    return this.filteredSubaccounts().get(lineIndex) || [];
+  }
+
+  getFilteredCostCenters(lineIndex: number) {
+    return this.filteredCostCenters().get(lineIndex) || [];
+  }
+
+  getFilteredElements(lineIndex: number) {
+    return this.filteredElements().get(lineIndex) || [];
+  }
+
+  selectAccount(account: Account, lineIndex: number) {
+    const lineGroup = this.getLineControls()[lineIndex];
+    lineGroup.get('accountCode')?.setValue(account.code);
+    
+    // Clear filtered accounts for this line
+    const currentMap = this.filteredAccounts();
+    currentMap.delete(lineIndex);
+    this.filteredAccounts.set(new Map(currentMap));
+    
+    // Load subaccounts for this account
+    this.loadSubaccounts(account.code);
+  }
+
+  selectSubaccount(subaccount: Account, lineIndex: number) {
+    const lineGroup = this.getLineControls()[lineIndex];
+    lineGroup.get('subaccountCode')?.setValue(subaccount.code);
+    
+    // Clear filtered subaccounts for this line
+    const currentMap = this.filteredSubaccounts();
+    currentMap.delete(lineIndex);
+    this.filteredSubaccounts.set(new Map(currentMap));
+  }
+
+  selectCostCenter(costCenter: CostCenter, lineIndex: number) {
+    const lineGroup = this.getLineControls()[lineIndex];
+    lineGroup.get('costCenterId')?.setValue(costCenter.id);
+    
+    // Clear filtered cost centers for this line
+    const currentMap = this.filteredCostCenters();
+    currentMap.delete(lineIndex);
+    this.filteredCostCenters.set(new Map(currentMap));
+  }
+
+  selectElement(subelement: Subelement, lineIndex: number) {
+    const lineGroup = this.getLineControls()[lineIndex];
+    lineGroup.get('element')?.setValue(subelement.code);
+    
+    // Clear filtered elements for this line
+    const currentMap = this.filteredElements();
+    currentMap.set(lineIndex, []);
+    this.filteredElements.set(new Map(currentMap));
+  }
+
+  getAccountDisplay(accountCode: string): string {
+    if (!accountCode) return '';
+    const account = this.accounts().find(acc => acc.code === accountCode);
+    return account ? `${account.code} - ${account.name}` : accountCode;
+  }
+
+  getSubaccountDisplay(subaccountCode: string): string {
+    if (!subaccountCode) return '';
+    const subaccount = this.subaccounts().find(sub => sub.code === subaccountCode);
+    return subaccount ? `${subaccount.code} - ${subaccount.name}` : subaccountCode;
+  }
+
+  getCostCenterDisplay(costCenterId: string): string {
+    if (!costCenterId) return '';
+    const costCenter = this.costCenters().find(cc => cc.id === costCenterId);
+    return costCenter ? `${costCenter.code} - ${costCenter.name}` : costCenterId;
+  }
+
+  getElementDisplay(elementCode: string): string {
+    if (!elementCode) return '';
+    const subelement = this.subelements().find(el => el.code === elementCode);
+    return subelement ? `${subelement.code} - ${subelement.name}` : elementCode;
+  }
+
+  // Methods to handle debit/credit field interactions
+  onDebitChange(event: any, lineIndex: number) {
+    const lineGroup = this.getLineControls()[lineIndex];
+    const debitValue = event.target.value;
+    const creditControl = lineGroup.get('credit');
+    
+    if (debitValue && Number(debitValue) > 0) {
+      creditControl?.setValue(0);
+      creditControl?.disable();
+    } else {
+      creditControl?.enable();
+    }
+  }
+
+  onCreditChange(event: any, lineIndex: number) {
+    const lineGroup = this.getLineControls()[lineIndex];
+    const creditValue = event.target.value;
+    const debitControl = lineGroup.get('debit');
+    
+    if (creditValue && Number(creditValue) > 0) {
+      debitControl?.setValue(0);
+      debitControl?.disable();
+    } else {
+      debitControl?.enable();
+    }
   }
 }

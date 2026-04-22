@@ -15,53 +15,26 @@
       </button>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-slate-50 rounded-lg p-4">
-        <div class="text-sm text-slate-600">Total Comprobantes</div>
-        <div class="text-2xl font-bold text-slate-900">{{ statistics().total }}</div>
-      </div>
-      <div class="bg-blue-50 rounded-lg p-4">
-        <div class="text-sm text-blue-600">Monto Total</div>
-        <div class="text-2xl font-bold text-blue-900">${{ statistics().totalAmount.toFixed(2) }}</div>
-      </div>
-      <div class="bg-green-50 rounded-lg p-4">
-        <div class="text-sm text-green-600">Contabilizados</div>
-        <div class="text-2xl font-bold text-green-900">{{ statistics().posted }}</div>
-      </div>
-      <div class="bg-amber-50 rounded-lg p-4">
-        <div class="text-sm text-amber-600">En Borrador</div>
-        <div class="text-2xl font-bold text-amber-900">{{ statistics().draft }}</div>
-      </div>
-    </div>
-  </div>
-
   <!-- Filters -->
   <div class="bg-white rounded-xl border border-slate-200 p-6">
-    <h2 class="text-lg font-semibold text-slate-900 mb-4">Filtros</h2>
     <form [formGroup]="filterForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="space-y-1">
-        <label class="text-xs font-medium text-slate-600">Buscar</label>
+        <label class="text-xs font-medium text-slate-600">N° Comprobante</label>
         <input type="text" formControlName="search"
-               placeholder="Descripción, referencia..."
+               placeholder="Escribir número de comprobante..."
                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
       </div>
       <div class="space-y-1">
-        <label class="text-xs font-medium text-slate-600">Tipo</label>
-        <select formControlName="type"
-                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
-          <option value="">Todos</option>
-          <option value="factura">Factura</option>
-          <option value="recibo">Recibo</option>
-          <option value="nota_debito">Nota Débito</option>
-          <option value="nota_credito">Nota Crédito</option>
-          <option value="nomina">Nómina</option>
-          <option value="depreciacion">Depreciación</option>
-          <option value="ajuste">Ajuste</option>
-          <option value="apertura">Apertura</option>
-          <option value="cierre">Cierre</option>
-          <option value="otro">Otro</option>
-        </select>
+        <label class="text-xs font-medium text-slate-600">Cuenta</label>
+        <input type="text" formControlName="accountCode"
+               placeholder="Escribir código de cuenta..."
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Subcuenta</label>
+        <input type="text" formControlName="subaccountCode"
+               placeholder="Escribir código de subcuenta..."
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
       </div>
       <div class="space-y-1">
         <label class="text-xs font-medium text-slate-600">Estado</label>
@@ -73,26 +46,23 @@
           <option value="cancelled">Anulado</option>
         </select>
       </div>
-      <div class="space-y-1">
-        <label class="text-xs font-medium text-slate-600">Acciones</label>
-        <div class="flex gap-2">
-          <button type="button" (click)="resetFilters()"
-                  class="px-3 py-2 text-sm text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-            Limpiar
-          </button>
-        </div>
-      </div>
       <!-- Date Range -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div class="space-y-1">
+      <div class="flex flex-col md:flex-row gap-4 mt-4">
+        <div class="flex-1 space-y-1">
           <label class="text-xs font-medium text-slate-600">Fecha Desde</label>
           <input type="date" formControlName="dateFrom"
                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
         </div>
-        <div class="space-y-1">
+        <div class="flex-1 space-y-1">
           <label class="text-xs font-medium text-slate-600">Fecha Hasta</label>
           <input type="date" formControlName="dateTo"
                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
+        </div>
+        <div class="flex items-end">
+          <button type="button" (click)="resetFilters()"
+                  class="px-4 py-2 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 transition-colors">
+            Limpiar
+          </button>
         </div>
       </div>
     </form>
@@ -128,97 +98,143 @@
     <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-slate-50 border-b border-slate-200">
+          <thead class="bg-slate-200 border-b border-slate-300">
             <tr>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Cuenta</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Subcuenta</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Partida</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Elemento</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Centro de Costo</th>
-              <th class="px-5 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Debe</th>
-              <th class="px-5 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Haber</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">N° Comprobante</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Cuenta Contable</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Centro de Costo</th>
+              <th class="px-6 py-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Débito</th>
+              <th class="px-6 py-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Crédito</th>
+              <th class="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Estado</th>
+              <th class="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
             @for (comprobante of pagedComprobantes(); track comprobante.id) {
-              <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-5 py-3">
-                  <div class="text-sm font-mono text-slate-900">{{ comprobante.lines[0]?.accountCode || '-' }}</div>
-                  <div class="text-xs text-slate-500">{{ comprobante.lines[0]?.accountName || '' }}</div>
-                </td>
-                <td class="px-5 py-3">
-                  <div class="text-sm text-slate-900">-</div>
-                </td>
-                <td class="px-5 py-3">
-                  <div class="text-sm text-slate-900">{{ comprobante.description || '-' }}</div>
-                </td>
-                <td class="px-5 py-3">
-                  <div class="text-sm text-slate-900">{{ comprobante.lines[0]?.description || '-' }}</div>
-                </td>
-                <td class="px-5 py-3">
-                  <div class="text-sm text-slate-900">{{ comprobante.lines[0]?.costCenter?.name || '-' }}</div>
-                </td>
-                <td class="px-5 py-3 text-right">
-                  <div class="text-sm font-semibold text-blue-900">{{ (+comprobante.totalAmount).toFixed(2) }}</div>
-                </td>
-                <td class="px-5 py-3 text-right">
-                  <div class="text-sm font-semibold text-green-900">{{ (+comprobante.totalAmount).toFixed(2) }}</div>
-                </td>
-                <td class="px-5 py-3">
-                  <div class="flex justify-center gap-1">
-                    <button (click)="viewEntries(comprobante)"
-                            class="p-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="Ver asientos">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-4M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                      </svg>
-                    </button>
-                    @if (comprobante.status === 'draft') {
-                      <button (click)="postComprobante(comprobante)"
-                              class="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Contabilizar">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                      </button>
+              @for (line of (comprobante.lines || []); track line.id || $index) {
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <!-- Show voucher number only on first line -->
+                  @if ($index === 0) {
+                    <td class="px-6 py-4 align-top" [attr.rowspan]="comprobante.lines.length || 1">
+                      <div class="space-y-2">
+                        <div class="font-semibold text-slate-900">{{ comprobante.voucherNumber }}</div>
+                        @if (comprobante.description) {
+                          <div class="text-xs text-slate-500 italic max-w-xs truncate" title="{{ comprobante.description }}">
+                            {{ comprobante.description }}
+                          </div>
+                        }
+                      </div>
+                    </td>
+                  }
+                  
+                  <td class="px-6 py-4">
+                    <div class="space-y-1">
+                      <div class="font-mono text-sm text-slate-900">{{ line.accountCode || '-' }}</div>
+                      <div class="text-xs text-slate-500 truncate max-w-xs" title="{{ line.accountName || '' }}">
+                        {{ line.accountName || '' }}
+                      </div>
+                    </div>
+                  </td>
+                  
+                  <td class="px-6 py-4">
+                    <div class="text-sm text-slate-900">{{ line.costCenter?.name || '-' }}</div>
+                  </td>
+                  
+                  <td class="px-6 py-4 text-right">
+                    @if (line.debit && line.debit > 0) {
+                      <div class="font-semibold text-blue-700">${{ (+line.debit).toFixed(2) }}</div>
+                    } @else {
+                      <div class="text-slate-400">-</div>
                     }
-                    @if (comprobante.status === 'draft' || comprobante.status === 'posted') {
-                      <button (click)="cancelComprobante(comprobante)"
-                              class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Anular">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                      </button>
+                  </td>
+                  
+                  <td class="px-6 py-4 text-right">
+                    @if (line.credit && line.credit > 0) {
+                      <div class="font-semibold text-green-700">${{ (+line.credit).toFixed(2) }}</div>
+                    } @else {
+                      <div class="text-slate-400">-</div>
                     }
-                    <button (click)="editComprobante(comprobante)"
-                            class="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Editar">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                    </button>
-                    <button (click)="deleteComprobante(comprobante)"
-                            class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Eliminar">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                  
+                  <!-- Show status and actions only on first line -->
+                  @if ($index === 0) {
+                    <td class="px-6 py-4 align-top" [attr.rowspan]="comprobante.lines.length || 1">
+                      <div class="text-center">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full"
+                              [class]="getStatusClass(comprobante.status)">
+                          {{ getStatusLabel(comprobante.status) }}
+                        </span>
+                      </div>
+                    </td>
+                    
+                    <td class="px-6 py-4 align-top" [attr.rowspan]="comprobante.lines.length || 1">
+                      <div class="flex items-center justify-center gap-1">
+                        <button (click)="editComprobante(comprobante)"
+                                class="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Editar comprobante">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                          </svg>
+                        </button>
+                        <button (click)="viewEntries(comprobante)"
+                                class="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Ver detalles">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          </svg>
+                        </button>
+                        @if (comprobante.status === 'draft') {
+                          <button (click)="postComprobante(comprobante)"
+                                  class="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Contabilizar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                          </button>
+                        }
+                        @if (comprobante.status === 'draft' || comprobante.status === 'posted') {
+                          <button (click)="cancelComprobante(comprobante)"
+                                  class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Anular">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  }
+                </tr>
+              }
+              
+              <!-- Voucher Total Row -->
+              @if (comprobante.lines && comprobante.lines.length > 0) {
+                <tr class="bg-slate-100 border-t-2 border-slate-300 font-semibold">
+                  <td colspan="3" class="px-6 py-4 text-right text-sm text-slate-700">
+                    TOTAL {{ comprobante.voucherNumber }}
+                  </td>
+                  <td class="px-6 py-4 text-right text-sm text-blue-700">
+                    ${{ (comprobante.lines || []).reduce((sum, line) => sum + (line.debit ? +line.debit : 0), 0).toFixed(2) }}
+                  </td>
+                  <td class="px-6 py-4 text-right text-sm text-green-700">
+                    ${{ (comprobante.lines || []).reduce((sum, line) => sum + (line.credit ? +line.credit : 0), 0).toFixed(2) }}
+                  </td>
+                  <td colspan="2"></td>
+                </tr>
+              }
             }
-            @empty {
+            
+            <!-- Empty State -->
+            @if (pagedComprobantes().length === 0) {
               <tr>
-                <td colspan="8" class="px-5 py-16 text-center">
-                  <div class="flex flex-col items-center gap-2 text-slate-400">
-                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <td colspan="7" class="px-6 py-16 text-center">
+                  <div class="flex flex-col items-center gap-3 text-slate-400">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    <p class="text-sm font-medium">No hay comprobantes registrados</p>
-                    <p class="text-xs">Crea tu primer comprobante contable</p>
+                    <p class="text-sm font-medium text-slate-600">No hay comprobantes registrados</p>
+                    <p class="text-xs text-slate-500">Crea tu primer comprobante contable para comenzar</p>
                   </div>
                 </td>
               </tr>
@@ -228,11 +244,9 @@
       </div>
 
       <!-- Pagination -->
-      @if (paginationConfig().totalPages > 1) {
-        <div class="mt-4 px-5 pb-4">
-          <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
-        </div>
-      }
+      <div class="mt-4 px-5 pb-4">
+        <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
+      </div>
     </div>
   }
 </div>
@@ -257,91 +271,166 @@
 
       <!-- Modal Body -->
       <form [formGroup]="voucherForm" (ngSubmit)="saveVoucher()" class="p-6 space-y-5">
-        <!-- Row 1: Fecha de Registro + Documento Primario -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Fecha de Registro *</label>
-            <input type="date" formControlName="date"
-                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-          </div>
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Documento Primario *</label>
-            <input type="text" formControlName="primaryDocument" placeholder="Nro. de documento primario"
-                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-          </div>
-        </div>
-
-        <!-- Row 2: Cuenta + Subcuenta -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Cuenta *</label>
-            <select formControlName="accountCode"
-                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Seleccionar cuenta...</option>
-              @for (acc of accounts(); track acc.id) {
-                <option [value]="acc.code">{{ acc.code }} - {{ acc.name }}</option>
-              }
-            </select>
-          </div>
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Subcuenta</label>
-            <select formControlName="subaccountCode"
-                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Sin subcuenta</option>
-              @for (sub of subaccounts(); track sub.id) {
-                <option [value]="sub.code">{{ sub.code }} - {{ sub.name }}</option>
-              }
-            </select>
+        <!-- Description and Date Section -->
+        <div class="space-y-4">
+          <div class="flex gap-4 items-start">
+            <div class="flex-1">
+              <label class="text-xs font-semibold text-slate-600 uppercase">Descripción del Comprobante</label>
+              <input type="text" formControlName="description" placeholder="Ingrese una descripción detallada del comprobante"
+                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+            </div>
+            <div class="w-40">
+              <label class="text-xs font-semibold text-slate-600 uppercase">Fecha</label>
+              <input type="date" formControlName="date"
+                     class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+            </div>
           </div>
         </div>
 
-        <!-- Row 3: Partida + Elemento -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Partida *</label>
-            <select formControlName="entryNumber"
-                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Seleccionar partida...</option>
-              @for (et of expenseTypes(); track et.code) {
-                <option [value]="et.code">{{ et.code }} - {{ et.name }}</option>
-              }
-            </select>
-          </div>
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Elemento</label>
-            <select formControlName="element"
-                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Seleccionar elemento...</option>
-              @for (el of uniqueElementos(); track el.id) {
-                <option [value]="el.element">{{ el.element }} {{ el.elementDescription ? '- ' + el.elementDescription : '' }}</option>
-              }
-            </select>
-          </div>
-        </div>
+        <!-- Lines Section -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold text-slate-700 uppercase">Líneas del Comprobante</h3>
 
-        <!-- Row 4: Centro de Costo -->
-        <div class="space-y-1">
-          <label class="text-xs font-semibold text-slate-600 uppercase">Centro de Costo</label>
-          <select formControlName="costCenterId"
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <option value="">Sin centro de costo</option>
-            @for (cc of costCenters(); track cc.id) {
-              <option [value]="cc.id">{{ cc.code }} - {{ cc.name }}</option>
+          <!-- Lines Container -->
+          <div formArrayName="lines" class="space-y-3">
+            @for (lineGroup of getLineControls(); track $index; let i = $index) {
+              <div [formGroupName]="i" class="bg-slate-200 rounded-lg p-4 border border-slate-400">
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs font-semibold text-slate-600 uppercase">Línea {{ i + 1 }}</span>
+                  @if (getLineControls().length > 1) {
+                    <button type="button" (click)="removeLine(i)"
+                            class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                            title="Eliminar línea">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  }
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600 uppercase">Cuenta *</label>
+                    <div class="relative">
+                      <input type="text" 
+                             [value]="getAccountDisplay(lineGroup.get('accountCode')?.value)"
+                             (input)="filterAccounts($any($event.target).value, i); lineGroup.get('accountCode')?.setValue($any($event.target).value)"
+                             placeholder="Buscar cuenta..."
+                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                      
+                      <!-- Dropdown with filtered accounts -->
+                      @if (getFilteredAccounts(i).length > 0 && lineGroup.get('accountCode')?.value) {
+                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          @for (account of getFilteredAccounts(i); track account.id) {
+                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                                 (click)="selectAccount(account, i)">
+                              <div class="text-sm font-medium text-slate-900">{{ account.code }}</div>
+                              <div class="text-xs text-slate-500">{{ account.name }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600 uppercase">Subcuenta</label>
+                    <div class="relative">
+                      <input type="text" 
+                             [value]="getSubaccountDisplay(lineGroup.get('subaccountCode')?.value)"
+                             (input)="filterSubaccounts($any($event.target).value, i); lineGroup.get('subaccountCode')?.setValue($any($event.target).value)"
+                             placeholder="Buscar subcuenta..."
+                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                      
+                      <!-- Dropdown with filtered subaccounts -->
+                      @if (getFilteredSubaccounts(i).length > 0 && lineGroup.get('subaccountCode')?.value) {
+                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          @for (subaccount of getFilteredSubaccounts(i); track subaccount.id) {
+                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                                 (click)="selectSubaccount(subaccount, i)">
+                              <div class="text-sm font-medium text-slate-900">{{ subaccount.code }}</div>
+                              <div class="text-xs text-slate-500">{{ subaccount.name }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600 uppercase">Centro de Costo</label>
+                    <div class="relative">
+                      <input type="text" 
+                             [value]="getCostCenterDisplay(lineGroup.get('costCenterId')?.value)"
+                             (input)="filterCostCenters($any($event.target).value, i); lineGroup.get('costCenterId')?.setValue($any($event.target).value)"
+                             placeholder="Buscar centro de costo..."
+                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                      
+                      <!-- Dropdown with filtered cost centers -->
+                      @if (getFilteredCostCenters(i).length > 0 && lineGroup.get('costCenterId')?.value) {
+                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          @for (costCenter of getFilteredCostCenters(i); track costCenter.id) {
+                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                                 (click)="selectCostCenter(costCenter, i)">
+                              <div class="text-sm font-medium text-slate-900">{{ costCenter.code }}</div>
+                              <div class="text-xs text-slate-500">{{ costCenter.name }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600 uppercase">Subelemento</label>
+                    <div class="relative">
+                      <input type="text" 
+                             [value]="getElementDisplay(lineGroup.get('element')?.value)"
+                             (input)="filterElements($any($event.target).value, i); lineGroup.get('element')?.setValue($any($event.target).value)"
+                             placeholder="Buscar subelemento..."
+                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                      
+                      <!-- Dropdown with filtered elements -->
+                      @if (getFilteredElements(i).length > 0 && lineGroup.get('element')?.value) {
+                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          @for (element of getFilteredElements(i); track element.id) {
+                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                                 (click)="selectElement(element, i)">
+                              <div class="text-sm font-medium text-slate-900">{{ element.code }}</div>
+                              <div class="text-xs text-slate-500">{{ element.name }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600 uppercase">Debe</label>
+                    <input type="number" formControlName="debit" step="0.01" min="0" placeholder="0.00"
+                           (input)="onDebitChange($event, i)"
+                           class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600 uppercase">Haber</label>
+                    <input type="number" formControlName="credit" step="0.01" min="0" placeholder="0.00"
+                           (input)="onCreditChange($event, i)"
+                           class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                  </div>
+                </div>
+
+                              </div>
             }
-          </select>
-        </div>
-
-        <!-- Row 5: Debe + Haber -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Debe</label>
-            <input type="number" formControlName="debit" step="0.01" min="0" placeholder="0.00"
-                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
           </div>
-          <div class="space-y-1">
-            <label class="text-xs font-semibold text-slate-600 uppercase">Haber</label>
-            <input type="number" formControlName="credit" step="0.01" min="0" placeholder="0.00"
-                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+
+          <!-- Add Line Button -->
+          <div class="flex justify-end pt-2">
+            <button type="button" (click)="addLine()"
+                    class="px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Agregar Línea
+            </button>
           </div>
         </div>
 
@@ -383,14 +472,10 @@
       </div>
 
       <!-- Voucher Info -->
-      <div class="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-3 border-b border-slate-100 bg-slate-50/50">
+      <div class="px-6 py-4 grid grid-cols-2 md:grid-cols-3 gap-3 border-b border-slate-100 bg-slate-50/50">
         <div>
           <div class="text-xs text-slate-500">Fecha</div>
-          <div class="text-sm font-medium text-slate-900">{{ selectedComprobante()!.date | date:'dd/MM/yyyy' }}</div>
-        </div>
-        <div>
-          <div class="text-xs text-slate-500">Tipo</div>
-          <div class="text-sm font-medium text-slate-900">{{ getTypeLabel(selectedComprobante()!.type) }}</div>
+          <div class="text-sm font-medium text-slate-900">{{ selectedComprobante()!.date }}</div>
         </div>
         <div>
           <div class="text-xs text-slate-500">Origen</div>
@@ -411,20 +496,41 @@
             <tr>
               <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">#</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Cuenta</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Detalle</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Subcuenta</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Subelemento</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Centro Costo</th>
               <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">Débito</th>
               <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">Crédito</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            @for (line of selectedComprobante()!.lines; track line.id) {
+            @for (line of selectedComprobante()!.lines.sort((a, b) => a.lineOrder - b.lineOrder); track $index) {
               <tr class="hover:bg-slate-50/50">
                 <td class="px-3 py-2 text-xs text-slate-400">{{ line.lineOrder }}</td>
                 <td class="px-3 py-2">
                   <div class="text-xs font-mono text-slate-900">{{ line.accountCode }}</div>
                   <div class="text-xs text-slate-500">{{ line.accountName }}</div>
                 </td>
-                <td class="px-3 py-2 text-xs text-slate-700">{{ line.description || '-' }}</td>
+                <td class="px-3 py-2">
+                  @if (line.subaccountCode) {
+                    <div class="text-xs font-mono text-slate-900">{{ line.subaccountCode }}</div>
+                    <div class="text-xs text-slate-500">{{ line.subaccountName || '' }}</div>
+                  } @else {
+                    <span class="text-xs text-slate-300">-</span>
+                  }
+                </td>
+                <td class="px-3 py-2">
+                  @if (line.element) {
+                    <div class="text-xs font-mono text-slate-900">{{ line.element }}</div>
+                    <div class="text-xs text-slate-500">{{ line.elementName || '' }}</div>
+                  } @else {
+                    <span class="text-xs text-slate-300">-</span>
+                  }
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs font-mono text-slate-900">{{ line.costCenter?.code || '-' }}</div>
+                  <div class="text-xs text-slate-500">{{ line.costCenter?.name || '' }}</div>
+                </td>
                 <td class="px-3 py-2 text-right">
                   @if (+line.debit > 0) {
                     <span class="text-xs font-semibold text-blue-700">${{ (+line.debit).toFixed(2) }}</span>
@@ -444,9 +550,13 @@
           </tbody>
           <tfoot class="border-t-2 border-slate-300 font-bold">
             <tr>
-              <td colspan="3" class="px-3 py-3 text-right text-xs text-slate-700 uppercase">Totales</td>
-              <td class="px-3 py-3 text-right text-sm text-blue-700">${{ (+selectedComprobante()!.totalAmount).toFixed(2) }}</td>
-              <td class="px-3 py-3 text-right text-sm text-green-700">${{ (+selectedComprobante()!.totalAmount).toFixed(2) }}</td>
+              <td colspan="4" class="px-3 py-3 text-right text-xs text-slate-700 uppercase">Totales</td>
+              <td class="px-3 py-3 text-right text-sm text-blue-700">
+                ${{ (selectedComprobante()!.lines || []).reduce((sum, line) => sum + (+line.debit || 0), 0).toFixed(2) }}
+              </td>
+              <td class="px-3 py-3 text-right text-sm text-green-700">
+                ${{ (selectedComprobante()!.lines || []).reduce((sum, line) => sum + (+line.credit || 0), 0).toFixed(2) }}
+              </td>
             </tr>
           </tfoot>
         </table>

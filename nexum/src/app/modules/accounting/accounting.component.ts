@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
-import { AccountingService, JournalEntry } from '../../core/services/accounting.service';
+import { AccountingService } from '../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
@@ -16,7 +16,7 @@ export class AccountingComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private confirmDialog = inject(ConfirmDialogService);
 
-  entries = signal<JournalEntry[]>([]);
+  entries = signal<any[]>([]);
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -57,16 +57,7 @@ export class AccountingComponent implements OnInit {
   }));
 
   ngOnInit() {
-    this.loadEntries();
-  }
-
-  loadEntries() {
-    this.isLoading.set(true);
-    this.hasError.set(false);
-    this.accountingService.getEntries().subscribe({
-      next: (data) => { this.entries.set(data); this.isLoading.set(false); },
-      error: () => { this.hasError.set(true); this.isLoading.set(false); }
-    });
+    // Entries functionality removed
   }
 
   applyFilters() { this.currentPage.set(1); }
@@ -78,34 +69,6 @@ export class AccountingComponent implements OnInit {
   createEntry() {
     this.showToast('Funcionalidad de crear asiento en desarrollo', 'info');
     this.closeCreate();
-  }
-
-  postEntry(entry: JournalEntry) {
-    this.accountingService.updateEntryStatus(entry.id, 'posted').subscribe({
-      next: () => { this.showToast('Asiento contabilizado', 'success'); this.loadEntries(); },
-      error: () => this.showToast('Error al contabilizar', 'error')
-    });
-  }
-
-  cancelEntry(entry: JournalEntry) {
-    this.accountingService.updateEntryStatus(entry.id, 'cancelled').subscribe({
-      next: () => { this.showToast('Asiento anulado', 'success'); this.loadEntries(); },
-      error: () => this.showToast('Error al anular', 'error')
-    });
-  }
-
-  async deleteEntry(entry: JournalEntry) {
-    const confirmed = await this.confirmDialog.confirm({
-      title: 'Eliminar asiento',
-      message: `¿Eliminar asiento ${entry.entryNumber}?`,
-      confirmText: 'Eliminar',
-      type: 'danger'
-    });
-    if (!confirmed) return;
-    this.accountingService.deleteEntry(entry.id).subscribe({
-      next: () => { this.showToast('Asiento eliminado', 'success'); this.loadEntries(); },
-      error: () => this.showToast('Error al eliminar', 'error')
-    });
   }
 
   getStatusClass(status: string): string {

@@ -29,6 +29,9 @@ export class AccountsComponent implements OnInit {
   levelFilter = signal('');
   activeOnly = signal(false);
 
+  // Subcuentas cargadas por cuenta principal
+  loadedSubaccounts = signal<Map<string, Account[]>>(new Map());
+
   // View mode
   viewMode = signal<'table' | 'tree'>('table');
 
@@ -617,7 +620,14 @@ export class AccountsComponent implements OnInit {
     data.level = this.calculateLevelFromCode(data.code);
 
     this.isLoading.set(true);
-    this.accountingService.createAccount(data).subscribe({
+    
+    // Usar el nuevo método createSubaccount
+    this.accountingService.createSubaccount({
+      accountId: parent.id,
+      subaccountCode: data.code,
+      subaccountName: data.name,
+      description: data.description || ''
+    }).subscribe({
       next: () => {
         this.showToast(`${this.getChildTypeLabel(parent)} creada bajo ${parent.name}`, 'success');
         this.closeModals();
@@ -632,12 +642,28 @@ export class AccountsComponent implements OnInit {
     });
   }
 
+  loadSubaccountsForAccount(account: Account) {
+    this.accountingService.getAccountsByParentCode(account.code).subscribe({
+      next: (data) => {
+        const currentMap = this.loadedSubaccounts();
+        currentMap.set(account.code, data);
+        this.loadedSubaccounts.set(new Map(currentMap));
+      },
+      error: () => {
+        const currentMap = this.loadedSubaccounts();
+        currentMap.set(account.code, []);
+        this.loadedSubaccounts.set(new Map(currentMap));
+      }
+    });
+  }
+
   getSubaccounts(account: Account): Account[] {
-    return this.accounts().filter(a => a.parentCode === account.code);
+    return this.loadedSubaccounts().get(account.code) || [];
   }
 
   hasSubaccounts(account: Account): boolean {
-    return this.accounts().some(a => a.parentCode === account.code);
+    const subaccounts = this.getSubaccounts(account);
+    return subaccounts.length > 0;
   }
 
   canHaveSubaccounts(account: Account): boolean {
@@ -708,7 +734,18 @@ export class AccountsComponent implements OnInit {
   toggleSubaccountActions(accountCode: string, event?: Event) {
     if (event) event.stopPropagation();
     const current = this.showSubaccountActions();
-    this.showSubaccountActions.set(current === accountCode ? null : accountCode);
+    
+    if (current === accountCode) {
+      // Si ya está abierto, cerrarlo
+      this.showSubaccountActions.set(null);
+    } else {
+      // Si se está abriendo, cargar las subcuentas
+      const account = this.accounts().find(a => a.code === accountCode);
+      if (account) {
+        this.loadSubaccountsForAccount(account);
+      }
+      this.showSubaccountActions.set(accountCode);
+    }
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info') {

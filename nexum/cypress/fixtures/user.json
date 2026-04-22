@@ -1,0 +1,20 @@
+{
+  "admin": {
+    "email": "admin@nexum.com",
+    "password": "1234",
+    "role": "admin",
+    "tenantType": "SINGLE_COMPANY"
+  },
+  "superadmin": {
+    "email": "admin@teneduriagarcia.com",
+    "password": "Admin1234",
+    "role": "superadmin",
+    "tenantType": "MULTI_COMPANY"
+  },
+  "contable": {
+    "email": "contable@teneduriagarcia.com",
+    "password": "Contable1234",
+    "role": "user",
+    "tenantType": "SINGLE_COMPANY"
+  }
+}

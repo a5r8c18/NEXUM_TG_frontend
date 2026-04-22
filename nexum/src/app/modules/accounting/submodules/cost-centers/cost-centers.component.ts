@@ -17,8 +17,7 @@ export class CostCentersComponent implements OnInit {
   private confirmDialog = inject(ConfirmDialogService);
 
   costCenters = signal<CostCenter[]>([]);
-  statistics = signal<CostCenterStatistics | null>(null);
-  isLoading = signal(false);
+    isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -80,19 +79,15 @@ export class CostCentersComponent implements OnInit {
 
   constructor() {
     this.costCenterForm = this.fb.group({
-      code: ['', [Validators.required, Validators.pattern(/^[A-Z0-9]{2,10}$/)]],
+      code: ['', [Validators.required, Validators.pattern(/^[A-Z0-9\-]{2,15}$/)]],
       name: ['', [Validators.required, Validators.minLength(2)]],
-      description: [''],
-      type: ['production', Validators.required],
       manager: [''],
-      budget: [0, [Validators.required, Validators.min(0)]],
       isActive: [true],
     });
   }
 
   ngOnInit() {
     this.loadCostCenters();
-    this.loadStatistics();
   }
 
   loadCostCenters() {
@@ -110,13 +105,7 @@ export class CostCentersComponent implements OnInit {
     });
   }
 
-  loadStatistics() {
-    this.accountingService.getCostCenterStatistics().subscribe({
-      next: (stats) => this.statistics.set(stats),
-      error: () => {},
-    });
-  }
-
+  
   // Actions
   openCreateModal() {
     this.costCenterForm.reset({
@@ -160,7 +149,6 @@ export class CostCentersComponent implements OnInit {
         this.showToast('Centro de costo creado correctamente', 'success');
         this.closeModals();
         this.loadCostCenters();
-        this.loadStatistics();
       },
       error: () => {
         this.showToast('Error al crear centro de costo', 'error');
@@ -214,7 +202,6 @@ export class CostCentersComponent implements OnInit {
       next: () => {
         this.showToast('Centro de costo eliminado correctamente', 'success');
         this.loadCostCenters();
-        this.loadStatistics();
       },
       error: () => {
         this.showToast('Error al eliminar centro de costo', 'error');

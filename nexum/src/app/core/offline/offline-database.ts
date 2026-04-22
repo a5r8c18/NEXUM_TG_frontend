@@ -98,22 +98,6 @@ export interface OfflineAccount {
   lastSyncedAt?: string;
 }
 
-export interface OfflineJournalEntry {
-  id?: string;
-  companyId: number;
-  entryNumber: string;
-  date: string;
-  description: string;
-  accountId: string;
-  accountCode: string;
-  accountName: string;
-  debit: number;
-  credit: number;
-  type: string;
-  status: string;
-  lastSyncedAt?: string;
-}
-
 export interface OfflineEmployee {
   id?: string;
   companyId: number;
@@ -188,8 +172,7 @@ export class OfflineDatabase extends Dexie {
   warehouses!: Table<OfflineWarehouse, string>;
   companies!: Table<OfflineCompany, number>;
   accounts!: Table<OfflineAccount, string>;
-  journalEntries!: Table<OfflineJournalEntry, string>;
-  employees!: Table<OfflineEmployee, string>;
+    employees!: Table<OfflineEmployee, string>;
   fixedAssets!: Table<OfflineFixedAsset, number>;
   stockLimits!: Table<OfflineStockLimit, string>;
   syncQueue!: Table<SyncQueueItem, number>;
