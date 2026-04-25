@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TenantRequestService } from '../../core/services/tenant-request.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { TenantRequest, TenantType } from '../../core/models/tenant-request.model';
 import { firstValueFrom } from 'rxjs';
 
@@ -42,13 +43,87 @@ export class TenantRequestComponent {
   
   private tenantRequestService = inject(TenantRequestService);
   private router = inject(Router);
+  public themeService = inject(ThemeService);
   
   // Tipos de tenant disponibles
   tenantTypes = signal(this.tenantRequestService.getTenantTypes());
   
   constructor() {
-    console.log('🔥 TENANT REQUEST COMPONENT - Constructor ejecutado!');
-    console.log('🔍 TENANT REQUEST - Componente de solicitud de acceso cargado');
+    console.log(' TENANT REQUEST COMPONENT - Constructor ejecutado!');
+    console.log(' TENANT REQUEST - Componente de solicitud de acceso cargado');
+  }
+
+  // Métodos para sincronizar con el tema del sidebar
+  get backgroundThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-gradient-to-br from-slate-50 to-slate-100';
+    } else {
+      return 'bg-gradient-to-br from-slate-900 to-slate-800';
+    }
+  }
+
+  get cardThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-white border border-slate-200';
+    } else {
+      return 'bg-white/10 backdrop-blur-md border border-slate-700';
+    }
+  }
+
+  get textThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-slate-900';
+    } else {
+      return 'text-white';
+    }
+  }
+
+  get subTextThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-slate-600';
+    } else {
+      return 'text-slate-400';
+    }
+  }
+
+  get inputThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+    } else {
+      return 'bg-white/5 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+    }
+  }
+
+  get labelThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-sm font-medium text-slate-700';
+    } else {
+      return 'text-sm font-medium text-slate-300';
+    }
+  }
+
+  get buttonThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'bg-blue-600 hover:bg-blue-700 text-white';
+    } else {
+      return 'bg-blue-500 hover:bg-blue-600 text-white';
+    }
+  }
+
+  get backButtonThemeClasses(): string {
+    const theme = this.themeService.currentTheme();
+    if (theme === 'light') {
+      return 'text-slate-600 hover:text-slate-900';
+    } else {
+      return 'text-white/60 hover:text-white';
+    }
   }
   
   goBack() {

@@ -8,6 +8,13 @@
 // Import commands
 import './commands';
 
+// Global type declarations for jsPDF (used in PDF export tests)
+declare global {
+  interface Window {
+    jsPDF: any;
+  }
+}
+
 // Prevent uncaught exceptions from failing tests
 Cypress.on('uncaught:exception', (err) => {
   // Angular sometimes throws navigation errors during testing

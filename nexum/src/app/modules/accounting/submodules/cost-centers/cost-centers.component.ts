@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject } from 'rxjs';
 import { AccountingService, CostCenter, CostCenterFilters, CostCenterStatistics } from '../../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
@@ -24,6 +26,9 @@ export class CostCentersComponent implements OnInit {
   // Filters
   searchTerm = signal('');
   activeOnly = signal(false);
+
+  // Subject for debounced search
+  searchSubject = new Subject<string>();
 
   // Pagination
   currentPage = signal(1);
@@ -84,10 +89,23 @@ export class CostCentersComponent implements OnInit {
       manager: [''],
       isActive: [true],
     });
+
+    // Setup debounced search
+    this.setupDebouncedSearch();
   }
 
   ngOnInit() {
     this.loadCostCenters();
+  }
+
+  private setupDebouncedSearch() {
+    // Create debounced search for cost centers
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.currentPage.set(1);
+    });
   }
 
   loadCostCenters() {

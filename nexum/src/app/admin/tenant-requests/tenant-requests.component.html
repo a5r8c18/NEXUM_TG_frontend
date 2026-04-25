@@ -1,16 +1,17 @@
-<div class="min-h-screen bg-slate-900">
+<div class="min-h-screen" [ngClass]="backgroundThemeClasses">
   <!-- Header -->
-  <div class="bg-slate-800 border-b border-slate-700">
+  <div [ngClass]="cardThemeClasses">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-medium text-white">Solicitudes de Acceso</h1>
-          <p class="text-slate-400 text-sm mt-1">Gestiona las solicitudes para acceder al sistema NEXUM</p>
+          <h1 class="text-2xl font-medium mt-1" [ngClass]="textThemeClasses">Solicitudes de Acceso</h1>
+          <p class="text-sm mt-1" [ngClass]="subTextThemeClasses">Gestiona las solicitudes para acceder al sistema NEXUM</p>
         </div>
         @if (shouldShowDashboardButton()) {
           <button 
             (click)="goToDashboard()"
-            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            class="px-4 py-2 rounded-lg transition-colors duration-200"
+            [ngClass]="buttonThemeClasses"
           >
             Volver al Dashboard
           </button>
@@ -22,24 +23,24 @@
   <!-- Stats Cards -->
   <div class="max-w-7xl mx-auto px-6 py-8">
     <div class="grid md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+      <div class="rounded-xl p-6" [ngClass]="cardThemeClasses">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-slate-400 text-sm">Total Solicitudes</p>
-            <p class="text-2xl font-medium text-white mt-1">{{ requests().length }}</p>
+            <p class="text-sm" [ngClass]="subTextThemeClasses">Total Solicitudes</p>
+            <p class="text-2xl font-medium mt-1" [ngClass]="textThemeClasses">{{ requests().length }}</p>
           </div>
-          <div class="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-12 h-12 rounded-lg flex items-center justify-center" [ngClass]="iconThemeClasses">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
           </div>
         </div>
       </div>
 
-      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+      <div class="rounded-xl p-6" [ngClass]="cardThemeClasses">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-slate-400 text-sm">Pendientes</p>
+            <p class="text-sm" [ngClass]="subTextThemeClasses">Pendientes</p>
             <p class="text-2xl font-medium text-yellow-400 mt-1">{{ pendingCount }}</p>
           </div>
           <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
@@ -50,10 +51,10 @@
         </div>
       </div>
 
-      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+      <div class="rounded-xl p-6" [ngClass]="cardThemeClasses">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-slate-400 text-sm">Aprobadas</p>
+            <p class="text-sm" [ngClass]="subTextThemeClasses">Aprobadas</p>
             <p class="text-2xl font-medium text-green-400 mt-1">{{ approvedCount }}</p>
           </div>
           <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
@@ -64,10 +65,10 @@
         </div>
       </div>
 
-      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+      <div class="rounded-xl p-6" [ngClass]="cardThemeClasses">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-slate-400 text-sm">Rechazadas</p>
+            <p class="text-sm" [ngClass]="subTextThemeClasses">Rechazadas</p>
             <p class="text-2xl font-medium text-red-400 mt-1">{{ rejectedCount }}</p>
           </div>
           <div class="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center">
@@ -80,13 +81,15 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 mb-8">
+    <div class="rounded-xl p-6 mb-8" [ngClass]="cardThemeClasses">
       <div class="flex flex-wrap gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Estado</label>
+          <label class="block mb-2" [ngClass]="labelThemeClasses">Estado</label>
           <select 
-            [(ngModel)]="statusFilter" 
-            class="bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [ngModel]="statusFilter()" 
+            (ngModelChange)="statusFilter.set($event); onFilterChange()"
+            class="px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [ngClass]="inputThemeClasses"
           >
             <option value="ALL">Todos</option>
             <option value="PENDING">Pendientes</option>
@@ -95,10 +98,12 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Tipo</label>
+          <label class="block mb-2" [ngClass]="labelThemeClasses">Tipo</label>
           <select 
-            [(ngModel)]="typeFilter" 
-            class="bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [ngModel]="typeFilter()" 
+            (ngModelChange)="typeFilter.set($event); onFilterChange()"
+            class="px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [ngClass]="inputThemeClasses"
           >
             <option value="ALL">Todos</option>
             <option value="MULTI_COMPANY">Multi-Empresa</option>
@@ -117,25 +122,25 @@
       <div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-center">
         Error al cargar las solicitudes. Intente nuevamente.
       </div>
-    } @else if (filteredRequests.length === 0) {
-      <div class="bg-slate-800 rounded-xl p-12 border border-slate-700 text-center">
-        <div class="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    } @else if (paginatedRequests().length === 0 && filteredRequests().length === 0) {
+      <div class="rounded-xl p-12 text-center" [ngClass]="cardThemeClasses">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" [ngClass]="iconThemeClasses">
+          <svg class="w-8 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
           </svg>
         </div>
-        <h3 class="text-lg font-medium text-white mb-2">No hay solicitudes</h3>
-        <p class="text-slate-400">No se encontraron solicitudes con los filtros seleccionados.</p>
+        <h3 class="text-lg font-medium mb-2" [ngClass]="textThemeClasses">No hay solicitudes</h3>
+        <p [ngClass]="subTextThemeClasses">No se encontraron solicitudes con los filtros seleccionados.</p>
       </div>
     } @else {
       <div class="space-y-4">
-        @for (request of filteredRequests; track request.email) {
-          <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:border-slate-600 transition-colors duration-200">
+        @for (request of paginatedRequests(); track request.email) {
+          <div class="rounded-xl border overflow-hidden transition-colors duration-200" [ngClass]="cardThemeClasses + ' ' + tableRowThemeClasses">
             <div class="p-6">
               <div class="flex justify-between items-start mb-4">
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-2">
-                    <h3 class="text-lg font-medium text-white">{{ request.firstName }} {{ request.lastName }}</h3>
+                    <h3 class="text-lg font-medium" [ngClass]="textThemeClasses">{{ request.firstName }} {{ request.lastName }}</h3>
                     <span class="px-2 py-1 rounded-full text-xs font-medium {{ getStatusColor(request.status) }}">
                       {{ request.status === 'PENDING' ? 'Pendiente' : request.status === 'APPROVED' ? 'Aprobada' : 'Rechazada' }}
                     </span>
@@ -145,22 +150,22 @@
                   </div>
                   <div class="grid md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p class="text-slate-400">Email: <span class="text-white">{{ request.email }}</span></p>
-                      <p class="text-slate-400">Teléfono: <span class="text-white">{{ request.phone }}</span></p>
-                      <p class="text-slate-400">Cargo: <span class="text-white">{{ request.position }}</span></p>
+                      <p [ngClass]="subTextThemeClasses">Email: <span [ngClass]="textThemeClasses">{{ request.email }}</span></p>
+                      <p [ngClass]="subTextThemeClasses">Teléfono: <span [ngClass]="textThemeClasses">{{ request.phone }}</span></p>
+                      <p [ngClass]="subTextThemeClasses">Cargo: <span [ngClass]="textThemeClasses">{{ request.position }}</span></p>
                     </div>
                     <div>
-                      <p class="text-slate-400">Empresa: <span class="text-white">{{ request.companyName }}</span></p>
-                      <p class="text-slate-400">Industria: <span class="text-white">{{ request.industry }}</span></p>
-                      <p class="text-slate-400">País: <span class="text-white">{{ request.country }}</span></p>
+                      <p [ngClass]="subTextThemeClasses">Empresa: <span [ngClass]="textThemeClasses">{{ request.companyName }}</span></p>
+                      <p [ngClass]="subTextThemeClasses">Industria: <span [ngClass]="textThemeClasses">{{ request.industry }}</span></p>
+                      <p [ngClass]="subTextThemeClasses">País: <span [ngClass]="textThemeClasses">{{ request.country }}</span></p>
                     </div>
                   </div>
                 </div>
                 <div class="flex items-center gap-2 ml-4">
                   <button 
-                    (click)="viewRequest(request)"
-                    class="text-blue-400 hover:text-blue-300 transition-colors"
-                    title="Ver detalles"
+                    (click)="toggleRequestExpansion(request.email)"
+                    class="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors"
+                    [title]="isRequestExpanded(request.email) ? 'Ocultar detalles' : 'Ver detalles'"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -191,33 +196,33 @@
               </div>
 
               <!-- Detalles adicionales -->
-              @if (selectedRequest()?.email === request.email) {
-                <div class="border-t border-slate-700 pt-4 mt-4">
+              @if (isRequestExpanded(request.email)) {
+                <div class="border-t pt-4 mt-4" [ngClass]="tableRowThemeClasses.replace('hover:', '').replace('border-', 'border-t-')">
                   <div class="grid md:grid-cols-2 gap-6">
                     <div>
-                      <h4 class="text-sm font-medium text-white mb-2">Caso de uso</h4>
-                      <p class="text-slate-300 text-sm">{{ request.useCase }}</p>
+                      <h4 class="text-sm font-medium mb-2" [ngClass]="textThemeClasses">Caso de uso</h4>
+                      <p class="text-sm" [ngClass]="subTextThemeClasses">{{ request.useCase }}</p>
                     </div>
                     <div>
-                      <h4 class="text-sm font-medium text-white mb-2">Mensaje adicional</h4>
-                      <p class="text-slate-300 text-sm">{{ request.message }}</p>
+                      <h4 class="text-sm font-medium mb-2" [ngClass]="textThemeClasses">Mensaje adicional</h4>
+                      <p class="text-sm" [ngClass]="subTextThemeClasses">{{ request.message }}</p>
                     </div>
                   </div>
                   @if (request.referralSource) {
                     <div class="mt-4">
-                      <p class="text-slate-400 text-sm">Cómo nos conoció: <span class="text-white">{{ request.referralSource }}</span></p>
+                      <p class="text-sm" [ngClass]="subTextThemeClasses">Cómo nos conoció: <span [ngClass]="textThemeClasses">{{ request.referralSource }}</span></p>
                     </div>
                   }
-                  <div class="mt-4 text-slate-400 text-xs">
+                  <div class="mt-4 text-xs" [ngClass]="subTextThemeClasses">
                     Solicitado: {{ formatDate(request.requestedAt) }}
                     @if (request.reviewedAt) {
                       <span class="ml-4">Revisado: {{ formatDate(request.reviewedAt) }}</span>
                     }
                   </div>
                   @if (request.adminNotes) {
-                    <div class="mt-4 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
-                      <h4 class="text-sm font-medium text-blue-400 mb-2">Notas del Administrador</h4>
-                      <p class="text-slate-200 text-sm">{{ request.adminNotes }}</p>
+                    <div class="mt-4 p-3 rounded-lg border" [ngClass]="cardThemeClasses">
+                      <h4 class="text-sm font-medium mb-2 text-blue-600 dark:text-blue-400">Notas del Administrador</h4>
+                      <p class="text-sm" [ngClass]="subTextThemeClasses">{{ request.adminNotes }}</p>
                     </div>
                   }
                 </div>
@@ -226,6 +231,89 @@
           </div>
         }
       </div>
+
+      <!-- Pagination -->
+      @if (paginationConfig().totalPages > 1) {
+        <div class="flex items-center justify-between mt-6">
+          <div class="text-sm" [ngClass]="subTextThemeClasses">
+            Mostrando 
+            <span class="font-medium" [ngClass]="textThemeClasses">
+              {{ pageRange().start }}-{{ pageRange().end }}
+            </span>
+            de 
+            <span class="font-medium" [ngClass]="textThemeClasses">{{ paginationConfig().totalItems }}</span>
+            solicitudes
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <!-- First Page -->
+            <button 
+              (click)="goToFirstPage()"
+              [disabled]="!paginationConfig().hasPreviousPage"
+              class="p-2 rounded-lg border transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              [ngClass]="paginationConfig().hasPreviousPage ? (buttonThemeClasses + ' border-transparent') : (cardThemeClasses + ' opacity-50 cursor-not-allowed')"
+              title="Primera página"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+              </svg>
+            </button>
+
+            <!-- Previous Page -->
+            <button 
+              (click)="goToPreviousPage()"
+              [disabled]="!paginationConfig().hasPreviousPage"
+              class="p-2 rounded-lg border transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              [ngClass]="paginationConfig().hasPreviousPage ? (buttonThemeClasses + ' border-transparent') : (cardThemeClasses + ' opacity-50 cursor-not-allowed')"
+              title="Página anterior"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </button>
+
+            <!-- Page Numbers -->
+            <div class="flex items-center gap-1">
+              @for (page of pageNumbers(); track page) {
+                <button 
+                  (click)="onPageChange(page)"
+                  [disabled]="page === paginationConfig().currentPage"
+                  class="px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed"
+                  [ngClass]="page === paginationConfig().currentPage ? buttonThemeClasses : (cardThemeClasses + ' hover:' + buttonThemeClasses.replace('bg-', 'hover:bg-'))"
+                >
+                  {{ page }}
+                </button>
+              }
+            </div>
+
+            <!-- Next Page -->
+            <button 
+              (click)="goToNextPage()"
+              [disabled]="!paginationConfig().hasNextPage"
+              class="p-2 rounded-lg border transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              [ngClass]="paginationConfig().hasNextPage ? (buttonThemeClasses + ' border-transparent') : (cardThemeClasses + ' opacity-50 cursor-not-allowed')"
+              title="Página siguiente"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+
+            <!-- Last Page -->
+            <button 
+              (click)="goToLastPage()"
+              [disabled]="!paginationConfig().hasNextPage"
+              class="p-2 rounded-lg border transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              [ngClass]="paginationConfig().hasNextPage ? (buttonThemeClasses + ' border-transparent') : (cardThemeClasses + ' opacity-50 cursor-not-allowed')"
+              title="Última página"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      }
     }
   </div>
 

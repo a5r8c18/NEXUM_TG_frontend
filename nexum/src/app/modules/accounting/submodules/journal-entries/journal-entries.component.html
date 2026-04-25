@@ -7,8 +7,9 @@
         <p class="text-sm text-slate-500 mt-1">Gestión de asientos y operaciones contables</p>
       </div>
       <button (click)="createComprobante()"
-              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              aria-label="Crear nuevo comprobante contable">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
         Nuevo Comprobante
@@ -20,9 +21,15 @@
     <form [formGroup]="filterForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="space-y-1">
         <label class="text-xs font-medium text-slate-600">N° Comprobante</label>
-        <input type="text" formControlName="search"
+        <input type="text" 
+               [value]="searchTerm()"
+               (input)="searchTerm.set($any($event.target).value); searchSubject.next($any($event.target).value)"
                placeholder="Escribir número de comprobante..."
-               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"/>
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+               aria-label="Buscar por número de comprobante"
+               role="combobox"
+               aria-expanded="false"
+               aria-autocomplete="list"/>
       </div>
       <div class="space-y-1">
         <label class="text-xs font-medium text-slate-600">Cuenta</label>
@@ -294,131 +301,14 @@
           <!-- Lines Container -->
           <div formArrayName="lines" class="space-y-3">
             @for (lineGroup of getLineControls(); track $index; let i = $index) {
-              <div [formGroupName]="i" class="bg-slate-200 rounded-lg p-4 border border-slate-400">
-                <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs font-semibold text-slate-600 uppercase">Línea {{ i + 1 }}</span>
-                  @if (getLineControls().length > 1) {
-                    <button type="button" (click)="removeLine(i)"
-                            class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                            title="Eliminar línea">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                      </svg>
-                    </button>
-                  }
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600 uppercase">Cuenta *</label>
-                    <div class="relative">
-                      <input type="text" 
-                             [value]="getAccountDisplay(lineGroup.get('accountCode')?.value)"
-                             (input)="filterAccounts($any($event.target).value, i); lineGroup.get('accountCode')?.setValue($any($event.target).value)"
-                             placeholder="Buscar cuenta..."
-                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-                      
-                      <!-- Dropdown with filtered accounts -->
-                      @if (getFilteredAccounts(i).length > 0 && lineGroup.get('accountCode')?.value) {
-                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          @for (account of getFilteredAccounts(i); track account.id) {
-                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
-                                 (click)="selectAccount(account, i)">
-                              <div class="text-sm font-medium text-slate-900">{{ account.code }}</div>
-                              <div class="text-xs text-slate-500">{{ account.name }}</div>
-                            </div>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600 uppercase">Subcuenta</label>
-                    <div class="relative">
-                      <input type="text" 
-                             [value]="getSubaccountDisplay(lineGroup.get('subaccountCode')?.value)"
-                             (input)="filterSubaccounts($any($event.target).value, i); lineGroup.get('subaccountCode')?.setValue($any($event.target).value)"
-                             placeholder="Buscar subcuenta..."
-                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-                      
-                      <!-- Dropdown with filtered subaccounts -->
-                      @if (getFilteredSubaccounts(i).length > 0 && lineGroup.get('subaccountCode')?.value) {
-                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          @for (subaccount of getFilteredSubaccounts(i); track subaccount.id) {
-                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
-                                 (click)="selectSubaccount(subaccount, i)">
-                              <div class="text-sm font-medium text-slate-900">{{ subaccount.code }}</div>
-                              <div class="text-xs text-slate-500">{{ subaccount.name }}</div>
-                            </div>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600 uppercase">Centro de Costo</label>
-                    <div class="relative">
-                      <input type="text" 
-                             [value]="getCostCenterDisplay(lineGroup.get('costCenterId')?.value)"
-                             (input)="filterCostCenters($any($event.target).value, i); lineGroup.get('costCenterId')?.setValue($any($event.target).value)"
-                             placeholder="Buscar centro de costo..."
-                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-                      
-                      <!-- Dropdown with filtered cost centers -->
-                      @if (getFilteredCostCenters(i).length > 0 && lineGroup.get('costCenterId')?.value) {
-                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          @for (costCenter of getFilteredCostCenters(i); track costCenter.id) {
-                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
-                                 (click)="selectCostCenter(costCenter, i)">
-                              <div class="text-sm font-medium text-slate-900">{{ costCenter.code }}</div>
-                              <div class="text-xs text-slate-500">{{ costCenter.name }}</div>
-                            </div>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600 uppercase">Subelemento</label>
-                    <div class="relative">
-                      <input type="text" 
-                             [value]="getElementDisplay(lineGroup.get('element')?.value)"
-                             (input)="filterElements($any($event.target).value, i); lineGroup.get('element')?.setValue($any($event.target).value)"
-                             placeholder="Buscar subelemento..."
-                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-                      
-                      <!-- Dropdown with filtered elements -->
-                      @if (getFilteredElements(i).length > 0 && lineGroup.get('element')?.value) {
-                        <div class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          @for (element of getFilteredElements(i); track element.id) {
-                            <div class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
-                                 (click)="selectElement(element, i)">
-                              <div class="text-sm font-medium text-slate-900">{{ element.code }}</div>
-                              <div class="text-xs text-slate-500">{{ element.name }}</div>
-                            </div>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600 uppercase">Debe</label>
-                    <input type="number" formControlName="debit" step="0.01" min="0" placeholder="0.00"
-                           (input)="onDebitChange($event, i)"
-                           class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-                  </div>
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600 uppercase">Haber</label>
-                    <input type="number" formControlName="credit" step="0.01" min="0" placeholder="0.00"
-                           (input)="onCreditChange($event, i)"
-                           class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-                  </div>
-                </div>
-
-                              </div>
+              <app-voucher-line-form 
+                [lineIndex]="i" 
+                [lineGroup]="lineGroup" 
+                [canRemove]="getLineControls().length > 1"
+                (removeLine)="removeLine($event)"
+                (debitChange)="onDebitChange($event.value, $event.index)"
+                (creditChange)="onCreditChange($event.value, $event.index)">
+              </app-voucher-line-form>
             }
           </div>
 

@@ -1,15 +1,18 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject } from 'rxjs';
 import { AccountingService, Voucher, Account, ExpenseType, CostCenter } from '../../../../core/services/accounting.service';
 import { SubelementsService, Subelement } from '../../../../core/services/subelements.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
+import { VoucherLineFormComponent } from './voucher-line-form.component';
 
 @Component({
   selector: 'app-journal-entries',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, PaginationComponent, VoucherLineFormComponent],
   templateUrl: './journal-entries.component.html',
 })
 export class JournalEntriesComponent implements OnInit {
@@ -31,6 +34,9 @@ export class JournalEntriesComponent implements OnInit {
   dateFromFilter = signal('');
   dateToFilter = signal('');
   statusFilter = signal('');
+
+  // Subject for debounced search
+  searchSubject = new Subject<string>();
 
   // Searchable dropdown data
   accounts = signal<Account[]>([]);
@@ -163,9 +169,11 @@ export class JournalEntriesComponent implements OnInit {
     // Initialize with one empty line
     this.addLine();
 
-    // Watch form changes for filters
+    // Setup debounced search for vouchers
+    this.setupDebouncedSearch();
+
+    // Watch form changes for filters (non-debounced)
     this.filterForm.valueChanges.subscribe(values => {
-      this.searchTerm.set(values.search || '');
       this.accountCodeFilter.set(values.accountCode || '');
       this.subaccountCodeFilter.set(values.subaccountCode || '');
       this.statusFilter.set(values.status || '');
@@ -177,12 +185,24 @@ export class JournalEntriesComponent implements OnInit {
     });
   }
 
+  private setupDebouncedSearch() {
+    // Create debounced search for voucher number
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.currentPage.set(1);
+      this.loadComprobantes();
+    });
+  }
+
   // Helper methods for form array
   createLineFormGroup(): FormGroup {
     return this.fb.group({
       accountCode: ['', Validators.required],
       subaccountCode: [''],
       element: [''],
+      subelement: [''],
       costCenterId: [''],
       debit: [0, [Validators.required, Validators.min(0)]],
       credit: [0, [Validators.required, Validators.min(0)]]
@@ -378,7 +398,8 @@ export class JournalEntriesComponent implements OnInit {
           accountCode: line.accountCode || '',
           subaccountCode: '',
           entryNumber: '',
-          element: '',
+          element: line.element || '',
+          subelement: line.subelement || '',
           costCenterId: line.costCenterId || '',
           debit: Number(line.debit) || 0,
           credit: Number(line.credit) || 0
@@ -448,6 +469,7 @@ export class JournalEntriesComponent implements OnInit {
         accountCode: line.accountCode,
         subaccountCode: line.subaccountCode || null,
         element: line.element || null,
+        subelement: line.subelement || null,
         costCenterId: line.costCenterId || null,
         debit: Number(line.debit) || 0,
         credit: Number(line.credit) || 0,
@@ -463,6 +485,7 @@ export class JournalEntriesComponent implements OnInit {
       accountCode: line.accountCode,
       subaccountCode: line.subaccountCode,
       element: line.element,
+      subelement: line.subelement,
       costCenterId: line.costCenterId,
       debit: line.debit,
       credit: line.credit

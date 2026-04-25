@@ -1,0 +1,203 @@
+<div class="tree-node">
+  <!-- Node Container -->
+  <div class="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group"
+       [class.opacity-50]="!node.isActive"
+       [class.bg-emerald-50]="level === 1"
+       [class.border]="level === 1"
+       [class.border-emerald-200]="level === 1"
+       [class.ml-4]="level > 1"
+       [class.ml-8]="level > 2"
+       (click)="onEditNode($event)">
+    
+    <!-- Expand/Collapse Button (only if has children) -->
+    @if (hasChildren()) {
+      <button class="shrink-0 w-6 flex justify-center items-center p-0 text-slate-400 hover:text-slate-600 transition-colors"
+              (click)="onToggleExpansion($event)">
+        <svg class="w-4 h-4 transition-transform duration-200"
+             [class.rotate-90]="isExpanded()"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+    } @else {
+      <div class="shrink-0 w-6"></div>
+    }
+
+    <!-- Account Code -->
+    <span class="font-mono text-sm min-w-[60px] shrink-0 font-bold"
+          [class.text-emerald-800]="level === 1"
+          [class.text-blue-800]="level === 2"
+          [class.text-slate-800]="level >= 3">{{ node.code }}</span>
+    
+    <!-- Account Name -->
+    <span class="text-sm flex-1 truncate font-medium"
+          [class.text-emerald-900]="level === 1"
+          [class.text-blue-900]="level === 2"
+          [class.text-slate-900]="level >= 3">{{ node.name }}</span>
+
+    <!-- Badges -->
+    <div class="flex items-center gap-1 shrink-0">
+      @if (node.allowsMovements) {
+        <span class="inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded bg-green-100 text-green-700">Mov</span>
+      }
+      <span class="inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-100 text-slate-600">N{{ node.level }}</span>
+      <span class="inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded" 
+            [class]="getTypeClass(node.type)">
+        {{ typeLabels[node.type] }}
+      </span>
+      <span class="inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded" 
+            [class]="getNatureClass(node.nature)">
+        {{ natureLabels[node.nature] }}
+      </span>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <!-- Subaccount Management (level 3+) -->
+      @if (canHaveSubaccounts()) {
+        <div class="relative subaccount-dropdown">
+          <button (click)="onToggleSubaccountActions($event)"
+                  class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                  title="Gestionar {{ getChildTypeLabel() }}s">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+          </button>
+          
+          <!-- Subaccount Dropdown -->
+          @if (showSubaccountActions() === node.code) {
+            <div class="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-slate-200 z-10 max-h-96 overflow-y-auto">
+              <div class="py-1">
+                <!-- Create New Subaccount -->
+                <button (click)="onCreateSubaccount($event)"
+                        class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 transition-colors flex items-center gap-2 border-b border-slate-100">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Crear {{ getChildTypeLabel() }}
+                </button>
+                
+                <!-- Existing Subaccounts -->
+                @if (hasSubaccounts()) {
+                  <div class="border-t border-slate-100 mt-1">
+                    <div class="px-3 py-2 text-xs font-medium text-slate-500 bg-slate-50">
+                      {{ getChildTypeLabel() }}s existentes ({{ getSubaccounts().length }})
+                    </div>
+                    @for (subaccount of getSubaccounts(); track subaccount.id) {
+                      <div class="px-3 py-2 hover:bg-slate-50 group">
+                        <div class="flex items-center justify-between gap-2">
+                          <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-slate-700 truncate">{{ subaccount.code }}</div>
+                            <div class="text-xs text-slate-500 truncate">{{ subaccount.name }}</div>
+                          </div>
+                          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button (click)="onViewSubaccount(subaccount, $event)"
+                                    class="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                    title="Ver">
+                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                              </svg>
+                            </button>
+                            <button (click)="onEditSubaccount(subaccount, $event)"
+                                    class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                                    title="Editar">
+                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                              </svg>
+                            </button>
+                            <button (click)="onDeleteSubaccount(subaccount, $event)"
+                                    class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                    title="Eliminar">
+                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="px-3 py-3 text-xs text-slate-400 text-center border-t border-slate-100">
+                    No hay {{ getChildTypeLabel().toLowerCase() }}s creados
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+      
+      <!-- Edit Button (level 3+) -->
+      @if (node.level >= 3) {
+        <button (click)="onEditNode($event)"
+                class="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                title="Editar">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+        </button>
+      }
+      
+      <!-- Toggle Active Button -->
+      <button (click)="onToggleActive($event)"
+              class="p-1 rounded-lg transition-colors"
+              [class.text-orange-600]="node.isActive"
+              [class.hover:bg-orange-50]="node.isActive"
+              [class.text-green-600]="!node.isActive"
+              [class.hover:bg-green-50]="!node.isActive"
+              [title]="node.isActive ? 'Desactivar' : 'Activar'">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          @if (node.isActive) {
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+          } @else {
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          }
+        </svg>
+      </button>
+      
+      <!-- Delete Button -->
+      <button (click)="onDeleteNode($event)"
+              class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+              title="Eliminar">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Children (Recursive) -->
+  @if (hasChildren() && isExpanded()) {
+    <div class="children-container">
+      @for (child of node.children; track child.id) {
+        <app-tree-node 
+          [node]="child" 
+          [level]="level + 1"
+          [expandedNodes]="expandedNodes"
+          [typeLabels]="typeLabels"
+          [natureLabels]="natureLabels"
+          (toggleExpansion)="toggleExpansion.emit($event)"
+          (editNode)="editNode.emit($event)"
+          (deleteNode)="deleteNode.emit($event)"
+          (toggleActive)="toggleActive.emit($event)"
+          (toggleSubaccountActions)="toggleSubaccountActions.emit($event)"
+          (createSubaccount)="createSubaccount.emit($event)"
+          (viewSubaccount)="viewSubaccount.emit($event)"
+          (editSubaccount)="editSubaccount.emit($event)"
+          (deleteSubaccount)="deleteSubaccount.emit($event)">
+        </app-tree-node>
+      }
+    </div>
+  }
+</div>

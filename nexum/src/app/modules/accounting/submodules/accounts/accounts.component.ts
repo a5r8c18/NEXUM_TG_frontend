@@ -1,14 +1,15 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AccountingService, Account, AccountFilters, AccountStatistics } from '../../../../core/services/accounting.service';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject } from 'rxjs';
+import { AccountingService, Account, AccountFilters, AccountStatistics, Subaccount } from '../../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
-import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-accounts',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './accounts.component.html',
 })
 export class AccountsComponent implements OnInit {
@@ -17,60 +18,137 @@ export class AccountsComponent implements OnInit {
   private confirmDialog = inject(ConfirmDialogService);
 
   accounts = signal<Account[]>([]);
+  subaccounts = signal<Record<string, Account[]>>({});
   statistics = signal<AccountStatistics | null>(null);
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Filters
+  // Search and filters
   searchTerm = signal('');
   typeFilter = signal('');
   natureFilter = signal('');
   levelFilter = signal('');
   activeOnly = signal(false);
-
-  // Subcuentas cargadas por cuenta principal
-  loadedSubaccounts = signal<Map<string, Account[]>>(new Map());
-
-  // View mode
-  viewMode = signal<'table' | 'tree'>('table');
+  searchSubject = new Subject<string>();
 
   // Pagination
   currentPage = signal(1);
-  pageSize = 20;
+  pageSize = 10;
+
+  // View mode
+  viewMode = signal<'tree' | 'table'>('table');
+
+  // Tree expansion
+  expandedNodes = signal<Set<string>>(new Set());
+
+  // Subaccounts dropdown
+  expandedSubaccounts = signal<Set<string>>(new Set());
+  subaccountsLoading = signal<Set<string>>(new Set());
+
+  // Form
+  accountForm = this.fb.group({
+    code: ['', [Validators.required]],
+    name: ['', [Validators.required]],
+    description: [''],
+    type: ['balance', [Validators.required]],
+    nature: ['deudora', [Validators.required]],
+    parentId: [''],
+    allowsMovements: [false],
+    isActive: [true],
+    groupNumber: [''],
+    level: [1]
+  });
 
   // Modals
   showCreateModal = signal(false);
   showEditModal = signal(false);
-  showSubaccountModal = signal(false);
   showViewModal = signal(false);
   selectedAccount = signal<Account | null>(null);
-  parentAccountForSubaccount = signal<Account | null>(null);
 
-  // Tree expansion state
-  expandedNodes = signal<Set<string>>(new Set());
+  // Subaccount modals
+  showSubaccountCreateModal = signal(false);
+  showSubaccountEditModal = signal(false);
+  selectedSubaccount = signal<Subaccount | null>(null);
+  selectedAccountForSubaccount = signal<Account | null>(null);
 
-  // Subaccount management
-  showSubaccountActions = signal<string | null>(null);
+  // Subaccount form
+  subaccountForm = this.fb.group({
+    accountId: ['', [Validators.required]],
+    subaccountCode: ['', [Validators.required]],
+    subaccountName: ['', [Validators.required]],
+    description: [''],
+    type: ['expense', [Validators.required]],
+    nature: ['deudora', [Validators.required]],
+    isActive: [true],
+    allowsMovements: [true]
+  });
 
-  accountForm: FormGroup;
-
-  typeLabels: Record<string, string> = {
+  // Labels
+  typeLabels = {
     asset: 'Activo',
     liability: 'Pasivo',
     equity: 'Patrimonio',
     income: 'Ingreso',
-    expense: 'Gasto',
+    expense: 'Egreso',
+    balance: 'Balance',
+    resultados: 'Resultados'
   };
 
-  natureLabels: Record<string, string> = {
+  natureLabels = {
     deudora: 'Deudora',
-    acreedora: 'Acreedora',
+    acreedora: 'Acreedora'
   };
 
+  ngOnInit() {
+    this.setupDebouncedSearch();
+    this.loadAccounts();
+    this.loadStatistics();
+  }
+
+  private setupDebouncedSearch() {
+    this.searchSubject
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe(() => {
+        this.currentPage.set(1);
+      });
+  }
+
+  loadAccounts() {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.accountingService.getAccounts().subscribe({
+      next: (accounts) => {
+        console.log('Cuentas cargadas:', accounts);
+        console.log('Cuenta 101:', accounts.find(a => a.code === '101'));
+        this.accounts.set(accounts);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading accounts:', err);
+        this.hasError.set(true);
+        this.isLoading.set(false);
+        this.showToast('Error al cargar las cuentas', 'error');
+      },
+    });
+  }
+
+  loadStatistics() {
+    this.accountingService.getAccountStatistics().subscribe({
+      next: (stats) => {
+        this.statistics.set(stats);
+      },
+      error: (err) => {
+        console.error('Error loading statistics:', err);
+      },
+    });
+  }
+
+  // Computed properties
   filteredAccounts = computed(() => {
     let filtered = this.accounts();
     const term = this.searchTerm().toLowerCase();
+    
     if (term) {
       filtered = filtered.filter(
         (a) =>
@@ -79,24 +157,32 @@ export class AccountsComponent implements OnInit {
           (a.description && a.description.toLowerCase().includes(term))
       );
     }
+    
     if (this.typeFilter()) {
       filtered = filtered.filter((a) => a.type === this.typeFilter());
     }
+    
     if (this.natureFilter()) {
       filtered = filtered.filter((a) => a.nature === this.natureFilter());
     }
+    
     if (this.levelFilter()) {
       filtered = filtered.filter((a) => a.level === parseInt(this.levelFilter()));
     }
+    
     if (this.activeOnly()) {
       filtered = filtered.filter((a) => a.isActive);
     }
     
+    return filtered;
+  });
+
+  treeAccounts = computed(() => {
+    const filtered = this.filteredAccounts();
     // Ordenar jerárquicamente
     return this.sortHierarchically(filtered);
   });
 
-  // Cuentas para vista de tabla (solo level 3+)
   tableAccounts = computed(() => {
     let filtered = this.accounts();
     const term = this.searchTerm().toLowerCase();
@@ -121,75 +207,26 @@ export class AccountsComponent implements OnInit {
       filtered = filtered.filter((a) => a.isActive);
     }
     
-    // En vista de tabla, solo mostrar cuentas (level 3) y subcuentas (level 4+)
-    // Excluir grupos (level 1) y subgrupos (level 2)
-    filtered = filtered.filter((a) => a.level >= 3);
+    // En vista de tabla, mostrar solo cuentas (level 3), las subcuentas (level 4) solo en dropdown
+    filtered = filtered.filter((a) => a.level === 3);
+    
+    console.log('TableAccounts (level 3):', filtered);
+    console.log('Cuenta 101 en tableAccounts:', filtered.find(a => a.code === '101'));
     
     // Ordenar por código (sin jerarquía)
     return filtered.sort((a, b) => a.code.localeCompare(b.code));
   });
 
-  sortHierarchically(accounts: Account[]): Account[] {
-    // Crear mapa de hijos por padre
-    const childrenMap = new Map<string, Account[]>();
-    const rootAccounts: Account[] = [];
-    
-    // Separar cuentas raíz y organizar hijos
-    accounts.forEach(account => {
-      const parentCode = account.parentCode || '';
-      if (!parentCode) {
-        rootAccounts.push(account);
-      } else {
-        if (!childrenMap.has(parentCode)) {
-          childrenMap.set(parentCode, []);
-        }
-        childrenMap.get(parentCode)!.push(account);
-      }
-    });
-    
-    // Ordenar cada grupo de hijos
-    childrenMap.forEach(children => {
-      children.sort((a, b) => a.code.localeCompare(b.code));
-    });
-    
-    // Función recursiva para construir la lista ordenada
-    const buildHierarchy = (accounts: Account[]): Account[] => {
-      const result: Account[] = [];
-      accounts.forEach(account => {
-        result.push(account);
-        const children = childrenMap.get(account.code) || [];
-        if (children.length > 0) {
-          result.push(...buildHierarchy(children));
-        }
-      });
-      return result;
-    };
-    
-    // Ordenar cuentas raíz y construir jerarquía
-    rootAccounts.sort((a, b) => a.code.localeCompare(b.code));
-    return buildHierarchy(rootAccounts);
-  }
-
   pagedAccounts = computed(() => {
-    // En vista de tabla, usar tableAccounts (solo level 3+)
-    // En vista de árbol, usar filteredAccounts (toda la jerarquía)
-    const filtered = this.viewMode() === 'table' ? this.tableAccounts() : this.filteredAccounts();
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return filtered.slice(start, start + this.pageSize);
+    const start = this.getStartIndex();
+    const end = this.getEndIndex();
+    return this.tableAccounts().slice(start, end);
   });
 
-  treeAccounts = computed(() => {
-    const filtered = this.filteredAccounts();
-    // Usar la misma lógica jerárquica que en sortHierarchically
-    return this.buildTreeStructure(filtered);
-  });
-
-  buildTreeStructure(accounts: Account[]): Account[] {
-    // Crear mapa de hijos por padre
+  sortHierarchically(accounts: Account[]): Account[] {
     const childrenMap = new Map<string, Account[]>();
     const rootAccounts: Account[] = [];
     
-    // Separar cuentas raíz y organizar hijos
     accounts.forEach(account => {
       const parentCode = account.parentCode || '';
       if (!parentCode) {
@@ -202,143 +239,165 @@ export class AccountsComponent implements OnInit {
       }
     });
     
-    // Función recursiva para construir árbol
-    const buildNode = (account: Account): Account => {
+    const buildHierarchy = (account: Account): Account => {
       const children = childrenMap.get(account.code) || [];
       return {
         ...account,
-        children: children.map(child => buildNode(child))
+        children: children.map(child => buildHierarchy(child))
       };
     };
     
-    // Ordenar cuentas raíz y construir árbol
-    rootAccounts.sort((a, b) => a.code.localeCompare(b.code));
-    return rootAccounts.map(root => buildNode(root));
+    return rootAccounts.map(account => buildHierarchy(account));
   }
 
-  paginationConfig = computed(() => ({
-    currentPage: this.currentPage(),
-    totalItems: this.filteredAccounts().length,
-    itemsPerPage: this.pageSize,
-    totalPages: Math.ceil(this.filteredAccounts().length / this.pageSize),
-  }));
+  // Pagination methods
+  getStartIndex(): number {
+    return (this.currentPage() - 1) * this.pageSize;
+  }
 
-  availableLevels = computed(() => {
-    const levels = [...new Set(this.accounts().map((a) => a.level))];
-    return levels.sort((a, b) => a - b);
-  });
+  getEndIndex(): number {
+    return this.getStartIndex() + this.pageSize;
+  }
 
-  constructor() {
-    this.accountForm = this.fb.group({
-      code: ['', [Validators.required, Validators.pattern(/^[\d.]{1,20}$/)]],
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      description: [''],
-      type: ['asset', Validators.required],
-      nature: ['deudora', Validators.required],
-      level: [1, [Validators.required, Validators.min(1), Validators.max(9)]],
-      groupNumber: [''],
-      parentCode: [''],
-      isActive: [true],
-      allowsMovements: [false],
-    });
+  getTotalPages(): number {
+    return Math.ceil(this.tableAccounts().length / this.pageSize);
+  }
 
-    // Cerrar dropdown al hacer clic fuera
-    document.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.subaccount-dropdown')) {
-        this.showSubaccountActions.set(null);
+  previousPage() {
+    if (this.currentPage() > 1) {
+      this.currentPage.set(this.currentPage() - 1);
+    }
+  }
+
+  nextPage() {
+    if (this.currentPage() < this.getTotalPages()) {
+      this.currentPage.set(this.currentPage() + 1);
+    }
+  }
+
+  // Tree expansion methods
+  toggleExpanded(accountCode: string) {
+    const current = new Set(this.expandedNodes());
+    if (current.has(accountCode)) {
+      current.delete(accountCode);
+    } else {
+      current.add(accountCode);
+    }
+    this.expandedNodes.set(current);
+  }
+
+  isExpanded(accountCode: string): boolean {
+    return this.expandedNodes().has(accountCode);
+  }
+
+  // Subaccounts dropdown methods
+  toggleSubaccountsDropdown(accountId: string) {
+    const current = new Set(this.expandedSubaccounts());
+    const loading = new Set(this.subaccountsLoading());
+    
+    if (current.has(accountId)) {
+      // Cerrar dropdown
+      current.delete(accountId);
+      this.expandedSubaccounts.set(current);
+    } else {
+      // Abrir dropdown y cargar subcuentas si no están cargadas
+      if (!this.subaccounts()[accountId]) {
+        loading.add(accountId);
+        this.subaccountsLoading.set(loading);
+        
+        // Cargar subcuentas y luego abrir dropdown
+        this.loadSubaccountsForAccount(accountId);
+        
+        // Simular carga y abrir dropdown después de un breve tiempo
+        setTimeout(() => {
+          const newLoading = new Set(this.subaccountsLoading());
+          newLoading.delete(accountId);
+          this.subaccountsLoading.set(newLoading);
+          
+          // Abrir dropdown después de cargar
+          const newExpanded = new Set(this.expandedSubaccounts());
+          newExpanded.add(accountId);
+          this.expandedSubaccounts.set(newExpanded);
+        }, 500);
+      } else {
+        // Abrir dropdown directamente si ya están cargadas
+        current.add(accountId);
+        this.expandedSubaccounts.set(current);
       }
-    });
-  }
-
-  ngOnInit() {
-    this.loadAccounts();
-    this.loadStatistics();
-  }
-
-  loadAccounts() {
-    this.isLoading.set(true);
-    this.hasError.set(false);
-    this.accountingService.getAccounts().subscribe({
-      next: (data) => {
-        this.accounts.set(data);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.hasError.set(true);
-        this.isLoading.set(false);
-      },
-    });
-  }
-
-  loadStatistics() {
-    this.accountingService.getAccountStatistics().subscribe({
-      next: (stats) => this.statistics.set(stats),
-      error: () => {},
-    });
-  }
-
-  getChildren(parentCode: string, allAccounts: Account[]): any[] {
-    const children = allAccounts.filter((a) => a.parentCode === parentCode);
-    return children.map((child) => ({
-      ...child,
-      children: this.getChildren(child.code, allAccounts),
-    }));
-  }
-
-  toggleExpansion(nodeCode: string, event: Event) {
-    event.stopPropagation();
-    const expanded = new Set(this.expandedNodes());
-    if (expanded.has(nodeCode)) {
-      expanded.delete(nodeCode);
-    } else {
-      expanded.add(nodeCode);
     }
-    this.expandedNodes.set(expanded);
   }
 
-  isExpanded(nodeCode: string): boolean {
-    return this.expandedNodes().has(nodeCode);
+  isSubaccountsDropdownExpanded(accountId: string): boolean {
+    return this.expandedSubaccounts().has(accountId);
   }
 
-  hasChildren(account: any): boolean {
-    return account.children && account.children.length > 0;
+  isSubaccountsLoading(accountId: string): boolean {
+    return this.subaccountsLoading().has(accountId);
   }
 
-  expandAll() {
-    const allCodes = this.accounts().map(a => a.code);
-    this.expandedNodes.set(new Set(allCodes));
-  }
-
-  collapseAll() {
-    this.expandedNodes.set(new Set());
-  }
-
-  toggleNode(code: string) {
-    const current = this.expandedNodes();
-    const newSet = new Set(current);
-    if (newSet.has(code)) {
-      newSet.delete(code);
-    } else {
-      newSet.add(code);
+  // Método para verificar si una cuenta tiene subcuentas
+  hasSubaccounts(accountId: string): boolean {
+    console.log(`hasSubaccounts called for accountId: ${accountId}`);
+    console.log('Subaccounts loaded:', this.subaccounts());
+    
+    // Si no están cargadas, cargarlas primero
+    if (!this.subaccounts()[accountId]) {
+      console.log('Loading subaccounts for account:', accountId);
+      // Disparar carga asíncrona pero no esperar aquí
+      this.loadSubaccountsForAccount(accountId);
     }
-    this.expandedNodes.set(newSet);
+    
+    // Verificar si hay subcuentas cargadas
+    const subaccounts = this.getSubaccountsForAccount(accountId);
+    console.log(`Subaccounts for ${accountId}:`, subaccounts);
+    return subaccounts.length > 0;
   }
 
+  // Método para cargar subcuentas si no están cargadas y verificar si tiene
+  async checkAndLoadSubaccounts(accountId: string): Promise<boolean> {
+    if (!this.subaccounts()[accountId]) {
+      // Cargar subcuentas si no están cargadas
+      this.loadSubaccountsForAccount(accountId);
+      // Esperar un poco a que carguen y verificar
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    return this.hasSubaccounts(accountId);
+  }
+
+  // Método de depuración para el template
+  debugDropdown(account: Account) {
+    console.log('Dropdown condition true for account:', account.code, 'level:', account.level);
+    return true;
+  }
+
+  // Filter methods
+  resetFilters() {
+    this.searchTerm.set('');
+    this.typeFilter.set('');
+    this.natureFilter.set('');
+    this.levelFilter.set('');
+    this.activeOnly.set(false);
+    this.currentPage.set(1);
+  }
+
+  // Account operations
   openCreateModal() {
     this.accountForm.reset({
       code: '',
       name: '',
       description: '',
-      type: 'asset',
+      type: 'balance',
       nature: 'deudora',
-      level: 1,
-      groupNumber: '',
-      parentCode: '',
-      isActive: true,
+      parentId: '',
       allowsMovements: false,
+      isActive: true,
+      groupNumber: '',
+      level: 1
     });
+    this.selectedAccount.set(null);
     this.showCreateModal.set(true);
+    this.showEditModal.set(false);
+    this.showViewModal.set(false);
   }
 
   openEditModal(account: Account) {
@@ -349,29 +408,44 @@ export class AccountsComponent implements OnInit {
       description: account.description || '',
       type: account.type,
       nature: account.nature,
-      level: account.level,
-      groupNumber: account.groupNumber || '',
-      parentCode: account.parentCode || '',
-      isActive: account.isActive,
+      parentId: account.parentAccountId || '',
       allowsMovements: account.allowsMovements,
+      isActive: account.isActive,
+      groupNumber: account.groupNumber || '',
+      level: account.level
     });
+    this.showCreateModal.set(false);
     this.showEditModal.set(true);
+    this.showViewModal.set(false);
   }
 
   openViewModal(account: Account) {
     this.selectedAccount.set(account);
+    this.showCreateModal.set(false);
+    this.showEditModal.set(false);
     this.showViewModal.set(true);
   }
 
-  closeModals() {
+  viewSubaccountDetails(subaccount: Account) {
+    this.selectedAccount.set(subaccount);
     this.showCreateModal.set(false);
     this.showEditModal.set(false);
-    this.showSubaccountModal.set(false);
+    this.showViewModal.set(true);
+  }
+
+  closeAllModals() {
+    this.showCreateModal.set(false);
+    this.showEditModal.set(false);
     this.showViewModal.set(false);
-    this.showSubaccountModal.set(false);
     this.selectedAccount.set(null);
-    this.parentAccountForSubaccount.set(null);
-    this.accountForm.reset();
+  }
+
+  saveAccount() {
+    if (this.showCreateModal()) {
+      this.createAccount();
+    } else if (this.showEditModal()) {
+      this.updateAccount();
+    }
   }
 
   createAccount() {
@@ -383,14 +457,30 @@ export class AccountsComponent implements OnInit {
     if (!data.groupNumber && data.code) {
       data.groupNumber = data.code.charAt(0);
     }
-    // Calcular nivel automáticamente basándose en el código
-    data.level = this.calculateLevelFromCode(data.code);
+    data.level = this.calculateLevelFromCode(data.code || '');
+    
+    // Convert form data to match Account interface
+    const accountData: Partial<Account> = {
+      code: data.code || '',
+      name: data.name || '',
+      description: data.description || null,
+      type: data.type as 'asset' | 'liability' | 'equity' | 'income' | 'expense',
+      nature: data.nature as 'deudora' | 'acreedora',
+      level: data.level || 1,
+      groupNumber: data.groupNumber || null,
+      parentCode: data.parentId || null,
+      parentAccountId: data.parentId || null,
+      balance: 0,
+      isActive: data.isActive ?? true,
+      allowsMovements: data.allowsMovements ?? false
+    };
+    
     this.isLoading.set(true);
-    this.accountingService.createAccount(data).subscribe({
+    this.accountingService.createAccount(accountData).subscribe({
       next: () => {
         const accountType = data.level === 1 ? 'Grupo' : data.level === 2 ? 'Subgrupo' : data.level === 3 ? 'Cuenta' : 'Subcuenta';
         this.showToast(`${accountType} creado exitosamente`, 'success');
-        this.closeModals();
+        this.closeAllModals();
         this.loadAccounts();
         this.loadStatistics();
       },
@@ -410,12 +500,28 @@ export class AccountsComponent implements OnInit {
     if (!account) return;
 
     const data = this.accountForm.value;
+    
+    // Convert form data to match Account interface
+    const accountData: Partial<Account> = {
+      code: data.code || '',
+      name: data.name || '',
+      description: data.description || null,
+      type: data.type as 'asset' | 'liability' | 'equity' | 'income' | 'expense',
+      nature: data.nature as 'deudora' | 'acreedora',
+      level: data.level || account.level,
+      groupNumber: data.groupNumber || account.groupNumber,
+      parentCode: data.parentId || account.parentCode,
+      parentAccountId: data.parentId || account.parentAccountId,
+      isActive: data.isActive ?? account.isActive,
+      allowsMovements: data.allowsMovements ?? account.allowsMovements
+    };
+    
     this.isLoading.set(true);
-    this.accountingService.updateAccount(account.id, data).subscribe({
+    this.accountingService.updateAccount(account.id, accountData).subscribe({
       next: () => {
         const accountType = this.getAccountTypeLabel(account);
         this.showToast(`${accountType} actualizada exitosamente`, 'success');
-        this.closeModals();
+        this.closeAllModals();
         this.loadAccounts();
         this.loadStatistics();
       },
@@ -427,257 +533,69 @@ export class AccountsComponent implements OnInit {
     });
   }
 
-  async deleteAccount(account: Account) {
-    // Validar si tiene hijos
-    const hasChildren = this.accounts().some(a => a.parentCode === account.code);
-    if (hasChildren) {
-      this.showToast(`No se puede eliminar ${this.getAccountTypeLabel(account).toLowerCase()} que tiene ${this.getChildTypeLabel(account).toLowerCase()}s. Elimine primero los ${this.getChildTypeLabel(account).toLowerCase()}s.`, 'error');
-      return;
-    }
-    const confirmed = await this.confirmDialog.confirm({
-      title: 'Eliminar cuenta',
-      message: `¿Eliminar ${this.getAccountTypeLabel(account).toLowerCase()} ${account.code} - ${account.name}?`,
-      confirmText: 'Eliminar',
-      type: 'danger'
-    });
-    if (!confirmed) return;
-    this.accountingService.deleteAccount(account.id).subscribe({
-      next: () => {
-        const accountType = this.getAccountTypeLabel(account);
-        this.showToast(`${accountType} eliminada`, 'success');
-        this.loadAccounts();
-        this.loadStatistics();
-      },
-      error: (err) => {
-        this.showToast(err.error?.message || 'Error al eliminar', 'error');
-      },
-    });
-  }
-
-  toggleActive(account: Account) {
-    this.accountingService
-      .updateAccount(account.id, { isActive: !account.isActive } as any)
-      .subscribe({
-        next: () => {
-          const accountType = this.getAccountTypeLabel(account);
-          this.showToast(
-            account.isActive ? `${accountType} desactivada` : `${accountType} activada`,
-            'success'
-          );
-          this.loadAccounts();
-          this.loadStatistics();
-        },
-        error: () => this.showToast('Error al cambiar estado', 'error'),
-      });
-  }
-
-  onCodeChange() {
-    const code = this.accountForm.get('code')?.value;
-    if (!code) return;
-
-    const firstDigit = code.charAt(0);
-    this.accountForm.patchValue({ groupNumber: firstDigit });
-
-    const typeMap: Record<string, string> = {
-      '1': 'asset',
-      '2': 'liability',
-      '3': 'equity',
-      '4': 'income',
-      '5': 'expense',
-      '6': 'expense',
-      '7': 'income',
-      '8': 'asset',
-      '9': 'asset',
-    };
-    if (typeMap[firstDigit]) {
-      this.accountForm.patchValue({ type: typeMap[firstDigit] });
-    }
-
-    const natureMap: Record<string, string> = {
-      '1': 'deudora',
-      '2': 'acreedora',
-      '3': 'acreedora',
-      '4': 'acreedora',
-      '5': 'deudora',
-      '6': 'deudora',
-      '7': 'acreedora',
-      '8': 'deudora',
-      '9': 'deudora',
-    };
-
-    if (typeMap[firstDigit]) {
-      this.accountForm.patchValue({
-        type: typeMap[firstDigit],
-        nature: natureMap[firstDigit],
-      });
-    }
-
-    // Sistema híbrido: decimal para subgrupos, numérico para cuentas
-    const level = this.getLevelFromCode(code);
-    this.accountForm.patchValue({ level });
-
-    const parentCode = this.getParentCode(code);
-    this.accountForm.patchValue({ parentCode });
-  }
-
-  getLevelFromCode(code: string): number {
-    // Si tiene puntos, es sistema decimal (subgrupos)
-    if (code.includes('.')) {
-      return code.split('.').length;
-    }
-    // Si no tiene puntos, es sistema numérico (cuentas)
-    // El nivel se basa en la longitud y el contexto
-    if (code.length === 1) return 1; // 10, 20, etc.
-    if (code.length === 2) return 2; // 10.1, 20.1, etc.
-    return 3; // 101, 102, etc.
-  }
-
-  getParentCode(code: string): string {
-    // Si tiene puntos, eliminar el último segmento
-    if (code.includes('.')) {
-      const parts = code.split('.');
-      if (parts.length <= 1) return '';
-      return parts.slice(0, -1).join('.');
-    }
-    // Si no tiene puntos y es de 3 dígitos, buscar subgrupo padre
-    if (code.length === 3) {
-      const firstTwo = code.substring(0, 2);
-      return `${firstTwo.substring(0, 1)}.${firstTwo.substring(1)}`;
-    }
-    return '';
-  }
-
-  applyFilters() {
-    this.currentPage.set(1);
-  }
-
-  resetFilters() {
-    this.searchTerm.set('');
-    this.typeFilter.set('');
-    this.natureFilter.set('');
-    this.levelFilter.set('');
-    this.activeOnly.set(false);
-    this.currentPage.set(1);
-  }
-
-  onPageChange(page: number) {
-    this.currentPage.set(page);
-  }
-
-  getTypeClass(type: string): string {
-    const classes: Record<string, string> = {
-      asset: 'bg-blue-100 text-blue-800',
-      liability: 'bg-red-100 text-red-800',
-      equity: 'bg-purple-100 text-purple-800',
-      income: 'bg-green-100 text-green-800',
-      expense: 'bg-orange-100 text-orange-800',
-    };
-    return classes[type] || 'bg-slate-100 text-slate-800';
-  }
-
-  getNatureClass(nature: string): string {
-    return nature === 'deudora'
-      ? 'bg-amber-100 text-amber-800'
-      : 'bg-cyan-100 text-cyan-800';
-  }
-
-  getLevelIndent(level: number): string {
-    return `${(level - 1) * 1.5}rem`; // Indentación para cada nivel jerárquico
-  }
-
-  openSubaccountModal(parentAccount: Account) {
-    this.parentAccountForSubaccount.set(parentAccount);
-    this.accountForm.reset({
-      code: '',
-      name: '',
-      description: '',
-      type: parentAccount.type,
-      nature: parentAccount.nature,
-      level: parentAccount.level + 1,
-      groupNumber: parentAccount.groupNumber,
-      parentCode: parentAccount.code,
-      isActive: true,
-      allowsMovements: parentAccount.allowsMovements,
-    });
-    this.showSubaccountModal.set(true);
-  }
-
-  createSubaccount() {
-    if (this.accountForm.invalid) {
-      this.accountForm.markAllAsTouched();
-      return;
-    }
-    const data = this.accountForm.value;
-    const parent = this.parentAccountForSubaccount();
-    if (!parent) return;
-
-    if (!data.code.startsWith(parent.code)) {
-      this.showToast(`El código de ${this.getChildTypeLabel(parent).toLowerCase()} debe comenzar con el código de ${this.getChildTypeLabel(parent).toLowerCase()} padre`, 'error');
-      return;
-    }
-
-    // Calcular nivel automáticamente basándose en el código
-    data.level = this.calculateLevelFromCode(data.code);
-
-    this.isLoading.set(true);
+  async deleteAccount(account: Account, parentAccountId?: string) {
+    const isSubaccount = parentAccountId !== undefined;
+    const accountType = isSubaccount ? 'Subcuenta' : 'Cuenta';
     
-    // Usar el nuevo método createSubaccount
-    this.accountingService.createSubaccount({
-      accountId: parent.id,
-      subaccountCode: data.code,
-      subaccountName: data.name,
-      description: data.description || ''
-    }).subscribe({
+    const confirmed = await this.confirmDialog.confirm(
+      `Eliminar ${accountType}`,
+      `¿Está seguro de eliminar la ${accountType.toLowerCase()} "${account.code || ''} - ${account.name || ''}"?`,
+      {
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        type: 'warning'
+      }
+    );
+    
+    if (!confirmed) return;
+    
+    this.accountingService.deleteAccount(account.id || '').subscribe({
       next: () => {
-        this.showToast(`${this.getChildTypeLabel(parent)} creada bajo ${parent.name}`, 'success');
-        this.closeModals();
+        this.showToast(`${accountType} eliminada exitosamente`, 'success');
         this.loadAccounts();
         this.loadStatistics();
-        this.toggleNode(parent.code);
+        
+        // Si es una subcuenta, limpiar el cache de subcuentas del padre
+        if (isSubaccount && parentAccountId) {
+          const current = { ...this.subaccounts() };
+          delete current[parentAccountId];
+          this.subaccounts.set(current);
+        }
       },
       error: (err) => {
-        this.showToast(err.error?.message || `Error al crear ${this.getChildTypeLabel(parent).toLowerCase()}`, 'error');
-        this.isLoading.set(false);
+        this.showToast(err.error?.message || `Error al eliminar la ${accountType.toLowerCase()}`, 'error');
       },
     });
   }
 
-  loadSubaccountsForAccount(account: Account) {
-    this.accountingService.getAccountsByParentCode(account.code).subscribe({
-      next: (data) => {
-        const currentMap = this.loadedSubaccounts();
-        currentMap.set(account.code, data);
-        this.loadedSubaccounts.set(new Map(currentMap));
-      },
-      error: () => {
-        const currentMap = this.loadedSubaccounts();
-        currentMap.set(account.code, []);
-        this.loadedSubaccounts.set(new Map(currentMap));
+  async toggleActive(account: Account) {
+    const action = account.isActive ? 'desactivar' : 'activar';
+    const confirmed = await this.confirmDialog.confirm(
+      `${action.charAt(0).toUpperCase() + action.slice(1)} Cuenta`,
+      `¿Está seguro de ${action} la cuenta "${account.code || ''} - ${account.name || ''}"?`,
+      {
+        confirmText: action.charAt(0).toUpperCase() + action.slice(1),
+        cancelText: 'Cancelar',
+        type: account.isActive ? 'warning' : 'info'
       }
+    );
+    
+    if (!confirmed) return;
+    
+    this.accountingService.updateAccount(account.id || '', { isActive: !account.isActive }).subscribe({
+      next: () => {
+        this.showToast(`Cuenta ${action}da exitosamente`, 'success');
+        this.loadAccounts();
+        this.loadStatistics();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || `Error al ${action} la cuenta`, 'error');
+      },
     });
   }
 
-  getSubaccounts(account: Account): Account[] {
-    return this.loadedSubaccounts().get(account.code) || [];
-  }
-
-  hasSubaccounts(account: Account): boolean {
-    const subaccounts = this.getSubaccounts(account);
-    return subaccounts.length > 0;
-  }
-
-  canHaveSubaccounts(account: Account): boolean {
-    // Jerarquía: Grupo (1) → Subgrupo (2) → Cuenta (3) → Subcuenta (4+)
-    // Grupos (level 1) y Subgrupos (level 2) NO pueden tener hijos (son fijos)
-    // Solo Cuentas (level 3) pueden tener subcuentas (level 4+)
-    // Subcuentas (level 4+) pueden tener más subcuentas
-    return account.level >= 3 && account.level < 9 && account.isActive;
-  }
-
-  getChildTypeLabel(account: Account): string {
-    // Solo cuentas (level 3) pueden tener subcuentas
-    if (account.level >= 3) return 'Subcuenta';
-    return '';
+  getParentAccounts(): Account[] {
+    return this.accounts().filter(account => account.level < 4);
   }
 
   getAccountTypeLabel(account: Account): string {
@@ -687,69 +605,227 @@ export class AccountsComponent implements OnInit {
     return 'Subcuenta';
   }
 
-  getChildLevel(account: Account): number {
-    return account.level + 1;
+  getNatureClass(nature: string): string {
+    return nature === 'deudora' 
+      ? 'bg-amber-100 text-amber-700' 
+      : 'bg-cyan-100 text-cyan-700';
+  }
+
+  getLevelIndent(level: number): string {
+    const indent = (level - 1) * 16;
+    return `${indent}px`;
   }
 
   calculateLevelFromCode(code: string): number {
-    // Calcular nivel basándose en el código según el nomenclador cubano 2016
-    // 10 = nivel 1 (grupo)
-    // 10.1 = nivel 2 (subgrupo)
-    // 101 = nivel 3 (cuenta)
-    // 101.1 = nivel 4 (subcuenta)
-    // 101.2.3 = nivel 5 (sub-subcuenta)
-    
-    // Si el código está vacío, retornar 1 por defecto
     if (!code) return 1;
     
     const dotCount = (code.match(/\./g) || []).length;
     
-    // Si no tiene puntos
     if (dotCount === 0) {
-      if (code.length <= 2) return 1; // 10, 20, etc. son grupos (nivel 1)
-      if (code.length === 3) return 3; // 101, 102, etc. son cuentas (nivel 3)
-      return 1; // Por defecto
+      if (code.length <= 2) return 1;
+      if (code.length === 3) return 3;
+      return 1;
     }
     
-    // Si tiene puntos, obtener la parte antes del primer punto
     const firstPart = code.split('.')[0];
     
-    // Si la parte antes del primer punto tiene 2 dígitos (ej: 10.1)
     if (firstPart.length === 2) {
-      return 2; // 10.1, 10.2, etc. son subgrupos (nivel 2)
+      return 2;
     }
     
-    // Si la parte antes del primer punto tiene 3 o más dígitos (ej: 101.1, 101.2.3)
     if (firstPart.length >= 3) {
-      // Verificar si el código termina con un punto (el usuario está escribiendo)
       if (code.endsWith('.')) {
-        return firstPart.length + 1; // 101. → nivel 4
+        return firstPart.length + 1;
       }
-      return firstPart.length + dotCount; // 101.1 → nivel 4, 101.2.3 → nivel 5
+      return firstPart.length + dotCount;
     }
     
-    return 1; // Por defecto
-  }
-
-  toggleSubaccountActions(accountCode: string, event?: Event) {
-    if (event) event.stopPropagation();
-    const current = this.showSubaccountActions();
-    
-    if (current === accountCode) {
-      // Si ya está abierto, cerrarlo
-      this.showSubaccountActions.set(null);
-    } else {
-      // Si se está abriendo, cargar las subcuentas
-      const account = this.accounts().find(a => a.code === accountCode);
-      if (account) {
-        this.loadSubaccountsForAccount(account);
-      }
-      this.showSubaccountActions.set(accountCode);
-    }
+    return 1;
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info') {
     this.toast.set({ message, type });
     setTimeout(() => this.toast.set(null), 3000);
+  }
+
+  // ── Subaccount operations ──
+
+  loadSubaccountsForAccount(accountId: string) {
+    console.log(`loadSubaccountsForAccount called for accountId: ${accountId}`);
+    
+    if (this.subaccounts()[accountId]) {
+      console.log(`Subcuentas ya cargadas para ${accountId}:`, this.subaccounts()[accountId]);
+      return; // Ya cargadas
+    }
+
+    console.log(`Cargando subcuentas para ${accountId}...`);
+    this.accountingService.getSubaccountsByAccount(accountId).subscribe({
+      next: (subaccounts) => {
+        console.log(`Respuesta del backend para ${accountId}:`, subaccounts);
+        const current = { ...this.subaccounts() };
+        current[accountId] = subaccounts as unknown as Account[];
+        this.subaccounts.set(current);
+        console.log(`Subcuentas guardadas para ${accountId}:`, subaccounts);
+      },
+      error: (err) => {
+        console.error('Error loading subaccounts:', err);
+        this.showToast('Error al cargar subcuentas', 'error');
+      },
+    });
+  }
+
+  getSubaccountsForAccount(accountId: string): Account[] {
+    return this.subaccounts()[accountId] || [];
+  }
+
+  openSubaccountCreateModal(account: Account) {
+    this.selectedAccountForSubaccount.set(account);
+    this.subaccountForm.reset({
+      accountId: account.id,
+      subaccountCode: '',
+      subaccountName: '',
+      description: '',
+      type: account.type,
+      nature: account.nature,
+      isActive: true,
+      allowsMovements: true
+    });
+    this.showSubaccountCreateModal.set(true);
+  }
+
+  openSubaccountEditModal(subaccount: Subaccount) {
+    this.selectedSubaccount.set(subaccount);
+    this.subaccountForm.reset({
+      accountId: subaccount.accountId,
+      subaccountCode: subaccount.subaccountCode,
+      subaccountName: subaccount.subaccountName,
+      description: subaccount.description || '',
+      type: subaccount.type,
+      nature: subaccount.nature,
+      isActive: subaccount.isActive,
+      allowsMovements: subaccount.allowsMovements
+    });
+    this.showSubaccountEditModal.set(true);
+  }
+
+  closeSubaccountModals() {
+    this.showSubaccountCreateModal.set(false);
+    this.showSubaccountEditModal.set(false);
+    this.selectedSubaccount.set(null);
+    this.selectedAccountForSubaccount.set(null);
+    this.subaccountForm.reset();
+  }
+
+  createSubaccount() {
+    if (this.subaccountForm.invalid) {
+      this.subaccountForm.markAllAsTouched();
+      return;
+    }
+
+    const data = this.subaccountForm.value;
+    this.isLoading.set(true);
+
+    const createData = {
+      accountId: data.accountId!,
+      subaccountCode: data.subaccountCode!,
+      subaccountName: data.subaccountName!,
+      description: data.description || undefined
+    };
+
+    this.accountingService.createSubaccount(createData).subscribe({
+      next: () => {
+        this.showToast('Subcuenta creada exitosamente', 'success');
+        this.closeSubaccountModals();
+        this.loadSubaccountsForAccount(createData.accountId);
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al crear la subcuenta', 'error');
+        this.isLoading.set(false);
+      },
+    });
+  }
+
+  updateSubaccount() {
+    if (this.subaccountForm.invalid) {
+      this.subaccountForm.markAllAsTouched();
+      return;
+    }
+
+    const subaccount = this.selectedSubaccount();
+    if (!subaccount) return;
+
+    const data = this.subaccountForm.value;
+    this.isLoading.set(true);
+
+    const updateData: Partial<Subaccount> = {
+      subaccountCode: data.subaccountCode!,
+      subaccountName: data.subaccountName!,
+      description: data.description || null,
+      type: data.type as 'asset' | 'liability' | 'equity' | 'income' | 'expense',
+      nature: data.nature as 'deudora' | 'acreedora',
+      isActive: data.isActive ?? true,
+      allowsMovements: data.allowsMovements ?? true
+    };
+
+    this.accountingService.updateSubaccount(subaccount.id, updateData).subscribe({
+      next: () => {
+        this.showToast('Subcuenta actualizada exitosamente', 'success');
+        this.closeSubaccountModals();
+        this.loadSubaccountsForAccount(subaccount.accountId);
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al actualizar la subcuenta', 'error');
+        this.isLoading.set(false);
+      },
+    });
+  }
+
+  async deleteSubaccount(subaccount: Subaccount) {
+    const confirmed = await this.confirmDialog.confirm(
+      'Eliminar Subcuenta',
+      `¿Está seguro de eliminar la subcuenta "${subaccount.subaccountCode} - ${subaccount.subaccountName}"?`,
+      {
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        type: 'warning'
+      }
+    );
+
+    if (!confirmed) return;
+
+    this.accountingService.deleteSubaccount(subaccount.id).subscribe({
+      next: () => {
+        this.showToast('Subcuenta eliminada exitosamente', 'success');
+        this.loadSubaccountsForAccount(subaccount.accountId);
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al eliminar la subcuenta', 'error');
+      },
+    });
+  }
+
+  async toggleSubaccountActive(subaccount: Subaccount) {
+    const action = subaccount.isActive ? 'desactivar' : 'activar';
+    const confirmed = await this.confirmDialog.confirm(
+      `${action.charAt(0).toUpperCase() + action.slice(1)} Subcuenta`,
+      `¿Está seguro de ${action} la subcuenta "${subaccount.subaccountCode} - ${subaccount.subaccountName}"?`,
+      {
+        confirmText: action.charAt(0).toUpperCase() + action.slice(1),
+        cancelText: 'Cancelar',
+        type: subaccount.isActive ? 'warning' : 'info'
+      }
+    );
+
+    if (!confirmed) return;
+
+    this.accountingService.toggleSubaccountActive(subaccount.id).subscribe({
+      next: () => {
+        this.showToast(`Subcuenta ${action}da exitosamente`, 'success');
+        this.loadSubaccountsForAccount(subaccount.accountId);
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || `Error al ${action} la subcuenta`, 'error');
+      },
+    });
   }
 }

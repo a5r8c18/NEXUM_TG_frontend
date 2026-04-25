@@ -27,7 +27,7 @@ export class ElementosComponent implements OnInit {
   pageSize = 10;
   searchTerm = signal('');
   categoryFilter = signal<SubelementCategory | ''>('');
-  activeOnlyFilter = signal(true);
+  activeOnlyFilter = signal(false);
 
   // Modal
   showModal = signal(false);
@@ -88,7 +88,7 @@ export class ElementosComponent implements OnInit {
     this.filterForm = this.fb.group({
       search: [''],
       category: [''],
-      activeOnly: [true],
+      activeOnly: [false],
     });
 
     this.subelementForm = this.fb.group({
@@ -253,7 +253,7 @@ export class ElementosComponent implements OnInit {
     this.filterForm.reset({
       search: '',
       category: '',
-      activeOnly: true,
+      activeOnly: false,
     });
     this.currentPage.set(1);
   }
@@ -279,6 +279,19 @@ export class ElementosComponent implements OnInit {
       style: 'currency',
       currency: 'COP',
     }).format(amount);
+  }
+
+  translateCategory(category: SubelementCategory | ''): string {
+    const translations: Record<SubelementCategory, string> = {
+      'inventory': 'Inventario',
+      'fuel': 'Combustible',
+      'energy': 'Energía',
+      'personnel': 'Personal',
+      'depreciation': 'Depreciación',
+      'services': 'Servicios',
+      'transfers': 'Transferencias'
+    };
+    return category ? translations[category] : category;
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info') {

@@ -78,6 +78,30 @@ export interface AccountStatistics {
   byLevel: Record<number, number>;
 }
 
+export interface Subaccount {
+  id: string;
+  companyId: number;
+  accountId: string;
+  account?: Account;
+  subaccountCode: string;
+  subaccountName: string;
+  description: string | null;
+  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  nature: 'deudora' | 'acreedora';
+  balance: number;
+  isActive: boolean;
+  allowsMovements: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubaccountStatistics {
+  total: number;
+  active: number;
+  inactive: number;
+  byAccount: Record<string, number>;
+}
+
 export interface ComprobanteOperacion {
   id: string;
   companyId: number;
@@ -151,6 +175,8 @@ export interface VoucherLineItem {
   subaccountName?: string | null;
   element?: string | null;
   elementName?: string | null;
+  subelement?: string | null;
+  subelementName?: string | null;
   debit: number;
   credit: number;
   description: string | null;
@@ -269,9 +295,7 @@ export class AccountingService {
     return this.http.get<Account[]>(`${this.baseUrl}/accounts/${parentCode}/subaccounts`);
   }
 
-  getSubaccountsByAccount(accountId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/subaccounts/${accountId}`);
-  }
+  
 
   getAccountStatistics() {
     return this.http.get<AccountStatistics>(`${this.baseUrl}/accounts/statistics`);
@@ -287,7 +311,37 @@ export class AccountingService {
     subaccountName: string;
     description?: string;
   }) {
-    return this.http.post(`${this.baseUrl}/subaccounts`, data);
+    return this.http.post<Subaccount>(`${this.baseUrl}/subaccounts`, data);
+  }
+
+  getSubaccounts(accountId?: string) {
+    const params: any = {};
+    if (accountId) params.accountId = accountId;
+    return this.http.get<Subaccount[]>(`${this.baseUrl}/subaccounts`, { params });
+  }
+
+  getSubaccountsByAccount(accountId: string) {
+    return this.http.get<Subaccount[]>(`${this.baseUrl}/subaccounts/${accountId}`);
+  }
+
+  getSubaccountStatistics() {
+    return this.http.get<SubaccountStatistics>(`${this.baseUrl}/subaccounts/statistics`);
+  }
+
+  getSubaccount(id: string) {
+    return this.http.get<Subaccount>(`${this.baseUrl}/subaccounts/${id}`);
+  }
+
+  updateSubaccount(id: string, data: Partial<Subaccount>) {
+    return this.http.put<Subaccount>(`${this.baseUrl}/subaccounts/${id}`, data);
+  }
+
+  toggleSubaccountActive(id: string) {
+    return this.http.patch<Subaccount>(`${this.baseUrl}/subaccounts/${id}/toggle-active`, {});
+  }
+
+  deleteSubaccount(id: string) {
+    return this.http.delete(`${this.baseUrl}/subaccounts/${id}`);
   }
 
   updateAccount(id: string, data: Partial<Account>) {
@@ -436,6 +490,13 @@ export class AccountingService {
     return this.http.get<any>(`${this.baseUrl}/reports/income-statement`, { params });
   }
 
+  getExpenseBreakdown(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get<any>(`${this.baseUrl}/reports/expense-breakdown`, { params });
+  }
+
   getGeneralLedger(accountCode: string, fromDate?: string, toDate?: string) {
     const params: any = { accountCode };
     if (fromDate) params.fromDate = fromDate;
@@ -477,6 +538,55 @@ export class AccountingService {
     if (fromDate) params.fromDate = fromDate;
     if (toDate) params.toDate = toDate;
     return this.http.get(`${this.baseUrl}/reports/modelo-5921/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportModelo5924Excel(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get(`${this.baseUrl}/reports/modelo-5924/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportTrialBalanceExcel(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get(`${this.baseUrl}/reports/trial-balance/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportBalanceSheetExcel(asOfDate?: string) {
+    const params: any = {};
+    if (asOfDate) params.asOfDate = asOfDate;
+    return this.http.get(`${this.baseUrl}/reports/balance-sheet/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportIncomeStatementExcel(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get(`${this.baseUrl}/reports/income-statement/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportExpenseBreakdownExcel(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get(`${this.baseUrl}/reports/modelo-5924/export/excel`, {
       params,
       responseType: 'blob',
     });

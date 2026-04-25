@@ -5,6 +5,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 
 import { routes } from './app.routes';
 import { contextInterceptor } from './core/interceptors/context.interceptor';
+import { errorInterceptor } from './interceptors/error.interceptor';
 import { GlobalErrorHandler } from './core/error-handler/global-error-handler.service';
 
 export const appConfig: ApplicationConfig = {
@@ -12,7 +13,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideHttpClient(
-      withInterceptors([contextInterceptor])
+      withInterceptors([contextInterceptor, errorInterceptor])
     ),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

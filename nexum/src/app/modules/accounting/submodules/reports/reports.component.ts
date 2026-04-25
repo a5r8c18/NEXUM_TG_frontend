@@ -26,6 +26,7 @@ export interface GeneratedReport {
     fullReport?: boolean;
     modelo5920?: boolean;
     modelo5921?: boolean;
+    modelo5924?: boolean;
   };
 }
 
@@ -48,7 +49,7 @@ export class ReportsComponent {
   pageSize = 10;
 
   // Active tab
-  activeTab = signal<'trial-balance' | 'balance-sheet' | 'income-statement'>('trial-balance');
+  activeTab = signal<'trial-balance' | 'balance-sheet' | 'income-statement' | 'expense-breakdown'>('trial-balance');
 
   // Shared filter signals
   includeDraftEntries = signal(false);
@@ -69,10 +70,17 @@ export class ReportsComponent {
   incomeStatementMonth = signal('');
   incomeStatementUpToMonth = signal(false);
 
+  // Gastos por Subelementos specific
+  modelo5924 = signal(false);
+  expenseBreakdownYear = signal(new Date().getFullYear().toString());
+  expenseBreakdownMonth = signal('');
+  expenseBreakdownUpToMonth = signal(false);
+
   // Collapsible sections state
   trialBalanceOptionsExpanded = signal(true);
   balanceSheetOptionsExpanded = signal(true);
   incomeStatementOptionsExpanded = signal(true);
+  expenseBreakdownOptionsExpanded = signal(true);
 
   // Options dropdown state
   optionsDropdown = signal(false);
@@ -171,100 +179,98 @@ export class ReportsComponent {
         fromDate = `${isYear}-01-01`;
         toDate = `${isYear}-12-31`;
       }
+    } else if (type === 'expense-breakdown') {
+      const ebYear = this.expenseBreakdownYear();
+      const ebMonth = this.expenseBreakdownMonth();
+      const ebUpToMonth = this.expenseBreakdownUpToMonth();
+      if (ebYear && ebMonth && !ebUpToMonth) {
+        fromDate = `${ebYear}-${ebMonth}-01`;
+        const lastDay = new Date(+ebYear, +ebMonth, 0).getDate();
+        toDate = `${ebYear}-${ebMonth}-${String(lastDay).padStart(2, '0')}`;
+      } else if (ebYear && ebUpToMonth && ebMonth) {
+        fromDate = `${ebYear}-01-01`;
+        const lastDay = new Date(+ebYear, +ebMonth, 0).getDate();
+        toDate = `${ebYear}-${ebMonth}-${String(lastDay).padStart(2, '0')}`;
+      } else if (ebYear) {
+        fromDate = `${ebYear}-01-01`;
+        toDate = `${ebYear}-12-31`;
+      }
     }
 
-    // If Modelo 5920-04 is selected, download Excel directly
-    if (type === 'balance-sheet' && this.modelo5920()) {
-      this.accountingService.exportModelo5920Excel(toDate || today).subscribe({
-        next: (blob) => {
-          this.downloadBlob(blob, 'Modelo_5920-04.xlsx');
-          this.isLoading.set(false);
-          this.showToast('Modelo 5920-04 descargado correctamente', 'success');
-        },
-        error: (err) => {
-          this.isLoading.set(false);
-          this.showToast(err.error?.message || 'Error al descargar Modelo 5920-04', 'error');
-        },
-      });
-      return;
-    }
-
-    // If Modelo 5921-04 is selected, download Excel directly
-    if (type === 'income-statement' && this.modelo5921()) {
-      this.accountingService.exportModelo5921Excel(fromDate, toDate || today).subscribe({
-        next: (blob) => {
-          this.downloadBlob(blob, 'Modelo_5921-04.xlsx');
-          this.isLoading.set(false);
-          this.showToast('Modelo 5921-04 descargado correctamente', 'success');
-        },
-        error: (err) => {
-          this.isLoading.set(false);
-          this.showToast(err.error?.message || 'Error al descargar Modelo 5921-04', 'error');
-        },
-      });
-      return;
-    }
-
-    // Normal report generation
-    let request$;
+    // Build title and request for all report types
+    let request$: any;
     let title = '';
 
     switch (type) {
-      case 'trial-balance':
-        title = 'Balance de comprobación';
+      case 'trial-balance': {
+        title = 'Balance de Comprobación';
         const tbYear = this.trialBalanceYear();
         const tbMonth = this.trialBalanceMonth();
         if (tbYear && tbMonth) {
-          const monthLabel = this.months.find(m => m.value === tbMonth)?.label;
-          title += ` (${monthLabel} ${tbYear})`;
+          const ml = this.months.find(m => m.value === tbMonth)?.label;
+          title += ` (${ml} ${tbYear})`;
         } else if (tbYear) {
           title += ` (${tbYear})`;
         }
         request$ = this.accountingService.getTrialBalance(fromDate, toDate || today);
         break;
-      case 'balance-sheet':
+      }
+      case 'balance-sheet': {
         title = 'Estado de Situación';
-        const bsYear2 = this.balanceSheetYear();
-        const bsMonth2 = this.balanceSheetMonth();
-        const bsUpToMonth2 = this.balanceSheetUpToMonth();
-        if (bsYear2 && bsUpToMonth2 && bsMonth2) {
-          const monthLabel = this.months.find(m => m.value === bsMonth2)?.label;
-          title += ` (Hasta ${monthLabel} ${bsYear2})`;
-        } else if (bsYear2 && bsMonth2) {
-          const monthLabel = this.months.find(m => m.value === bsMonth2)?.label;
-          title += ` (${monthLabel} ${bsYear2})`;
-        } else if (bsYear2) {
-          title += ` (${bsYear2})`;
+        const bsYear = this.balanceSheetYear();
+        const bsMonth = this.balanceSheetMonth();
+        const bsUp = this.balanceSheetUpToMonth();
+        if (bsYear && bsUp && bsMonth) {
+          title += ` (Hasta ${this.months.find(m => m.value === bsMonth)?.label} ${bsYear})`;
+        } else if (bsYear && bsMonth) {
+          title += ` (${this.months.find(m => m.value === bsMonth)?.label} ${bsYear})`;
+        } else if (bsYear) {
+          title += ` (${bsYear})`;
         }
         request$ = this.accountingService.getBalanceSheet(toDate || today);
         break;
-      case 'income-statement':
+      }
+      case 'income-statement': {
         title = 'Estado de Rendimiento Financiero';
-        const isYear2 = this.incomeStatementYear();
-        const isMonth2 = this.incomeStatementMonth();
-        const isUpToMonth2 = this.incomeStatementUpToMonth();
-        if (isYear2 && isMonth2 && !isUpToMonth2) {
-          const monthLabel = this.months.find(m => m.value === isMonth2)?.label;
-          title += ` (${monthLabel} ${isYear2})`;
-        } else if (isYear2 && isUpToMonth2 && isMonth2) {
-          const monthLabel = this.months.find(m => m.value === isMonth2)?.label;
-          title += ` (Hasta ${monthLabel} ${isYear2})`;
-        } else if (isYear2) {
-          title += ` (${isYear2})`;
+        const isYear = this.incomeStatementYear();
+        const isMonth = this.incomeStatementMonth();
+        const isUp = this.incomeStatementUpToMonth();
+        if (isYear && isMonth && !isUp) {
+          title += ` (${this.months.find(m => m.value === isMonth)?.label} ${isYear})`;
+        } else if (isYear && isUp && isMonth) {
+          title += ` (Hasta ${this.months.find(m => m.value === isMonth)?.label} ${isYear})`;
+        } else if (isYear) {
+          title += ` (${isYear})`;
         }
         request$ = this.accountingService.getIncomeStatement(fromDate, toDate || today);
         break;
+      }
+      case 'expense-breakdown': {
+        title = 'Gastos por Subelementos';
+        const ebYear = this.expenseBreakdownYear();
+        const ebMonth = this.expenseBreakdownMonth();
+        const ebUp = this.expenseBreakdownUpToMonth();
+        if (ebYear && ebMonth && !ebUp) {
+          title += ` (${this.months.find(m => m.value === ebMonth)?.label} ${ebYear})`;
+        } else if (ebYear && ebUp && ebMonth) {
+          title += ` (Hasta ${this.months.find(m => m.value === ebMonth)?.label} ${ebYear})`;
+        } else if (ebYear) {
+          title += ` (${ebYear})`;
+        }
+        request$ = this.accountingService.getExpenseBreakdown(fromDate, toDate || today);
+        break;
+      }
       default:
         this.isLoading.set(false);
         return;
     }
 
     const desc: string[] = [];
-    if (this.includeDraftEntries()) desc.push('Incluye asientos no contabilizados');
-    if (this.beforeClosing()) desc.push('Antes de cierre contable');
+    if (this.includeDraftEntries()) desc.push('Incluye borradores');
+    if (this.beforeClosing()) desc.push('Antes de cierre');
 
     request$.subscribe({
-      next: (data) => {
+      next: (data: any) => {
         const newReport: GeneratedReport = {
           id: Date.now().toString(),
           type,
@@ -274,16 +280,40 @@ export class ReportsComponent {
           generatedBy: 'Usuario',
           generatedAt: new Date().toISOString(),
           data,
+          period: { year: this.getActiveYear(), month: this.getActiveMonth(), fromDate, toDate },
+          options: {
+            modelo5920: this.modelo5920(),
+            modelo5921: this.modelo5921(),
+            modelo5924: this.modelo5924(),
+          },
         };
         this.reports.set([newReport, ...this.reports()]);
         this.isLoading.set(false);
         this.showToast('Informe generado correctamente', 'success');
       },
-      error: (err) => {
+      error: (err: any) => {
         this.isLoading.set(false);
         this.showToast(err.error?.message || 'Error al generar informe', 'error');
       },
     });
+  }
+
+  private getActiveYear(): string {
+    switch (this.activeTab()) {
+      case 'trial-balance': return this.trialBalanceYear();
+      case 'balance-sheet': return this.balanceSheetYear();
+      case 'income-statement': return this.incomeStatementYear();
+      case 'expense-breakdown': return this.expenseBreakdownYear();
+    }
+  }
+
+  private getActiveMonth(): string {
+    switch (this.activeTab()) {
+      case 'trial-balance': return this.trialBalanceMonth();
+      case 'balance-sheet': return this.balanceSheetMonth();
+      case 'income-statement': return this.incomeStatementMonth();
+      case 'expense-breakdown': return this.expenseBreakdownMonth();
+    }
   }
 
   async deleteReport(report: GeneratedReport) {
@@ -298,228 +328,170 @@ export class ReportsComponent {
     this.showToast('Informe eliminado correctamente', 'success');
   }
 
-  downloadReport(report: GeneratedReport) {
-    const blob = new Blob([JSON.stringify(report.data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${report.type}-${report.date}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    this.showToast('Descarga iniciada', 'info');
-  }
-
   exportExcel(report: GeneratedReport) {
     this.isLoading.set(true);
-    
-    // Llamar al servicio de exportación Excel del backend usando los métodos existentes
-    if (report.type === 'balance-sheet') {
-      this.accountingService.exportModelo5920Excel(report.date).subscribe({
-        next: (blob: Blob) => {
-          this.downloadBlob(blob, `estado-situacion-${report.date}.xlsx`);
-          this.showToast('Excel exportado correctamente', 'success');
-          this.isLoading.set(false);
-        },
-        error: (error: any) => {
-          console.error('Error exporting Excel:', error);
-          this.showToast('Error al exportar Excel', 'error');
-          this.isLoading.set(false);
+    const fd = report.period?.fromDate;
+    const td = report.period?.toDate || report.date;
+
+    let export$: any;
+    let filename = '';
+
+    switch (report.type) {
+      case 'trial-balance':
+        export$ = this.accountingService.exportTrialBalanceExcel(fd, td);
+        filename = `balance-comprobacion-${report.date}.xlsx`;
+        break;
+      case 'balance-sheet':
+        if (report.options?.modelo5920) {
+          export$ = this.accountingService.exportModelo5920Excel(td);
+          filename = `Modelo_5920-04-${report.date}.xlsx`;
+        } else {
+          export$ = this.accountingService.exportBalanceSheetExcel(td);
+          filename = `estado-situacion-${report.date}.xlsx`;
         }
-      });
-    } else if (report.type === 'income-statement') {
-      // Para Estado de Rendimiento, usar fromDate y toDate del período
-      const fromDate = report.period?.fromDate || report.date;
-      const toDate = report.period?.toDate || report.date;
-      this.accountingService.exportModelo5921Excel(fromDate, toDate).subscribe({
-        next: (blob: Blob) => {
-          this.downloadBlob(blob, `estado-rendimiento-${report.date}.xlsx`);
-          this.showToast('Excel exportado correctamente', 'success');
-          this.isLoading.set(false);
-        },
-        error: (error: any) => {
-          console.error('Error exporting Excel:', error);
-          this.showToast('Error al exportar Excel', 'error');
-          this.isLoading.set(false);
+        break;
+      case 'income-statement':
+        if (report.options?.modelo5921) {
+          export$ = this.accountingService.exportModelo5921Excel(fd, td);
+          filename = `Modelo_5921-04-${report.date}.xlsx`;
+        } else {
+          export$ = this.accountingService.exportIncomeStatementExcel(fd, td);
+          filename = `estado-rendimiento-${report.date}.xlsx`;
         }
-      });
-    } else {
-      // Para balance de comprobación, generar Excel desde los datos
-      const excelData = this.generateTrialBalanceExcel(report.data);
-      const blob = new Blob([excelData], { type: 'text/csv' });
-      this.downloadBlob(blob, `balance-comprobacion-${report.date}.csv`);
-      this.showToast('Excel exportado correctamente', 'success');
-      this.isLoading.set(false);
+        break;
+      case 'expense-breakdown':
+        export$ = this.accountingService.exportExpenseBreakdownExcel(fd, td);
+        filename = report.options?.modelo5924
+          ? `Modelo_5924-${report.date}.xlsx`
+          : `gastos-subelementos-${report.date}.xlsx`;
+        break;
+      default:
+        this.isLoading.set(false);
+        return;
     }
+
+    export$.subscribe({
+      next: (blob: Blob) => {
+        this.downloadBlob(blob, filename);
+        this.showToast('Excel exportado correctamente', 'success');
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.showToast('Error al exportar Excel', 'error');
+        this.isLoading.set(false);
+      },
+    });
   }
 
-  exportPdf(report: GeneratedReport) {
+  async exportPdf(report: GeneratedReport) {
     this.isLoading.set(true);
-    
-    // Para PDF, actualmente generamos desde los datos HTML
-    // En producción, esto debería convertir el Excel a PDF o usar un servicio de PDF
-    if (report.type === 'balance-sheet' || report.type === 'income-statement') {
-      // Para Estado de Situación y Rendimiento, generar PDF desde los datos
-      const pdfData = this.generateFinancialStatementPdf(report);
-      const blob = new Blob([pdfData], { type: 'text/html' });
-      this.downloadBlob(blob, `${report.type}-${report.date}.html`);
-      this.showToast('Reporte exportado correctamente', 'success');
-      this.isLoading.set(false);
-    } else {
-      // Para balance de comprobación, generar PDF desde los datos
-      const pdfData = this.generateTrialBalancePdf(report.data);
-      const blob = new Blob([pdfData], { type: 'text/html' });
-      this.downloadBlob(blob, `balance-comprobacion-${report.date}.html`);
+    try {
+      const jspdfModule = await import('jspdf');
+      await import('jspdf-autotable');
+      const jsPDF = jspdfModule.jsPDF;
+
+      const doc = new jsPDF('landscape', 'mm', 'letter');
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      doc.setFontSize(14);
+      doc.text(report.title, pageWidth / 2, 15, { align: 'center' });
+      doc.setFontSize(9);
+      doc.text(`Fecha: ${this.formatDate(report.generatedAt)}   Período: ${this.getPeriodLabel(report.period)}`, pageWidth / 2, 22, { align: 'center' });
+
+      const fmtNum = (n: number) => Number(n || 0).toLocaleString('es-CU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      if (report.type === 'trial-balance') {
+        const rows = (report.data || []).map((r: any) => [
+          r.accountCode, r.accountName, fmtNum(r.openingBalance),
+          fmtNum(r.periodDebit), fmtNum(r.periodCredit), fmtNum(r.closingBalance),
+        ]);
+        const totals = (report.data || []).reduce((t: any, r: any) => ({
+          ob: t.ob + Number(r.openingBalance || 0), pd: t.pd + Number(r.periodDebit || 0),
+          pc: t.pc + Number(r.periodCredit || 0), cb: t.cb + Number(r.closingBalance || 0),
+        }), { ob: 0, pd: 0, pc: 0, cb: 0 });
+        rows.push(['', 'TOTALES', fmtNum(totals.ob), fmtNum(totals.pd), fmtNum(totals.pc), fmtNum(totals.cb)]);
+
+        (doc as any).autoTable({
+          head: [['Código', 'Cuenta', 'Saldo Inicial', 'Débitos', 'Créditos', 'Saldo Final']],
+          body: rows,
+          startY: 28,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+          footStyles: { fontStyle: 'bold' },
+        });
+      } else if (report.type === 'balance-sheet') {
+        const d = report.data || {};
+        const body: any[] = [];
+        body.push([{ content: 'ACTIVOS', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [219, 234, 254] } }]);
+        (d.assets?.items || []).forEach((i: any) => body.push([i.accountCode, i.accountName, fmtNum(i.balance)]));
+        body.push([{ content: '', styles: {} }, { content: 'Total Activos', styles: { fontStyle: 'bold' } }, { content: fmtNum(d.assets?.total), styles: { fontStyle: 'bold' } }]);
+        body.push([{ content: 'PASIVOS', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [254, 226, 226] } }]);
+        (d.liabilities?.items || []).forEach((i: any) => body.push([i.accountCode, i.accountName, fmtNum(Math.abs(Number(i.balance)))]));
+        body.push([{ content: '', styles: {} }, { content: 'Total Pasivos', styles: { fontStyle: 'bold' } }, { content: fmtNum(d.liabilities?.total), styles: { fontStyle: 'bold' } }]);
+        body.push([{ content: 'PATRIMONIO', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 252, 231] } }]);
+        (d.equity?.items || []).forEach((i: any) => body.push([i.accountCode, i.accountName, fmtNum(Math.abs(Number(i.balance)))]));
+        body.push([{ content: '', styles: {} }, { content: 'Total Patrimonio', styles: { fontStyle: 'bold' } }, { content: fmtNum(d.equity?.total), styles: { fontStyle: 'bold' } }]);
+
+        (doc as any).autoTable({
+          head: [['Código', 'Cuenta', 'Saldo']],
+          body,
+          startY: 28,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+        });
+      } else if (report.type === 'income-statement') {
+        const d = report.data || {};
+        const body: any[] = [];
+        body.push([{ content: 'INGRESOS', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 252, 231] } }]);
+        (d.income?.items || []).forEach((i: any) => body.push([i.accountCode, i.accountName, fmtNum(Math.abs(Number(i.totalCredit) - Number(i.totalDebit)))]));
+        body.push([{ content: '', styles: {} }, { content: 'Total Ingresos', styles: { fontStyle: 'bold' } }, { content: fmtNum(d.income?.total), styles: { fontStyle: 'bold' } }]);
+        body.push([{ content: 'GASTOS', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [254, 226, 226] } }]);
+        (d.expenses?.items || []).forEach((i: any) => body.push([i.accountCode, i.accountName, fmtNum(Math.abs(Number(i.totalDebit) - Number(i.totalCredit)))]));
+        body.push([{ content: '', styles: {} }, { content: 'Total Gastos', styles: { fontStyle: 'bold' } }, { content: fmtNum(d.expenses?.total), styles: { fontStyle: 'bold' } }]);
+        body.push([{ content: '', styles: {} }, { content: 'RESULTADO NETO', styles: { fontStyle: 'bold', fontSize: 10 } }, { content: fmtNum(d.netProfit), styles: { fontStyle: 'bold', fontSize: 10 } }]);
+
+        (doc as any).autoTable({
+          head: [['Código', 'Cuenta', 'Importe']],
+          body,
+          startY: 28,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+        });
+      } else if (report.type === 'expense-breakdown') {
+        const d = report.data || {};
+        const body: any[] = [];
+        (d.elements || []).forEach((el: any) => {
+          body.push([{ content: `${el.elementCode} - ${el.elementName}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } }, { content: fmtNum(el.total), styles: { fontStyle: 'bold' } }]);
+          (el.subelements || []).forEach((sub: any) => {
+            body.push([`  ${sub.subelementCode}`, sub.subelementName, fmtNum(sub.total)]);
+          });
+        });
+        body.push([{ content: '', styles: {} }, { content: 'TOTAL GENERAL', styles: { fontStyle: 'bold', fontSize: 10 } }, { content: fmtNum(d.grandTotal), styles: { fontStyle: 'bold', fontSize: 10 } }]);
+
+        (doc as any).autoTable({
+          head: [['Código', 'Elemento / Subelemento', 'Importe']],
+          body,
+          startY: 28,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+        });
+      }
+
+      doc.save(`${report.type}-${report.date}.pdf`);
       this.showToast('PDF exportado correctamente', 'success');
-      this.isLoading.set(false);
+    } catch (e) {
+      console.error('Error generating PDF:', e);
+      this.showToast('Error al generar PDF. Verifique que jspdf está instalado.', 'error');
     }
-  }
-
-  private generateTrialBalanceExcel(data: any): string {
-    // Implementación básica para generar Excel de balance de comprobación
-    // En producción, esto debería usar una librería como exceljs
-    const headers = ['Cuenta', 'Descripción', 'Débito', 'Crédito', 'Saldo'];
-    const rows = data?.lines || [];
-    
-    let csvContent = headers.join(',') + '\n';
-    rows.forEach((row: any) => {
-      csvContent += `${row.accountCode},${row.accountName},${row.debit || 0},${row.credit || 0},${row.balance || 0}\n`;
-    });
-    
-    return csvContent;
-  }
-
-  private generateFinancialStatementPdf(report: GeneratedReport): string {
-    // Generar PDF para estados financieros (Estado de Situación y Estado de Rendimiento)
-    const title = report.type === 'balance-sheet' ? 'Estado de Situación' : 'Estado de Rendimiento Financiero';
-    const date = new Date().toLocaleDateString('es-ES');
-    
-    let htmlContent = `
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { color: #333; text-align: center; }
-            .info { margin-bottom: 20px; }
-            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            .total { font-weight: bold; background-color: #f9f9f9; }
-            .section-title { font-weight: bold; background-color: #e9ecef; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <h1>${title}</h1>
-          <div class="info">
-            <p><strong>Fecha:</strong> ${date}</p>
-            <p><strong>Período:</strong> ${this.getPeriodLabel(report.period)}</p>
-            @if (report.options?.modelo5920 || report.options?.modelo5921) {
-              <p><strong>Modelo:</strong> ${report.options?.modelo5920 ? '5920-04' : '5921-04'}</p>
-            }
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Cuenta</th>
-                <th>Descripción</th>
-                <th>Saldo Actual</th>
-                <th>Saldo Anterior</th>
-              </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    // Datos de ejemplo - en producción esto vendría de los datos reales del informe
-    const sampleData = [
-      { code: '1.0.0.0.0', name: 'ACTIVO', current: 100000, previous: 95000 },
-      { code: '1.1.0.0.0', name: 'Activo Corriente', current: 75000, previous: 70000 },
-      { code: '2.0.0.0.0', name: 'PASIVO', current: 60000, previous: 55000 },
-      { code: '3.0.0.0.0', name: 'PATRIMONIO', current: 40000, previous: 40000 }
-    ];
-    
-    sampleData.forEach((row: any) => {
-      htmlContent += `
-        <tr>
-          <td>${row.code}</td>
-          <td>${row.name}</td>
-          <td>$${row.current.toLocaleString('es-CU')}</td>
-          <td>$${row.previous.toLocaleString('es-CU')}</td>
-        </tr>
-      `;
-    });
-    
-    htmlContent += `
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    
-    return htmlContent;
-  }
-
-  private generateTrialBalancePdf(data: any): string {
-    // Implementación básica para generar PDF de balance de comprobación
-    // En producción, esto debería usar una librería como jsPDF
-    const title = 'Balance de Comprobación';
-    const date = new Date().toLocaleDateString('es-ES');
-    
-    let htmlContent = `
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { color: #333; }
-            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-          </style>
-        </head>
-        <body>
-          <h1>${title}</h1>
-          <p>Fecha: ${date}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Cuenta</th>
-                <th>Descripción</th>
-                <th>Débito</th>
-                <th>Crédito</th>
-                <th>Saldo</th>
-              </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    const rows = data?.lines || [];
-    rows.forEach((row: any) => {
-      htmlContent += `
-        <tr>
-          <td>${row.accountCode || ''}</td>
-          <td>${row.accountName || ''}</td>
-          <td>${row.debit || 0}</td>
-          <td>${row.credit || 0}</td>
-          <td>${row.balance || 0}</td>
-        </tr>
-      `;
-    });
-    
-    htmlContent += `
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    
-    return htmlContent;
+    this.isLoading.set(false);
   }
 
   getReportTypeLabel(type: string): string {
     const labels: Record<string, string> = {
-      'trial-balance': 'Balance de comprobación',
+      'trial-balance': 'Balance de Comprobación',
       'balance-sheet': 'Estado de Situación',
-      'income-statement': 'Estado de Rendimiento Financiero',
+      'income-statement': 'Estado de Rendimiento',
+      'expense-breakdown': 'Gastos por Subelementos',
     };
     return labels[type] || type;
   }
@@ -529,6 +501,7 @@ export class ReportsComponent {
       'trial-balance': 'bg-orange-100 text-orange-800',
       'balance-sheet': 'bg-blue-100 text-blue-800',
       'income-statement': 'bg-green-100 text-green-800',
+      'expense-breakdown': 'bg-purple-100 text-purple-800',
     };
     return colors[type] || 'bg-slate-100 text-slate-800';
   }
@@ -538,6 +511,7 @@ export class ReportsComponent {
       'trial-balance': 'bg-orange-100',
       'balance-sheet': 'bg-blue-100',
       'income-statement': 'bg-green-100',
+      'expense-breakdown': 'bg-purple-100',
     };
     return colors[type] || 'bg-slate-100';
   }
@@ -547,6 +521,7 @@ export class ReportsComponent {
       'trial-balance': 'text-orange-600',
       'balance-sheet': 'text-blue-600',
       'income-statement': 'text-green-600',
+      'expense-breakdown': 'text-purple-600',
     };
     return colors[type] || 'text-slate-600';
   }
