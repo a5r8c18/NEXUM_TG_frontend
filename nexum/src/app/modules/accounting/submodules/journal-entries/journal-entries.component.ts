@@ -215,7 +215,11 @@ export class JournalEntriesComponent implements OnInit {
     // Watch accountCode changes to load subaccounts for this line
     newLine.get('accountCode')?.valueChanges.subscribe(code => {
       if (code) {
-        this.loadSubaccounts(code);
+        // Find account by code to get its ID
+        const account = this.accounts().find(acc => acc.code === code);
+        if (account) {
+          this.loadSubaccounts(account.id);
+        }
       }
     });
     
@@ -241,9 +245,9 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   loadAccounts() {
-    this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
+    this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true', level: '3' }).subscribe({
       next: (data) => {
-        // Filtrar solo cuentas de nivel 3 (Cuentas), excluir subcuentas (level 4+)
+        // El backend ya filtra por level=3, pero mantenemos el filtro por seguridad
         const accountsOnly = data.filter(acc => acc.level === 3);
         this.accounts.set(accountsOnly);
       },
@@ -251,9 +255,9 @@ export class JournalEntriesComponent implements OnInit {
     });
   }
 
-  loadSubaccounts(parentCode: string) {
-    this.accountingService.getAccountsByParentCode(parentCode).subscribe({
-      next: (data) => this.subaccounts.set(data),
+  loadSubaccounts(accountId: string) {
+    this.accountingService.getSubaccountsByAccount(accountId).subscribe({
+      next: (data) => this.subaccounts.set(data as unknown as Account[]),
       error: () => this.subaccounts.set([]),
     });
   }
@@ -408,7 +412,11 @@ export class JournalEntriesComponent implements OnInit {
         // Watch accountCode changes for this line
         lineGroup.get('accountCode')?.valueChanges.subscribe(code => {
           if (code) {
-            this.loadSubaccounts(code);
+            // Find account by code to get its ID
+            const account = this.accounts().find(acc => acc.code === code);
+            if (account) {
+              this.loadSubaccounts(account.id);
+            }
           }
         });
         
@@ -477,36 +485,23 @@ export class JournalEntriesComponent implements OnInit {
       })),
     };
 
-    // Logs para depuración
-    console.log('=== CREANDO COMPROBANTE ===');
-    console.log('Header Values:', headerValues);
-    console.log('Lines detalladas:', lines.map((line: any, index: number) => ({
-      index,
-      accountCode: line.accountCode,
-      subaccountCode: line.subaccountCode,
-      element: line.element,
-      subelement: line.subelement,
-      costCenterId: line.costCenterId,
-      debit: line.debit,
-      credit: line.credit
-    })));
-    console.log('Payload enviado al backend:', JSON.stringify(payload, null, 2));
-    console.log('==========================');
-
     this.isSaving.set(true);
-    
-    // For now, both create and edit use createVoucher
-    // TODO: Implement proper update functionality when backend supports it
-    this.accountingService.createVoucher(payload).subscribe({
+
+    const editing = this.editingVoucher();
+    const request$ = editing
+      ? this.accountingService.updateVoucher(editing.id, payload)
+      : this.accountingService.createVoucher(payload);
+
+    request$.subscribe({
       next: () => {
-        const message = this.editingVoucher() ? 'Comprobante actualizado correctamente' : 'Comprobante creado correctamente';
+        const message = editing ? 'Comprobante actualizado correctamente' : 'Comprobante creado correctamente';
         this.showToast(message, 'success');
         this.closeModal();
         this.loadComprobantes();
         this.isSaving.set(false);
       },
       error: (err) => {
-        const errorMessage = this.editingVoucher() ? 'Error al actualizar comprobante' : 'Error al guardar comprobante';
+        const errorMessage = editing ? 'Error al actualizar comprobante' : 'Error al guardar comprobante';
         this.showToast(err.error?.message || errorMessage, 'error');
         this.isSaving.set(false);
       },
@@ -674,7 +669,7 @@ export class JournalEntriesComponent implements OnInit {
     this.filteredAccounts.set(new Map(currentMap));
     
     // Load subaccounts for this account
-    this.loadSubaccounts(account.code);
+    this.loadSubaccounts(account.id);
   }
 
   selectSubaccount(subaccount: Account, lineIndex: number) {

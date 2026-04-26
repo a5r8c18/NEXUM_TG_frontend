@@ -32,17 +32,20 @@ export const companySelectedGuard: CanActivateFn = (route, state) => {
   if (userTenant.type === 'SINGLE_COMPANY') {
     // Asignar empresa automáticamente si no hay una activa
     if (!contextService.hasActiveCompany()) {
-      // En producción, obtener la empresa del backend
-      // Por ahora, asignar una empresa demo
-      contextService.setCurrentCompany({
-        id: 'company-single',
-        name: userTenant.name,
-        tenantId: 'tenant-single',
-        taxId: 'TAX-DEMO',
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+      // Usar el companyId del usuario autenticado del JWT
+      const userCompanyId = authService.getCurrentCompanyId();
+      
+      if (userCompanyId) {
+        contextService.setCurrentCompany({
+          id: userCompanyId.toString(),
+          name: userTenant.name,
+          tenantId: currentUser?.tenantId || '',
+          taxId: 'TAX-DEMO',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
     }
     return true;
   }

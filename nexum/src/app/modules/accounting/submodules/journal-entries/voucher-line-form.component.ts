@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, signal, computed, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
-import { AccountingService, Account, CostCenter } from '../../../../core/services/accounting.service';
+import { FormsModule, ReactiveFormsModule, FormGroup } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { AccountingService, Account, CostCenter, Subaccount } from '../../../../core/services/accounting.service';
 import { SubelementsService, Subelement } from '../../../../core/services/subelements.service';
 
 export interface VoucherLineData {
@@ -25,7 +26,7 @@ export interface VoucherLineData {
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './voucher-line-form.component.html',
 })
-export class VoucherLineFormComponent {
+export class VoucherLineFormComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private subelementsService = inject(SubelementsService);
 
@@ -39,19 +40,31 @@ export class VoucherLineFormComponent {
   @Output() debitChange = new EventEmitter<{ index: number; value: number }>();
   @Output() creditChange = new EventEmitter<{ index: number; value: number }>();
 
-  // Signals for dropdown data
+  // Master data signals
   accounts = signal<Account[]>([]);
-  subaccounts = signal<Account[]>([]);
+  subaccounts = signal<Subaccount[]>([]);
   costCenters = signal<CostCenter[]>([]);
   elements = signal<Subelement[]>([]);
 
-  // Filtered data for this specific line
+  // Filtered data signals
   filteredAccounts = signal<Account[]>([]);
-  filteredSubaccounts = signal<Account[]>([]);
+  filteredSubaccounts = signal<Subaccount[]>([]);
   filteredCostCenters = signal<CostCenter[]>([]);
   filteredElements = signal<Subelement[]>([]);
 
-  constructor() {
+  // Input display value signals (separate from form control values)
+  accountInputValue = signal('');
+  subaccountInputValue = signal('');
+  costCenterInputValue = signal('');
+  elementInputValue = signal('');
+
+  // Dropdown visibility (signal-only dependencies)
+  showAccountDropdown = computed(() => this.filteredAccounts().length > 0);
+  showSubaccountDropdown = computed(() => this.filteredSubaccounts().length > 0);
+  showCostCenterDropdown = computed(() => this.filteredCostCenters().length > 0);
+  showElementDropdown = computed(() => this.filteredElements().length > 0);
+
+  ngOnInit() {
     this.loadMasterData();
   }
 
@@ -59,31 +72,75 @@ export class VoucherLineFormComponent {
   private async loadMasterData() {
     try {
       const [accountsRes, costCentersRes, elementsRes] = await Promise.all([
-        this.accountingService.getAccounts().toPromise() as unknown as Account[],
-        this.accountingService.getCostCenters().toPromise() as unknown as CostCenter[],
-        this.subelementsService.findAll().toPromise() as unknown as Subelement[],
+        firstValueFrom(this.accountingService.getAccounts({ activeOnly: 'true', level: '3' })),
+        firstValueFrom(this.accountingService.getCostCenters()),
+        firstValueFrom(this.subelementsService.findAll()),
       ]);
 
-      this.accounts.set(accountsRes);
-      this.costCenters.set(costCentersRes);
-      this.elements.set(elementsRes);
+      const accountsOnly = (accountsRes ?? []).filter(acc => acc.level === 3);
+      this.accounts.set(accountsOnly);
+      this.costCenters.set(costCentersRes ?? []);
+      this.elements.set(elementsRes ?? []);
+
+      // Initialize display values from existing form data (edit mode)
+      this.initializeDisplayValues();
     } catch (error) {
       console.error('Error loading master data:', error);
     }
   }
 
-  // Account filtering and selection
-  filterAccounts(searchTerm: string) {
-    if (!searchTerm) {
-      this.filteredAccounts.set([]);
+  private initializeDisplayValues() {
+    const accountCode = this.lineGroup.get('accountCode')?.value;
+    if (accountCode) {
+      const acc = this.accounts().find(a => a.code === accountCode);
+      this.accountInputValue.set(acc ? `${acc.code} - ${acc.name}` : accountCode);
+      if (acc) this.loadSubaccounts(acc.id);
+    }
+    const subCode = this.lineGroup.get('subaccountCode')?.value;
+    if (subCode) {
+      this.subaccountInputValue.set(subCode);
+    }
+    const ccId = this.lineGroup.get('costCenterId')?.value;
+    if (ccId) {
+      const cc = this.costCenters().find(c => c.id === ccId);
+      this.costCenterInputValue.set(cc ? `${cc.code} - ${cc.name}` : '');
+    }
+    const elCode = this.lineGroup.get('subelement')?.value || this.lineGroup.get('element')?.value;
+    if (elCode) {
+      const el = this.elements().find(e => e.code === elCode);
+      this.elementInputValue.set(el ? `${el.code} - ${el.name}` : elCode);
+    }
+  }
+
+  // ── Account ──
+  onAccountInput(value: string) {
+    this.accountInputValue.set(value);
+    if (!value) {
+      this.filteredAccounts.set(this.accounts());
       return;
     }
-
-    const filtered = this.accounts().filter(account =>
-      account.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      account.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const term = value.toLowerCase();
+    this.filteredAccounts.set(
+      this.accounts().filter(a =>
+        a.code.toLowerCase().includes(term) || a.name.toLowerCase().includes(term)
+      )
     );
-    this.filteredAccounts.set(filtered);
+  }
+
+  onAccountFocus() {
+    this.accountInputValue.set('');
+    this.filteredAccounts.set(this.accounts());
+  }
+
+  onAccountBlur() {
+    setTimeout(() => {
+      this.filteredAccounts.set([]);
+      const code = this.lineGroup.get('accountCode')?.value;
+      if (code) {
+        const acc = this.accounts().find(a => a.code === code);
+        this.accountInputValue.set(acc ? `${acc.code} - ${acc.name}` : code);
+      }
+    }, 200);
   }
 
   selectAccount(account: Account) {
@@ -93,68 +150,101 @@ export class VoucherLineFormComponent {
       subaccountCode: null,
       subaccountName: null,
     });
-
-    // Load subaccounts for selected account
-    this.loadSubaccounts(account.code);
+    this.accountInputValue.set(`${account.code} - ${account.name}`);
     this.filteredAccounts.set([]);
+    this.subaccountInputValue.set('');
+    this.subaccounts.set([]);
+    this.loadSubaccounts(account.id);
   }
 
-  getAccountDisplay(value?: string): string {
-    if (!value) return '';
-    const account = this.accounts().find(acc => acc.code === value);
-    return account ? `${account.code} - ${account.name}` : value;
-  }
-
-  // Subaccount filtering and selection
-  private async loadSubaccounts(accountCode: string) {
+  // ── Subaccount ──
+  private async loadSubaccounts(accountId: string) {
     try {
-      const subaccounts = await this.accountingService.getSubaccountsByAccount(accountCode).toPromise() as unknown as Account[];
-      this.subaccounts.set(subaccounts);
+      const res = await firstValueFrom(this.accountingService.getSubaccountsByAccount(accountId));
+      this.subaccounts.set(res ?? []);
     } catch (error) {
-      console.error('Error loading subaccounts:', error);
       this.subaccounts.set([]);
     }
   }
 
-  filterSubaccounts(searchTerm: string) {
-    if (!searchTerm) {
-      this.filteredSubaccounts.set([]);
+  onSubaccountInput(value: string) {
+    this.subaccountInputValue.set(value);
+    if (!value) {
+      this.filteredSubaccounts.set(this.subaccounts());
       return;
     }
-
-    const filtered = this.subaccounts().filter(subaccount =>
-      subaccount.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      subaccount.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const term = value.toLowerCase();
+    this.filteredSubaccounts.set(
+      this.subaccounts().filter(s =>
+        (s as any).code.toLowerCase().includes(term) || (s as any).name.toLowerCase().includes(term)
+      )
     );
-    this.filteredSubaccounts.set(filtered);
   }
 
-  selectSubaccount(subaccount: Account) {
+  onSubaccountFocus() {
+    this.subaccountInputValue.set('');
+    // Set filteredSubaccounts to the loaded subaccounts
+    this.filteredSubaccounts.set(this.subaccounts());
+  }
+
+  onSubaccountBlur() {
+    setTimeout(() => {
+      this.filteredSubaccounts.set([]);
+      const code = this.lineGroup.get('subaccountCode')?.value;
+      if (code) {
+        const sub = this.subaccounts().find(s => (s as any).code === code);
+        this.subaccountInputValue.set(sub ? `${(sub as any).code} - ${(sub as any).name}` : code);
+      }
+    }, 200);
+  }
+
+  selectSubaccount(subaccount: any) {
     this.lineGroup.patchValue({
       subaccountCode: subaccount.code,
       subaccountName: subaccount.name,
     });
+    this.subaccountInputValue.set(`${subaccount.code} - ${subaccount.name}`);
     this.filteredSubaccounts.set([]);
   }
 
-  getSubaccountDisplay(value?: string): string {
-    if (!value) return '';
-    const subaccount = this.subaccounts().find(sub => sub.code === value);
-    return subaccount ? `${subaccount.code} - ${subaccount.name}` : value;
+  // Helper methods to safely access subaccount properties
+  getSubaccountCode(subaccount: any): string {
+    return subaccount.code || subaccount.subaccountCode || '';
   }
 
-  // Cost center filtering and selection
-  filterCostCenters(searchTerm: string) {
-    if (!searchTerm) {
-      this.filteredCostCenters.set([]);
+  getSubaccountName(subaccount: any): string {
+    return subaccount.name || subaccount.subaccountName || '';
+  }
+
+  // ── Cost Center ──
+  onCostCenterInput(value: string) {
+    this.costCenterInputValue.set(value);
+    if (!value) {
+      this.filteredCostCenters.set(this.costCenters());
       return;
     }
-
-    const filtered = this.costCenters().filter(center =>
-      center.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      center.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const term = value.toLowerCase();
+    this.filteredCostCenters.set(
+      this.costCenters().filter(c =>
+        c.code.toLowerCase().includes(term) || c.name.toLowerCase().includes(term)
+      )
     );
-    this.filteredCostCenters.set(filtered);
+  }
+
+  onCostCenterFocus() {
+    this.costCenterInputValue.set('');
+    this.filteredCostCenters.set(this.costCenters());
+  }
+
+  onCostCenterBlur() {
+    setTimeout(() => {
+      this.filteredCostCenters.set([]);
+      const ccId = this.lineGroup.get('costCenterId')?.value;
+      if (ccId) {
+        const cc = this.costCenters().find(c => c.id === ccId);
+        this.costCenterInputValue.set(cc ? `${cc.code} - ${cc.name}` : '');
+      }
+    }, 200);
   }
 
   selectCostCenter(costCenter: CostCenter) {
@@ -163,49 +253,54 @@ export class VoucherLineFormComponent {
       costCenterCode: costCenter.code,
       costCenterName: costCenter.name,
     });
+    this.costCenterInputValue.set(`${costCenter.code} - ${costCenter.name}`);
     this.filteredCostCenters.set([]);
   }
 
-  getCostCenterDisplay(value?: string): string {
-    if (!value) return '';
-    const costCenter = this.costCenters().find(cc => cc.id === value);
-    return costCenter ? `${costCenter.code} - ${costCenter.name}` : '';
-  }
-
-  // Element filtering and selection
-  filterElements(searchTerm: string) {
-    if (!searchTerm) {
-      this.filteredElements.set([]);
+  // ── Element ──
+  onElementInput(value: string) {
+    this.elementInputValue.set(value);
+    if (!value) {
+      this.filteredElements.set(this.elements());
       return;
     }
-
-    const filtered = this.elements().filter(element =>
-      element.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      element.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const term = value.toLowerCase();
+    this.filteredElements.set(
+      this.elements().filter(e =>
+        e.code.toLowerCase().includes(term) || e.name.toLowerCase().includes(term)
+      )
     );
-    this.filteredElements.set(filtered);
+  }
+
+  onElementFocus() {
+    this.elementInputValue.set('');
+    this.filteredElements.set(this.elements());
+  }
+
+  onElementBlur() {
+    setTimeout(() => {
+      this.filteredElements.set([]);
+      const code = this.lineGroup.get('subelement')?.value || this.lineGroup.get('element')?.value;
+      if (code) {
+        const el = this.elements().find(e => e.code === code);
+        this.elementInputValue.set(el ? `${el.code} - ${el.name}` : code);
+      }
+    }, 200);
   }
 
   selectElement(element: Subelement) {
     this.lineGroup.patchValue({
       element: element.code,
-      elementName: element.name,
+      subelement: element.code,
     });
+    this.elementInputValue.set(`${element.code} - ${element.name}`);
     this.filteredElements.set([]);
   }
 
-  getElementDisplay(value?: string): string {
-    if (!value) return '';
-    const element = this.elements().find(el => el.code === value);
-    return element ? `${element.code} - ${element.name}` : value;
-  }
-
-  // Debit/Credit change handlers
+  // ── Debit/Credit ──
   onDebitChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value) || 0;
     this.debitChange.emit({ index: this.lineIndex, value });
-    
-    // Clear credit when debit is entered
     if (value > 0) {
       this.lineGroup.patchValue({ credit: 0 });
     }
@@ -214,8 +309,6 @@ export class VoucherLineFormComponent {
   onCreditChange(event: Event) {
     const value = parseFloat((event.target as HTMLInputElement).value) || 0;
     this.creditChange.emit({ index: this.lineIndex, value });
-    
-    // Clear debit when credit is entered
     if (value > 0) {
       this.lineGroup.patchValue({ debit: 0 });
     }
@@ -225,21 +318,4 @@ export class VoucherLineFormComponent {
   onRemoveLine() {
     this.removeLine.emit(this.lineIndex);
   }
-
-  // Computed properties for dropdown visibility
-  showAccountDropdown = computed(() => 
-    this.filteredAccounts().length > 0 && this.lineGroup.get('accountCode')?.value
-  );
-
-  showSubaccountDropdown = computed(() => 
-    this.filteredSubaccounts().length > 0 && this.lineGroup.get('subaccountCode')?.value
-  );
-
-  showCostCenterDropdown = computed(() => 
-    this.filteredCostCenters().length > 0 && this.lineGroup.get('costCenterId')?.value
-  );
-
-  showElementDropdown = computed(() => 
-    this.filteredElements().length > 0 && this.lineGroup.get('element')?.value
-  );
 }

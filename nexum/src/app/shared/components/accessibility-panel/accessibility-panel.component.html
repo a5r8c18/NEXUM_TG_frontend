@@ -1,0 +1,150 @@
+<div class="fixed top-5 right-5 z-[1000]">
+  <!-- Accessibility Toggle Button -->
+  <button
+    class="bg-indigo-600 text-white border-none rounded-full w-14 h-14 flex items-center justify-center cursor-pointer shadow-lg hover:bg-indigo-700 hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+    (click)="togglePanel()"
+    aria-label="Opciones de accesibilidad"
+    aria-expanded="isOpen"
+    aria-controls="accessibility-panel"
+    appAccessibility
+    role="button"
+    tabIndex="0"
+  >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M12 6v6l4 2"></path>
+    </svg>
+    <span class="sr-only">Opciones de accesibilidad</span>
+  </button>
+
+  <!-- Accessibility Panel -->
+  <div
+    *ngIf="isOpen"
+    class="bg-white border border-gray-200 rounded-xl shadow-xl w-80 max-h-[80vh] overflow-y-auto mt-2.5 relative"
+    id="accessibility-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="accessibility-panel-title"
+    (keydown)="onKeyDown($event)"
+  >
+    <div class="flex justify-between items-center p-5 border-b border-gray-200">
+      <h2 id="accessibility-panel-title" class="m-0 text-xl font-semibold text-gray-900">Opciones de Accesibilidad</h2>
+      <button
+        class="bg-transparent border-none p-2 rounded-lg cursor-pointer text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        (click)="togglePanel()"
+        aria-label="Cerrar panel de accesibilidad"
+        appAccessibility
+        role="button"
+        tabIndex="0"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="p-5">
+      <!-- Font Size Settings -->
+      <div class="mb-6 last:mb-0">
+        <h3 class="m-0 mb-3 text-base font-semibold text-gray-700">Tamaño de Fuente</h3>
+        <div class="flex gap-2 flex-wrap" role="radiogroup" aria-labelledby="font-size-label">
+          <span id="font-size-label" class="sr-only">Seleccionar tamaño de fuente</span>
+          <button
+            *ngFor="let option of fontSizeOptions"
+            class="flex flex-col items-center p-3 border-2 border-gray-200 rounded-lg bg-white cursor-pointer transition-all duration-200 min-w-[70px] hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            [class.border-indigo-600]="settings.fontSize === option.value"
+            [class.bg-indigo-50]="settings.fontSize === option.value"
+            [class.text-indigo-600]="settings.fontSize === option.value"
+            (click)="updateFontSize(option.value)"
+            [attr.aria-pressed]="settings.fontSize === option.value"
+            [attr.aria-label]="option.label"
+            appAccessibility
+            role="radio"
+            tabIndex="0"
+          >
+            <span class="font-bold mb-1 leading-none" [style.fontSize]="getFontSize(option.value)">{{ option.icon }}</span>
+            <span class="text-xs text-center">{{ option.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- High Contrast -->
+      <div class="mb-6 last:mb-0">
+        <h3 class="m-0 mb-3 text-base font-semibold text-gray-700">Contraste</h3>
+        <label class="flex items-center gap-3 cursor-pointer relative">
+          <input
+            type="checkbox"
+            [checked]="settings.highContrast"
+            (change)="toggleHighContrast()"
+            aria-describedby="high-contrast-desc"
+            class="peer sr-only"
+          >
+          <div class="relative w-11 h-6 bg-gray-300 rounded-full transition-colors duration-300 peer-checked:bg-indigo-600">
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
+          </div>
+          <span class="text-sm text-gray-700 select-none">Alto Contraste</span>
+          <span id="high-contrast-desc" class="sr-only">
+            Activar modo de alto contraste para mejor visibilidad
+          </span>
+        </label>
+      </div>
+
+      <!-- Reduced Motion -->
+      <div class="mb-6 last:mb-0">
+        <h3 class="m-0 mb-3 text-base font-semibold text-gray-700">Animaciones</h3>
+        <label class="flex items-center gap-3 cursor-pointer relative">
+          <input
+            type="checkbox"
+            [checked]="settings.reducedMotion"
+            (change)="toggleReducedMotion()"
+            aria-describedby="reduced-motion-desc"
+            class="peer sr-only"
+          >
+          <div class="relative w-11 h-6 bg-gray-300 rounded-full transition-colors duration-300 peer-checked:bg-indigo-600">
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
+          </div>
+          <span class="text-sm text-gray-700 select-none">Reducir Movimiento</span>
+          <span id="reduced-motion-desc" class="sr-only">
+            Reducir animaciones y transiciones para usuarios sensibles al movimiento
+          </span>
+        </label>
+      </div>
+
+      <!-- Keyboard Navigation -->
+      <div class="mb-6 last:mb-0">
+        <h3 class="m-0 mb-3 text-base font-semibold text-gray-700">Navegación</h3>
+        <label class="flex items-center gap-3 cursor-pointer relative">
+          <input
+            type="checkbox"
+            [checked]="settings.keyboardNavigation"
+            (change)="toggleKeyboardNavigation()"
+            aria-describedby="keyboard-nav-desc"
+            class="peer sr-only"
+          >
+          <div class="relative w-11 h-6 bg-gray-300 rounded-full transition-colors duration-300 peer-checked:bg-indigo-600">
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
+          </div>
+          <span class="text-sm text-gray-700 select-none">Indicadores de Teclado</span>
+          <span id="keyboard-nav-desc" class="sr-only">
+            Mostrar indicadores visuales al navegar con el teclado
+          </span>
+        </label>
+      </div>
+
+      <!-- Reset Button -->
+      <div class="mb-6 last:mb-0">
+        <button
+          class="bg-red-500 text-white border-none p-3 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 w-full hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          (click)="resetSettings()"
+          aria-label="Restablecer configuración de accesibilidad a valores predeterminados"
+          appAccessibility
+          role="button"
+          tabIndex="0"
+        >
+          Restablecer Configuración
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -377,6 +377,10 @@ export class AccountingService {
     return this.http.post<Voucher>(`${this.baseUrl}/vouchers`, data);
   }
 
+  updateVoucher(id: string, data: any) {
+    return this.http.put<Voucher>(`${this.baseUrl}/vouchers/${id}`, data);
+  }
+
   updateVoucherStatus(id: string, status: string) {
     return this.http.put<Voucher>(`${this.baseUrl}/vouchers/${id}/status`, { status });
   }

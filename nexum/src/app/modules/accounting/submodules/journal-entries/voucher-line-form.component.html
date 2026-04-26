@@ -20,13 +20,15 @@
       <label class="text-xs font-semibold text-slate-600 uppercase">Cuenta *</label>
       <div class="relative">
         <input type="text" 
-               [value]="getAccountDisplay(lineGroup.get('accountCode')?.value)"
-               (input)="filterAccounts($any($event.target).value); lineGroup.get('accountCode')?.setValue($any($event.target).value)"
+               [value]="accountInputValue()"
+               (input)="onAccountInput($any($event.target).value)"
+               (focus)="onAccountFocus()"
+               (blur)="onAccountBlur()"
                placeholder="Buscar cuenta..."
                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                aria-label="Buscar cuenta contable"
                role="combobox"
-               aria-expanded="false"
+               [attr.aria-expanded]="showAccountDropdown()"
                aria-autocomplete="list"/>
         
         <!-- Account Dropdown -->
@@ -53,13 +55,15 @@
       <label class="text-xs font-semibold text-slate-600 uppercase">Subcuenta</label>
       <div class="relative">
         <input type="text" 
-               [value]="getSubaccountDisplay(lineGroup.get('subaccountCode')?.value)"
-               (input)="filterSubaccounts($any($event.target).value); lineGroup.get('subaccountCode')?.setValue($any($event.target).value)"
+               [value]="subaccountInputValue()"
+               (input)="onSubaccountInput($any($event.target).value)"
+               (focus)="onSubaccountFocus()"
+               (blur)="onSubaccountBlur()"
                placeholder="Buscar subcuenta..."
                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                aria-label="Buscar subcuenta contable"
                role="combobox"
-               aria-expanded="false"
+               [attr.aria-expanded]="showSubaccountDropdown()"
                aria-autocomplete="list"/>
         
         <!-- Subaccount Dropdown -->
@@ -72,8 +76,8 @@
                    tabindex="0"
                    (keydown.enter)="selectSubaccount(subaccount)"
                    (keydown.space)="selectSubaccount(subaccount)">
-                <div class="text-sm font-medium text-slate-900">{{ subaccount.code }}</div>
-                <div class="text-xs text-slate-500">{{ subaccount.name }}</div>
+                <div class="text-sm font-medium text-slate-900">{{ getSubaccountCode(subaccount) }}</div>
+                <div class="text-xs text-slate-500">{{ getSubaccountName(subaccount) }}</div>
               </div>
             }
           </div>
@@ -86,8 +90,10 @@
       <label class="text-xs font-semibold text-slate-600 uppercase">Centro de Costo</label>
       <div class="relative">
         <input type="text" 
-               [value]="getCostCenterDisplay(lineGroup.get('costCenterId')?.value)"
-               (input)="filterCostCenters($any($event.target).value); lineGroup.get('costCenterId')?.setValue($any($event.target).value)"
+               [value]="costCenterInputValue()"
+               (input)="onCostCenterInput($any($event.target).value)"
+               (focus)="onCostCenterFocus()"
+               (blur)="onCostCenterBlur()"
                placeholder="Buscar centro de costo..."
                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
         
@@ -114,8 +120,10 @@
       <label class="text-xs font-semibold text-slate-600 uppercase">Subelemento</label>
       <div class="relative">
         <input type="text" 
-               [value]="getElementDisplay(lineGroup.get('element')?.value)"
-               (input)="filterElements($any($event.target).value); lineGroup.get('element')?.setValue($any($event.target).value)"
+               [value]="elementInputValue()"
+               (input)="onElementInput($any($event.target).value)"
+               (focus)="onElementFocus()"
+               (blur)="onElementBlur()"
                placeholder="Buscar subelemento..."
                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
         

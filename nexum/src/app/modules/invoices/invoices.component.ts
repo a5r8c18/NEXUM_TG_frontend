@@ -3,7 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
-import { InvoicesService, Invoice, InvoiceFilters } from '../../core/services/invoices.service';
+import { InvoicesService, Invoice, InvoiceFilters, PaginationResult } from '../../core/services/invoices.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../core/offline/offline-first.service';
@@ -26,6 +26,9 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
+  // Pagination data
+  paginationData = signal<PaginationResult<Invoice> | null>(null);
 
   // UI state
   currentPage = signal(1);
@@ -36,37 +39,32 @@ export class InvoicesComponent implements OnInit, OnDestroy {
 
   // Computed
   filteredInvoices = computed(() => {
-    let filtered = this.invoices();
-
-    if (this.searchTerm()) {
-      const term = this.searchTerm().toLowerCase();
-      filtered = filtered.filter(inv =>
-        inv.customerName.toLowerCase().includes(term) ||
-        inv.invoiceNumber.toLowerCase().includes(term)
-      );
-    }
-
-    if (this.statusFilter()) {
-      filtered = filtered.filter(inv => inv.status === this.statusFilter());
-    }
-
-    return filtered;
+    return this.invoices(); // Server-side filtering, no client-side filtering needed
   });
 
   pagedInvoices = computed(() => {
-    const filtered = this.filteredInvoices();
-    const start = (this.currentPage() - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    return filtered.slice(start, end);
+    return this.invoices(); // Server-side pagination, no client-side pagination needed
   });
 
-  paginationConfig = computed(() => ({
-    currentPage: this.currentPage(),
-    totalPages: Math.ceil(this.filteredInvoices().length / this.pageSize) || 1,
-    totalItems: this.filteredInvoices().length,
-    pageSize: this.pageSize,
-    itemsPerPage: this.pageSize
-  }));
+  paginationConfig = computed(() => {
+    const pagination = this.paginationData();
+    if (!pagination) {
+      return {
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        pageSize: this.pageSize,
+        itemsPerPage: this.pageSize
+      };
+    }
+    return {
+      currentPage: pagination.pagination.page,
+      totalPages: pagination.pagination.totalPages,
+      totalItems: pagination.pagination.total,
+      pageSize: pagination.pagination.limit,
+      itemsPerPage: pagination.pagination.limit
+    };
+  });
 
   ngOnInit() {
     this.loadInvoices();
@@ -81,13 +79,16 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     this.hasError.set(false);
 
     const filters: InvoiceFilters = {
-      status: this.statusFilter() || undefined
+      customerName: this.searchTerm() || undefined,
+      status: this.statusFilter() || undefined,
+      page: this.currentPage(),
+      limit: this.pageSize
     };
 
-    this.offlineFirst.getInvoices(filters).subscribe({
-      next: (data: Invoice[]) => {
-        this.invoices.set(data);
-        this.currentPage.set(1);
+    this.invoicesService.getInvoices(filters).subscribe({
+      next: (data: PaginationResult<Invoice>) => {
+        this.invoices.set(data.data);
+        this.paginationData.set(data);
         this.isLoading.set(false);
       },
       error: () => {
@@ -100,16 +101,19 @@ export class InvoicesComponent implements OnInit, OnDestroy {
 
   applyFilters() {
     this.currentPage.set(1);
+    this.loadInvoices();
   }
 
   resetFilters() {
     this.searchTerm.set('');
     this.statusFilter.set('');
     this.currentPage.set(1);
+    this.loadInvoices();
   }
 
   onPageChange(page: number) {
     this.currentPage.set(page);
+    this.loadInvoices();
   }
 
   updateStatus(invoice: Invoice, status: 'paid' | 'cancelled') {

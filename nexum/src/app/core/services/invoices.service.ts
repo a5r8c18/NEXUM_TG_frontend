@@ -5,6 +5,18 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Invoice, InvoiceItem, CreateInvoiceDto, InvoiceFilters } from '../../models/invoice.models';
 
+export interface PaginationResult<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}
+
 export type { Invoice, InvoiceItem, CreateInvoiceDto, InvoiceFilters };
 
 @Injectable({
@@ -15,7 +27,7 @@ export class InvoicesService {
 
   constructor(private http: HttpClient) {}
 
-  getInvoices(filters?: InvoiceFilters): Observable<Invoice[]> {
+  getInvoices(filters?: InvoiceFilters): Observable<PaginationResult<Invoice>> {
     let params = new HttpParams();
     if (filters) {
       if (filters.customerName) params = params.set('customerName', filters.customerName);
@@ -25,8 +37,7 @@ export class InvoicesService {
       if (filters.page) params = params.set('page', filters.page.toString());
       if (filters.limit) params = params.set('limit', filters.limit.toString());
     }
-    return this.http.get<{ invoices: Invoice[] }>(this.apiUrl, { params })
-      .pipe(map(response => response.invoices || []));
+    return this.http.get<PaginationResult<Invoice>>(this.apiUrl, { params });
   }
 
   getInvoiceById(id: string): Observable<Invoice> {
