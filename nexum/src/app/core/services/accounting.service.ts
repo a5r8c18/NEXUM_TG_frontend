@@ -472,6 +472,20 @@ export class AccountingService {
     return this.http.get<AccountElement[]>(`${this.baseUrl}/elements`);
   }
 
+  // ── Generated Reports CRUD ──
+
+  getGeneratedReports() {
+    return this.http.get<any[]>(`${this.baseUrl}/reports/generated`);
+  }
+
+  saveGeneratedReport(reportData: any) {
+    return this.http.post<any>(`${this.baseUrl}/reports/generated`, reportData);
+  }
+
+  deleteGeneratedReport(reportId: string) {
+    return this.http.delete<any>(`${this.baseUrl}/reports/generated/${reportId}`);
+  }
+
   // ── Reports (Informes Contables) ──
 
   getTrialBalance(fromDate?: string, toDate?: string) {
@@ -537,11 +551,49 @@ export class AccountingService {
     });
   }
 
+  exportModelo5920Pdf(asOfDate?: string) {
+    console.log('🔍 AccountingService - exportModelo5920Pdf called');
+    console.log('🔍 AccountingService - asOfDate:', asOfDate);
+    console.log('🔍 AccountingService - baseUrl:', this.baseUrl);
+    
+    const params: any = {};
+    if (asOfDate) params.asOfDate = asOfDate;
+    
+    const url = `${this.baseUrl}/reports/modelo-5920/export/pdf`;
+    console.log('🔍 AccountingService - Final URL:', url);
+    console.log('🔍 AccountingService - Params:', params);
+    
+    return this.http.get(url, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
   exportModelo5921Excel(fromDate?: string, toDate?: string) {
     const params: any = {};
     if (fromDate) params.fromDate = fromDate;
     if (toDate) params.toDate = toDate;
     return this.http.get(`${this.baseUrl}/reports/modelo-5921/export/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportModelo5921Pdf(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get(`${this.baseUrl}/reports/modelo-5921/export/pdf`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  exportModelo5924Pdf(fromDate?: string, toDate?: string) {
+    const params: any = {};
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return this.http.get(`${this.baseUrl}/reports/modelo-5924/export/pdf`, {
       params,
       responseType: 'blob',
     });
@@ -590,7 +642,7 @@ export class AccountingService {
     const params: any = {};
     if (fromDate) params.fromDate = fromDate;
     if (toDate) params.toDate = toDate;
-    return this.http.get(`${this.baseUrl}/reports/modelo-5924/export/excel`, {
+    return this.http.get(`${this.baseUrl}/reports/expense-breakdown/export/excel`, {
       params,
       responseType: 'blob',
     });

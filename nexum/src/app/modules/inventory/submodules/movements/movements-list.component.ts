@@ -7,7 +7,7 @@ import { InventoryService } from '../../../../core/services/inventory.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
-import { MovementItem, MovementFilters, DirectEntryDto, ExitDto } from '../../../../models/inventory.models';
+import { MovementItem, MovementFilters, DirectEntryDto, ExitDto, MovementTypeOption, InventoryCategory } from '../../../../models/inventory.models';
 import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 
 @Component({
@@ -26,6 +26,10 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Movement type catalog
+  entryTypes = signal<MovementTypeOption[]>([]);
+  exitTypes = signal<MovementTypeOption[]>([]);
 
   currentPage = signal(1);
   pageSize = 5;
@@ -46,7 +50,9 @@ export class MovementsListComponent implements OnInit, OnDestroy {
     entity: '',
     unitPrice: 0,
     unit: '',
-    location: ''
+    location: '',
+    movementCode: '',
+    category: 'mercancia'
   };
 
   // --- Modal: Confirmar devolución ---
@@ -67,7 +73,9 @@ export class MovementsListComponent implements OnInit, OnDestroy {
     entity: '', 
     warehouseId: '', 
     unit: '', 
-    unitPrice: 0
+    unitPrice: 0,
+    movementCode: '',
+    category: 'mercancia'
   };
 
   // --- Modal: Transferencia ---
@@ -91,10 +99,22 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadMovements();
+    this.loadMovementTypes();
     this.refreshSub = this.notificationService.refresh$.subscribe(() => this.loadMovements());
     this.toastSub = this.notificationService.toasts$.subscribe(t => {
       this.toast.set(t);
       setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  loadMovementTypes(): void {
+    this.movementsService.getMovementTypes('entry').subscribe({
+      next: (types) => this.entryTypes.set(types),
+      error: () => {}
+    });
+    this.movementsService.getMovementTypes('exit').subscribe({
+      next: (types) => this.exitTypes.set(types),
+      error: () => {}
     });
   }
 
@@ -183,8 +203,32 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       entry: 'Entrada', ENTRY: 'Entrada',
       exit: 'Salida', EXIT: 'Salida',
       return: 'Devolución', RETURN: 'Devolución',
+      transfer: 'Transferencia', TRANSFER: 'Transferencia',
     };
     return map[type] ?? type;
+  }
+
+  translateCategory(category?: string): string {
+    const map: Record<string, string> = {
+      insumo: 'Insumo',
+      mercancia: 'Mercancía',
+      produccion: 'Producción',
+    };
+    return category ? (map[category] ?? category) : '';
+  }
+
+  categoryClass(category?: string): string {
+    switch (category) {
+      case 'insumo': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'mercancia': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'produccion': return 'bg-teal-50 text-teal-700 border-teal-200';
+      default: return 'bg-slate-50 text-slate-600 border-slate-200';
+    }
+  }
+
+  formatCurrency(amount?: number): string {
+    if (!amount && amount !== 0) return '-';
+    return '$' + amount.toLocaleString('es-CU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   translateComment(comment?: string): string {
@@ -220,7 +264,9 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       entity: '',
       unitPrice: 0,
       unit: '',
-      location: ''
+      location: '',
+      movementCode: '',
+      category: 'mercancia'
     };
     this.isDirectEntryOpen.set(true);
   }
@@ -228,6 +274,10 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   closeDirectEntry(): void { this.isDirectEntryOpen.set(false); }
 
   confirmDirectEntry(): void {
+    if (!this.directEntry.movementCode?.trim()) {
+      this.notificationService.showError('Debe seleccionar un tipo de movimiento');
+      return;
+    }
     if (!this.directEntry.productCode?.trim()) {
       this.notificationService.showError('El código del producto es obligatorio');
       return;
@@ -238,6 +288,10 @@ export class MovementsListComponent implements OnInit, OnDestroy {
     }
     if (!this.directEntry.quantity || this.directEntry.quantity <= 0) {
       this.notificationService.showError('La cantidad debe ser mayor a 0');
+      return;
+    }
+    if (!this.directEntry.warehouseId?.trim()) {
+      this.notificationService.showError('Debe especificar un almacén');
       return;
     }
     this.offlineFirst.registerDirectEntry(this.directEntry).subscribe({
@@ -312,6 +366,8 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       warehouseId: m.product.warehouseId ?? '',
       unit: m.product.productUnit ?? '',
       unitPrice: m.product.unitPrice ?? 0,
+      movementCode: '',
+      category: (m.category as InventoryCategory) || 'mercancia'
     };
     this.isExitOpen.set(true);
   }
@@ -322,16 +378,22 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   }
 
   confirmExit(): void {
+    if (!this.exitData.movementCode?.trim()) {
+      this.notificationService.showError('Debe seleccionar un tipo de salida');
+      return;
+    }
     if (!this.exitData.quantity || this.exitData.quantity <= 0) {
       this.notificationService.showError('La cantidad debe ser mayor a 0');
       return;
     }
-    const payload: ExitDto = {
-      productCode: this.exitData.productCode,
+    const payload: any = {
+      product_code: this.exitData.productCode,
       quantity: this.exitData.quantity,
       reason: this.exitData.reason,
       entity: this.exitData.entity,
       warehouseId: this.exitData.warehouseId,
+      movementCode: this.exitData.movementCode,
+      category: this.exitData.category || undefined,
     };
     this.offlineFirst.registerExit(payload).subscribe({
       next: () => {

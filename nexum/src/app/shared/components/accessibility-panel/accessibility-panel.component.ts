@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { AccessibilityService, AccessibilitySettings } from '../../../core/services/accessibility.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -7,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
   selector: 'app-accessibility-panel',
   templateUrl: './accessibility-panel.component.html',
   standalone: true,
+  imports: [CommonModule],
 })
 export class AccessibilityPanelComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -15,7 +17,7 @@ export class AccessibilityPanelComponent implements OnInit, OnDestroy {
   isOpen = false;
 
   // Font size options
-  fontSizeOptions = [
+  fontSizeOptions: Array<{value: 'small' | 'medium' | 'large' | 'extra-large', label: string, icon: string}> = [
     { value: 'small', label: 'Pequeño', icon: 'A' },
     { value: 'medium', label: 'Mediano', icon: 'A' },
     { value: 'large', label: 'Grande', icon: 'A' },

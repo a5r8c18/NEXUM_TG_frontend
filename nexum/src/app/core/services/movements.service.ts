@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { MovementItem, MovementFilters, DirectEntryDto, ExitDto } from '../../models/inventory.models';
+import { MovementItem, MovementFilters, DirectEntryDto, ExitDto, MovementTypeOption } from '../../models/inventory.models';
 
 export interface TransferDto {
   productCode: string;
@@ -68,5 +68,12 @@ export class MovementsService {
       if (filters.type) params = params.set('type', filters.type);
     }
     return this.http.get<any[]>(`${this.apiUrl}/transfers/${warehouseId}`, { params });
+  }
+
+  getMovementTypes(direction?: 'entry' | 'exit', category?: string): Observable<MovementTypeOption[]> {
+    let params = new HttpParams();
+    if (direction) params = params.set('direction', direction);
+    if (category) params = params.set('category', category);
+    return this.http.get<MovementTypeOption[]>(`${this.apiUrl}/types`, { params });
   }
 }

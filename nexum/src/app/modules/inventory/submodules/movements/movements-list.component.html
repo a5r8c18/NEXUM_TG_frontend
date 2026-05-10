@@ -23,10 +23,17 @@
         </svg>
       </div>
       <div>
-        <h2 class="text-xl font-semibold text-slate-800">Movimientos</h2>
-        <p class="text-xs text-slate-500">Entradas, salidas y devoluciones</p>
+        <h2 class="text-xl font-semibold text-slate-800">Movimientos de Inventario</h2>
+        <p class="text-xs text-slate-500">Entradas, salidas, transferencias y devoluciones</p>
       </div>
     </div>
+    <button (click)="openDirectEntry()"
+            class="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 shadow-sm transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Entrada Directa
+    </button>
   </div>
 
   <!-- Filtros inline -->
@@ -120,63 +127,85 @@
         <table class="w-full">
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Tipo</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Producto</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Cantidad</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
-              <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Comentario</th>
-              <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Tipo</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Código</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Producto</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Cant.</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Importe</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Fecha</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Detalle</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
             @for (m of pagedMovements; track $index) {
               <tr class="hover:bg-slate-50/50 transition-colors">
-                <td class="px-5 py-4 whitespace-nowrap">
-                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full border {{ typeClass(m.type) }}">
-                    {{ translateType(m.type) }}
-                  </span>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full border inline-block w-fit {{ typeClass(m.type) }}">
+                      {{ translateType(m.type) }}
+                    </span>
+                    @if (m.category) {
+                      <span class="text-[10px] font-medium px-2 py-0.5 rounded-full border inline-block w-fit {{ categoryClass(m.category) }}">
+                        {{ translateCategory(m.category) }}
+                      </span>
+                    }
+                  </div>
                 </td>
-                <td class="px-5 py-4">
+                <td class="px-4 py-3 whitespace-nowrap">
+                  @if (m.movementCode) {
+                    <div class="flex flex-col">
+                      <span class="text-xs font-bold text-slate-800 font-mono">{{ m.movementCode }}</span>
+                      <span class="text-[10px] text-slate-500 max-w-[140px] truncate" [title]="m.movementDescription || ''">{{ m.movementDescription }}</span>
+                    </div>
+                  } @else {
+                    <span class="text-xs text-slate-400">-</span>
+                  }
+                </td>
+                <td class="px-4 py-3">
                   <p class="text-sm font-medium text-slate-900">{{ m.product.productName }}</p>
                   <p class="text-xs text-slate-500 font-mono">{{ m.product.productCode }}</p>
                 </td>
-                <td class="px-5 py-4 whitespace-nowrap text-center">
+                <td class="px-4 py-3 whitespace-nowrap text-center">
                   <span class="text-sm font-semibold text-slate-700">{{ m.quantity }}</span>
                 </td>
-                <td class="px-5 py-4 whitespace-nowrap">
-                  <span class="text-sm text-slate-600">{{ formatDate(m.createdAt) }}</span>
+                <td class="px-4 py-3 whitespace-nowrap text-right">
+                  <span class="text-sm font-medium text-slate-800">{{ formatCurrency(m.totalAmount) }}</span>
+                  @if (m.unitPrice) {
+                    <p class="text-[10px] text-slate-400">{{ formatCurrency(m.unitPrice) }}/u</p>
+                  }
                 </td>
-                <td class="px-5 py-4">
-                  <span class="text-sm text-slate-500">{{ translateComment(m.reason || m.label) }}</span>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <span class="text-xs text-slate-600">{{ formatDate(m.createdAt) }}</span>
                 </td>
-                <td class="px-5 py-4 whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-2">
+                <td class="px-4 py-3">
+                  <span class="text-xs text-slate-500 max-w-[160px] truncate block">{{ translateComment(m.reason || m.label) }}</span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-1">
                     @if (isEntry(m) && m.product.stock > 0) {
                       <button (click)="openExit(m)"
                               title="Registrar salida"
-                              class="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-50 text-red-700 text-xs font-medium rounded-lg border border-red-200 hover:bg-red-100 transition-colors">
+                              class="p-1.5 bg-red-50 text-red-700 rounded-lg border border-red-200 hover:bg-red-100 transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
                         </svg>
-                        Salida
                       </button>
                       <button (click)="openTransfer(m)"
                               title="Transferir a otro almacén"
-                              class="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
+                              class="p-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                         </svg>
-                        Transferir
                       </button>
                       @if (m.purchaseId) {
                         <button (click)="openReturnConfirm(m)"
                                 title="Registrar devolución"
-                                class="flex items-center gap-1.5 px-2.5 py-1.5 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-lg border border-yellow-200 hover:bg-yellow-100 transition-colors">
+                                class="p-1.5 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200 hover:bg-yellow-100 transition-colors">
                           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
                           </svg>
-                          Devolver
                         </button>
                       }
                     }
@@ -186,7 +215,7 @@
             }
             @empty {
               <tr>
-                <td colspan="6" class="px-5 py-16 text-center">
+                <td colspan="8" class="px-5 py-16 text-center">
                   <div class="flex flex-col items-center gap-2 text-slate-400">
                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -220,38 +249,88 @@
   iconEmoji="📦"
   iconBgClass="bg-green-50"
   confirmButtonClass="bg-green-600 hover:bg-green-700"
-  maxWidthClass="max-w-lg"
+  maxWidthClass="max-w-2xl"
   (closeEvent)="closeDirectEntry()"
   (confirmEvent)="confirmDirectEntry()">
   <div class="space-y-4">
+    <!-- Tipo de movimiento -->
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
-        <label class="text-sm font-semibold text-slate-700">Código <span class="text-red-500">*</span></label>
+        <label class="text-xs font-semibold text-slate-700">Tipo de Movimiento <span class="text-red-500">*</span></label>
+        <select [(ngModel)]="directEntry.movementCode"
+                class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
+          <option value="">Seleccionar tipo de entrada</option>
+          @for (t of entryTypes(); track t.code) {
+            <option [value]="t.code">{{ t.code }} - {{ t.description }}</option>
+          }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Categoría</label>
+        <select [(ngModel)]="directEntry.category"
+                class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
+          <option value="mercancia">Mercancía</option>
+          <option value="insumo">Insumo</option>
+          <option value="produccion">Producción</option>
+        </select>
+      </div>
+    </div>
+    <!-- Producto -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Código Producto <span class="text-red-500">*</span></label>
         <input type="text" [(ngModel)]="directEntry.productCode"
                placeholder="Ej: PROD-001"
                class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
       </div>
       <div class="space-y-1">
-        <label class="text-sm font-semibold text-slate-700">Nombre <span class="text-red-500">*</span></label>
+        <label class="text-xs font-semibold text-slate-700">Nombre <span class="text-red-500">*</span></label>
         <input type="text" [(ngModel)]="directEntry.productName"
                placeholder="Ej: Laptop Dell"
                class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
       </div>
     </div>
     <div class="space-y-1">
-      <label class="text-sm font-semibold text-slate-700">Descripción</label>
+      <label class="text-xs font-semibold text-slate-700">Descripción</label>
       <textarea [(ngModel)]="directEntry.productDescription" rows="2"
                 placeholder="Descripción opcional del producto..."
                 class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"></textarea>
     </div>
-    <div class="grid grid-cols-2 gap-4">
+    <!-- Cantidades y valores -->
+    <div class="grid grid-cols-4 gap-3">
       <div class="space-y-1">
-        <label class="text-sm font-semibold text-slate-700">Cantidad <span class="text-red-500">*</span></label>
+        <label class="text-xs font-semibold text-slate-700">Cantidad <span class="text-red-500">*</span></label>
         <input type="number" [(ngModel)]="directEntry.quantity" min="1"
                class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
       </div>
       <div class="space-y-1">
-        <label class="text-sm font-semibold text-slate-700">Comentario</label>
+        <label class="text-xs font-semibold text-slate-700">Precio Unit.</label>
+        <input type="number" [(ngModel)]="directEntry.unitPrice" min="0" step="0.01"
+               class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">U/M</label>
+        <input type="text" [(ngModel)]="directEntry.unit"
+               placeholder="UN, KG"
+               class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Importe</label>
+        <div class="px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg text-sm font-semibold text-green-800">
+          ${{ ((directEntry.quantity || 0) * (directEntry.unitPrice || 0)) | number: '1.2-2' }}
+        </div>
+      </div>
+    </div>
+    <!-- Extra -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Almacén <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="directEntry.warehouseId"
+               placeholder="ID del almacén"
+               class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Comentario</label>
         <input type="text" [(ngModel)]="directEntry.label"
                placeholder="Comentario adicional..."
                class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
@@ -332,18 +411,34 @@
         {{ selectedForExit?.product?.stock }}
       </p>
     </div>
+    <!-- Tipo de movimiento de salida -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Tipo de Salida <span class="text-red-500">*</span></label>
+        <select [(ngModel)]="exitData.movementCode"
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all">
+          <option value="">Seleccionar tipo de salida</option>
+          @for (t of exitTypes(); track t.code) {
+            <option [value]="t.code">{{ t.code }} - {{ t.description }}</option>
+          }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Categoría</label>
+        <select [(ngModel)]="exitData.category"
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all">
+          <option value="mercancia">Mercancía</option>
+          <option value="insumo">Insumo</option>
+          <option value="produccion">Producción</option>
+        </select>
+      </div>
+    </div>
     <!-- Fila 1 -->
     <div class="grid grid-cols-4 gap-3">
       <div class="space-y-1">
-        <label class="text-xs font-semibold text-slate-700">Entidad <span class="text-red-500">*</span></label>
+        <label class="text-xs font-semibold text-slate-700">Entidad</label>
         <input type="text" [(ngModel)]="exitData.entity"
                placeholder="Hospital Central"
-               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
-      </div>
-      <div class="space-y-1">
-        <label class="text-xs font-semibold text-slate-700">Almacén <span class="text-red-500">*</span></label>
-        <input type="text" [(ngModel)]="exitData.warehouseId"
-               placeholder="Almacén Principal"
                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
       </div>
       <div class="space-y-1">
@@ -352,28 +447,28 @@
                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
       </div>
       <div class="space-y-1">
-        <label class="text-xs font-semibold text-slate-700">U/M</label>
-        <input type="text" [(ngModel)]="exitData.unit"
-               placeholder="UN, KG"
-               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
-      </div>
-    </div>
-    <!-- Fila 2 -->
-    <div class="grid grid-cols-4 gap-3">
-      <div class="space-y-1">
-        <label class="text-xs font-semibold text-slate-700">Costo Unit. (entrada)</label>
+        <label class="text-xs font-semibold text-slate-700">Costo Unit.</label>
         <div class="px-3 py-2 bg-slate-100 border-2 border-slate-200 rounded-lg text-sm text-slate-700 font-medium">
           ${{ exitData.unitPrice | number: '1.2-2' }}
         </div>
       </div>
       <div class="space-y-1">
         <label class="text-xs font-semibold text-slate-700">Importe</label>
-        <div class="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm font-semibold text-blue-800">
+        <div class="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm font-semibold text-red-800">
           ${{ (exitData.quantity * exitData.unitPrice) | number: '1.2-2' }}
         </div>
       </div>
-      <div class="col-span-2 space-y-1">
-        <label class="text-xs font-semibold text-slate-700">Comentario (Opcional)</label>
+    </div>
+    <!-- Fila 2 -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">U/M</label>
+        <input type="text" [(ngModel)]="exitData.unit"
+               placeholder="UN, KG"
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Comentario</label>
         <input type="text" [(ngModel)]="exitData.reason"
                placeholder="Motivo de la salida..."
                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"/>

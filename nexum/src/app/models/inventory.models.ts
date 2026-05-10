@@ -38,6 +38,8 @@ export interface MovementProduct {
   productUnit?: string;
 }
 
+export type InventoryCategory = 'insumo' | 'mercancia' | 'produccion';
+
 export interface MovementItem {
   id?: string;
   product: MovementProduct;
@@ -49,11 +51,24 @@ export interface MovementItem {
   purchaseId?: string;
   sourceWarehouse?: string;
   destinationWarehouse?: string;
+  movementCode?: string;
+  movementDescription?: string;
+  category?: InventoryCategory;
+  unitPrice?: number;
+  totalAmount?: number;
+  voucherId?: string;
   purchase?: {
     id: string;
     document: string;
     createdAt: string;
   };
+}
+
+export interface MovementTypeOption {
+  code: string;
+  description: string;
+  direction: 'entry' | 'exit';
+  category: InventoryCategory;
 }
 
 export interface MovementFilters {
@@ -75,6 +90,8 @@ export interface DirectEntryDto {
   unitPrice?: number;
   unit?: string;
   location?: string;
+  movementCode?: string;
+  category?: InventoryCategory;
 }
 
 export interface ExitDto {
@@ -84,4 +101,6 @@ export interface ExitDto {
   entity?: string;
   warehouseId: string;
   unit?: string;
+  movementCode?: string;
+  category?: InventoryCategory;
 }

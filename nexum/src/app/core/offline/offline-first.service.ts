@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, of, catchError, tap, firstValueFrom } from 'rxjs';
+import { Observable, from, of, catchError, tap, firstValueFrom, map } from 'rxjs';
 import { NetworkStatusService } from '../services/network-status.service';
 import { OfflineDataService } from './offline-data.service';
 import { SyncQueueService } from './sync-queue.service';
@@ -146,6 +146,15 @@ export class OfflineFirstService {
   getInvoices(filters?: any): Observable<any[]> {
     if (this.network.isOnline()) {
       return this.invoicesService.getInvoices(filters).pipe(
+        map(result => {
+          // Handle both array and PaginationResult
+          if (Array.isArray(result)) {
+            return result;
+          } else if (result && result.data) {
+            return result.data;
+          }
+          return [];
+        }),
         tap(items => this.cacheInvoices(items)),
         catchError(() => from(this.offlineData.getInvoicesOffline(this.companyId)))
       );

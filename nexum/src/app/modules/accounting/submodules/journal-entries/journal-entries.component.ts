@@ -447,7 +447,7 @@ export class JournalEntriesComponent implements OnInit {
     }
 
     const headerValues = this.voucherForm.value;
-    const lines = this.linesFormArray.value;
+    const lines = this.linesFormArray.getRawValue();
 
     // Validate that at least one line has debit or credit
     const hasValidLines = lines.some((line: any) => 
@@ -462,6 +462,7 @@ export class JournalEntriesComponent implements OnInit {
     // Calculate totals
     const totalDebit = lines.reduce((sum: number, line: any) => sum + (Number(line.debit) || 0), 0);
     const totalCredit = lines.reduce((sum: number, line: any) => sum + (Number(line.credit) || 0), 0);
+
 
     // Validate that debits equal credits
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
@@ -484,6 +485,7 @@ export class JournalEntriesComponent implements OnInit {
         lineOrder: index + 1,
       })),
     };
+
 
     this.isSaving.set(true);
 
@@ -578,13 +580,13 @@ export class JournalEntriesComponent implements OnInit {
 
   // Computed totals for validation display
   totalDebit = computed(() => {
-    return this.linesFormArray.value.reduce((sum: number, line: any) => 
+    return this.linesFormArray.getRawValue().reduce((sum: number, line: any) => 
       sum + (Number(line.debit) || 0), 0
     );
   });
 
   totalCredit = computed(() => {
-    return this.linesFormArray.value.reduce((sum: number, line: any) => 
+    return this.linesFormArray.getRawValue().reduce((sum: number, line: any) => 
       sum + (Number(line.credit) || 0), 0
     );
   });
@@ -727,29 +729,21 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   // Methods to handle debit/credit field interactions
-  onDebitChange(event: any, lineIndex: number) {
+  onDebitChange(value: number, lineIndex: number) {
     const lineGroup = this.getLineControls()[lineIndex];
-    const debitValue = event.target.value;
-    const creditControl = lineGroup.get('credit');
-    
-    if (debitValue && Number(debitValue) > 0) {
-      creditControl?.setValue(0);
-      creditControl?.disable();
-    } else {
-      creditControl?.enable();
+    // Update the debit field explicitly
+    lineGroup.get('debit')?.setValue(value, { emitEvent: false });
+    if (value > 0) {
+      lineGroup.get('credit')?.setValue(0);
     }
   }
 
-  onCreditChange(event: any, lineIndex: number) {
+  onCreditChange(value: number, lineIndex: number) {
     const lineGroup = this.getLineControls()[lineIndex];
-    const creditValue = event.target.value;
-    const debitControl = lineGroup.get('debit');
-    
-    if (creditValue && Number(creditValue) > 0) {
-      debitControl?.setValue(0);
-      debitControl?.disable();
-    } else {
-      debitControl?.enable();
+    // Update the credit field explicitly
+    lineGroup.get('credit')?.setValue(value, { emitEvent: false });
+    if (value > 0) {
+      lineGroup.get('debit')?.setValue(0);
     }
   }
 }

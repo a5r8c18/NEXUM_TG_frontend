@@ -1,16 +1,16 @@
 <div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
 
   <!-- Toast notifications -->
-  @if (toast()) {
+  @if (toastMessage()) {
     <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all"
-         [class.bg-green-50]="toast()!.type === 'success'"
-         [class.text-green-800]="toast()!.type === 'success'"
+         [class.bg-green-50]="toastMessage()!.type === 'success'"
+         [class.text-green-800]="toastMessage()!.type === 'success'"
          [class.border]="true"
-         [class.border-green-200]="toast()!.type === 'success'"
-         [class.bg-red-50]="toast()!.type === 'error'"
-         [class.text-red-800]="toast()!.type === 'error'"
-         [class.border-red-200]="toast()!.type === 'error'">
-      <span>{{ toast()!.message }}</span>
+         [class.border-green-200]="toastMessage()!.type === 'success'"
+         [class.bg-red-50]="toastMessage()!.type === 'error'"
+         [class.text-red-800]="toastMessage()!.type === 'error'"
+         [class.border-red-200]="toastMessage()!.type === 'error'">
+      <span>{{ toastMessage()!.message }}</span>
     </div>
   }
 
