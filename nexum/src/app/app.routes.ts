@@ -54,12 +54,28 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/inventory/inventory-table.component').then(m => m.InventoryTableComponent)
       },
       {
-        path: 'inventory/entry',
-        loadComponent: () => import('./modules/inventory/submodules/entry/entry.component').then(m => m.EntryComponent)
+        path: 'inventory/catalog',
+        loadComponent: () => import('./modules/inventory/catalog/catalog.component').then(m => m.CatalogComponent)
       },
       {
         path: 'inventory/reports',
         loadComponent: () => import('./modules/inventory/submodules/reports/reports.component').then(m => m.ReportsComponent)
+      },
+      {
+        path: 'inventory/physical-count',
+        loadComponent: () => import('./modules/inventory/physical-count/physical-count.component').then(m => m.PhysicalCountComponent)
+      },
+      {
+        path: 'inventory/analytics',
+        loadComponent: () => import('./modules/inventory/analytics/analytics.component').then(m => m.InventoryAnalyticsComponent)
+      },
+      {
+        path: 'inventory/suppliers',
+        loadComponent: () => import('./modules/inventory/suppliers/suppliers.component').then(m => m.SuppliersComponent)
+      },
+      {
+        path: 'inventory/purchase-orders',
+        loadComponent: () => import('./modules/inventory/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
       },
       {
         path: 'inventory/warehouses',
@@ -88,6 +104,27 @@ export const routes: Routes = [
       {
         path: 'inventory/movements',
         loadComponent: () => import('./modules/inventory/submodules/movements/movements-list.component').then(m => m.MovementsListComponent)
+      },
+      // Finance Module
+      {
+        path: 'finance',
+        loadComponent: () => import('./modules/finance/finance-dashboard.component').then(m => m.FinanceDashboardComponent)
+      },
+      {
+        path: 'finance/receivables',
+        loadComponent: () => import('./modules/finance/receivables/receivables.component').then(m => m.ReceivablesComponent)
+      },
+      {
+        path: 'finance/payables',
+        loadComponent: () => import('./modules/finance/payables/payables.component').then(m => m.PayablesComponent)
+      },
+      {
+        path: 'finance/banks',
+        loadComponent: () => import('./modules/finance/banks/banks.component').then(m => m.BanksComponent)
+      },
+      {
+        path: 'finance/payments',
+        loadComponent: () => import('./modules/finance/payments/payments.component').then(m => m.PaymentsComponent)
       },
       // Billing Module
       {
@@ -128,6 +165,10 @@ export const routes: Routes = [
       {
         path: 'hr/employees',
         loadComponent: () => import('./modules/hr/employees/employees.component').then(m => m.EmployeesComponent)
+      },
+      {
+        path: 'hr/payroll',
+        loadComponent: () => import('./modules/hr/payroll/payroll.component').then(m => m.PayrollComponent)
       },
       // Messages Module
       {

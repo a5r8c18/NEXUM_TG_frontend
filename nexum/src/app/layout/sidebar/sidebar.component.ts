@@ -100,11 +100,28 @@ export class SidebarComponent {
       hasSubmenu: true,
       isExpanded: false,
       submenu: [
-        { icon: 'ArrowDown', label: 'Entrada', route: '/inventory/entry' },
+        { icon: 'Database', label: 'Catálogo', route: '/inventory/catalog' },
         { icon: 'ArrowRightLeft', label: 'Movimientos', route: '/inventory/movements' },
         { icon: 'FileText', label: 'Reportes', route: '/inventory/reports' },
+        { icon: 'Search', label: 'Conteo Físico', route: '/inventory/physical-count' },
+        { icon: 'BarChart3', label: 'Analítica', route: '/inventory/analytics' },
+        { icon: 'Truck', label: 'Proveedores', route: '/inventory/suppliers' },
+        { icon: 'ShoppingCart', label: 'Órdenes de Compra', route: '/inventory/purchase-orders' },
         { icon: 'Warehouse', label: 'Almacenes', route: '/inventory/warehouses' },
         { icon: 'AlertTriangle', label: 'Límites de Stock', route: '/inventory/stock-limits' }
+      ]
+    },
+    { 
+      icon: 'DollarSign', 
+      label: 'Finanzas', 
+      route: '/finance',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: [
+        { icon: 'TrendingUp', label: 'Cuentas por Cobrar', route: '/finance/receivables' },
+        { icon: 'TrendingDown', label: 'Cuentas por Pagar', route: '/finance/payables' },
+        { icon: 'CreditCard', label: 'Cuentas Bancarias', route: '/finance/banks' },
+        { icon: 'Banknote', label: 'Cobros y Pagos', route: '/finance/payments' }
       ]
     },
     { 
@@ -127,7 +144,7 @@ export class SidebarComponent {
       submenu: [
         { icon: 'FileText', label: 'Informes', route: '/accounting/reports' },
         { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
-                { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
+        { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
         { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' },
         { icon: 'BookOpen', label: 'Años Fiscales', route: '/accounting/fiscal-years' }
       ]
@@ -135,7 +152,13 @@ export class SidebarComponent {
     { 
       icon: 'Users', 
       label: 'Recursos Humanos', 
-      route: '/hr/employees'
+      route: '/hr',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: [
+        { icon: 'UserCheck', label: 'Empleados', route: '/hr/employees' },
+        { icon: 'Wallet', label: 'Nómina', route: '/hr/payroll' }
+      ]
     },
     { 
       icon: 'Settings', 

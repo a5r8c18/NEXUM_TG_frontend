@@ -1,0 +1,75 @@
+<app-modal
+  [isOpen]="isOpen"
+  title="Transferir entre Almacenes"
+  confirmText="Confirmar Transferencia"
+  iconEmoji="🔄"
+  iconBgClass="bg-blue-50"
+  confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+  maxWidthClass="max-w-lg"
+  (closeEvent)="onClose()"
+  (confirmEvent)="onConfirm()">
+
+  <div class="space-y-4">
+    @if (selectedMovement) {
+      <div class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-slate-800">{{ selectedMovement.product.productName }}</p>
+          <p class="text-xs text-slate-500">Código: {{ selectedMovement.product.productCode }} &bull; Stock: {{ selectedMovement.product.stock }}</p>
+        </div>
+      </div>
+    }
+
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-slate-700">Categoría <span class="text-red-500">*</span></label>
+      <select [(ngModel)]="selectedCategory" (ngModelChange)="onCategoryChange()"
+              class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        @for (cat of categoryOptions; track cat.value) {
+          <option [value]="cat.value">{{ cat.label }} ({{ cat.code }})</option>
+        }
+      </select>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Almacén Origen <span class="text-red-500">*</span></label>
+        <select [(ngModel)]="sourceWarehouseId"
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">Seleccionar...</option>
+          @for (wh of warehouses; track wh.id) {
+            <option [value]="wh.id">{{ wh.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Almacén Destino <span class="text-red-500">*</span></label>
+        <select [(ngModel)]="destinationWarehouseId"
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">Seleccionar...</option>
+          @for (wh of warehouses; track wh.id) {
+            @if (wh.id !== sourceWarehouseId) {
+              <option [value]="wh.id">{{ wh.name }}</option>
+            }
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-slate-700">Cantidad <span class="text-red-500">*</span></label>
+      <input type="number" [(ngModel)]="quantity" min="1"
+             [max]="selectedMovement?.product?.stock || 9999"
+             class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-slate-700">Motivo</label>
+      <textarea [(ngModel)]="reason" rows="2" placeholder="Motivo de la transferencia..."
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"></textarea>
+    </div>
+
+    @if (sourceWarehouseId && sourceWarehouseId === destinationWarehouseId) {
+      <p class="text-xs text-red-500 text-center">El almacén origen y destino no pueden ser iguales</p>
+    }
+  </div>
+
+</app-modal>

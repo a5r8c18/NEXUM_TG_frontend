@@ -1,0 +1,94 @@
+<app-modal
+  [isOpen]="isOpen"
+  title="Registrar Salida"
+  confirmText="Registrar Salida"
+  iconEmoji="📤"
+  iconBgClass="bg-red-50"
+  confirmButtonClass="bg-red-600 hover:bg-red-700"
+  maxWidthClass="max-w-2xl"
+  (closeEvent)="onClose()"
+  (confirmEvent)="onConfirm()">
+
+  <div class="space-y-4">
+    @if (selectedMovement) {
+      <!-- Info del producto -->
+      <div class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-slate-800">{{ selectedMovement.product.productName }}</p>
+          <p class="text-xs text-slate-500">Código: {{ selectedMovement.product.productCode }} &bull; Stock: {{ selectedMovement.product.stock }}</p>
+        </div>
+      </div>
+    }
+
+    <!-- Tipo de salida -->
+    <div class="space-y-2">
+      <label class="text-xs font-semibold text-slate-700">Tipo de salida <span class="text-red-500">*</span></label>
+      <div class="grid grid-cols-1 gap-1.5 max-h-[200px] overflow-y-auto pr-1">
+        @for (type of exitTypes; track type.code) {
+          <button type="button"
+                  (click)="selectType(type)"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all text-sm"
+                  [class.border-red-500]="selectedType()?.code === type.code"
+                  [class.bg-red-50]="selectedType()?.code === type.code"
+                  [class.border-slate-200]="selectedType()?.code !== type.code"
+                  [class.hover:border-slate-300]="selectedType()?.code !== type.code">
+            <span class="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{{ type.code }}</span>
+            <span class="flex-1 text-xs text-slate-700">{{ type.description }}</span>
+            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border {{ categoryClass(type.category) }}">
+              {{ categoryLabel(type.category) }}
+            </span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Datos de salida -->
+    <div class="grid grid-cols-3 gap-3">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Cantidad <span class="text-red-500">*</span></label>
+        <input type="number" [(ngModel)]="quantity" min="1"
+               [max]="selectedMovement?.product?.stock || 9999"
+               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">U/M</label>
+        <input type="text" [(ngModel)]="unit" readonly
+               class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">Importe</label>
+        <div class="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm font-semibold text-red-700">
+          ${{ totalAmount | number:'1.2-2' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Elemento de gasto (solo para centros de costo: 1105, 2105, 3105) -->
+    @if (isCostCenterExit) {
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700">
+          Elemento de Gasto
+          <span class="text-[10px] text-slate-400 ml-1">(opcional — centro de costo)</span>
+        </label>
+        <select [(ngModel)]="expenseElement"
+                class="w-full px-3 py-2.5 border-2 border-amber-200 bg-amber-50/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all">
+          <option value="">Sin especificar</option>
+          @for (elem of expenseElements; track elem.code) {
+            <option [value]="elem.code + ' - ' + elem.label">{{ elem.code }} — {{ elem.label }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-slate-700">Motivo / Observación</label>
+      <textarea [(ngModel)]="reason" rows="2" placeholder="Motivo de la salida..."
+                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"></textarea>
+    </div>
+
+    @if (!selectedType()) {
+      <p class="text-xs text-red-500 text-center">Debe seleccionar un tipo de salida</p>
+    }
+  </div>
+
+</app-modal>

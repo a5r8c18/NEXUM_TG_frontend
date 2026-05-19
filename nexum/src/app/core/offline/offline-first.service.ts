@@ -77,6 +77,26 @@ export class OfflineFirstService {
     return from(this.offlineData.getMovementsOffline(this.companyId));
   }
 
+  getMovementsPaginated(filters?: any, page = 1, limit = 15): Observable<any> {
+    if (this.network.isOnline()) {
+      return this.movementsService.getMovementsPaginated(filters, page, limit, this.companyId).pipe(
+        tap(res => { if (res?.data) this.cacheMovements(res.data); }),
+        catchError(() => from(this.offlineData.getMovementsOffline(this.companyId)).pipe(
+          map((items: any[]) => ({
+            data: items.slice((page - 1) * limit, page * limit),
+            meta: { currentPage: page, itemsPerPage: limit, totalItems: items.length, totalPages: Math.ceil(items.length / limit) }
+          }))
+        ))
+      );
+    }
+    return from(this.offlineData.getMovementsOffline(this.companyId)).pipe(
+      map((items: any[]) => ({
+        data: items.slice((page - 1) * limit, page * limit),
+        meta: { currentPage: page, itemsPerPage: limit, totalItems: items.length, totalPages: Math.ceil(items.length / limit) }
+      }))
+    );
+  }
+
   registerDirectEntry(data: any): Observable<any> {
     if (this.network.isOnline()) {
       return this.movementsService.registerDirectEntry(data, this.companyId).pipe(

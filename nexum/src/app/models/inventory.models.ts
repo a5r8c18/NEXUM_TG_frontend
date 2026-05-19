@@ -56,6 +56,8 @@ export interface MovementItem {
   category?: InventoryCategory;
   unitPrice?: number;
   totalAmount?: number;
+  relatedMovementId?: string;
+  expenseElement?: string;
   voucherId?: string;
   purchase?: {
     id: string;
@@ -79,28 +81,89 @@ export interface MovementFilters {
   movement_type?: string;
 }
 
-export interface DirectEntryDto {
+// ── Entry ──
+export interface EntryItemDto {
   productCode: string;
   productName: string;
   productDescription?: string;
   quantity: number;
-  label?: string;
-  warehouseId: string;
-  entity?: string;
   unitPrice?: number;
   unit?: string;
   location?: string;
-  movementCode?: string;
+  expenseElement?: string;
+}
+
+export interface DirectEntryDto {
+  movementCode: string;
   category?: InventoryCategory;
+  label?: string;
+  entity?: string;
+  warehouseId: string;
+  items?: EntryItemDto[];
+  // Backward compat (single product)
+  productCode?: string;
+  productName?: string;
+  productDescription?: string;
+  quantity?: number;
+  unitPrice?: number;
+  unit?: string;
+  location?: string;
+  expenseElement?: string;
+}
+
+// ── Exit ──
+export interface ExitItemDto {
+  productCode: string;
+  quantity: number;
+  expenseElement?: string;
 }
 
 export interface ExitDto {
-  productCode: string;
-  quantity: number;
+  movementCode: string;
+  category?: InventoryCategory;
+  warehouseId: string;
   reason?: string;
   entity?: string;
-  warehouseId: string;
-  unit?: string;
-  movementCode?: string;
+  expenseElement?: string;
+  items?: ExitItemDto[];
+  // Backward compat (single product)
+  productCode?: string;
+  quantity?: number;
+}
+
+// ── Transfer ──
+export interface TransferItemDto {
+  productCode: string;
+  quantity: number;
+}
+
+export interface TransferDto {
+  movementCode: string;
   category?: InventoryCategory;
+  sourceWarehouseId: string;
+  destinationWarehouseId: string;
+  reason?: string;
+  items?: TransferItemDto[];
+  // Backward compat
+  productCode?: string;
+  quantity?: number;
+}
+
+// ── Return ──
+export interface ReturnItemDto {
+  productCode: string;
+  quantity: number;
+}
+
+export interface ReturnDto {
+  movementCode: string;
+  category?: InventoryCategory;
+  warehouseId: string;
+  reason: string;
+  purchase_id?: string;
+  entity?: string;
+  items?: ReturnItemDto[];
+  // Backward compat
+  product_code?: string;
+  quantity?: number;
 }

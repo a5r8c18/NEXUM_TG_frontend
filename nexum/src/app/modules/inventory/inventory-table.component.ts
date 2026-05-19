@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { DateFilterComponent, FilterValues } from '../../shared/components/filter/date-filter.component';
 import { PaginationComponent, PaginationConfig } from '../../shared/components/pagination/pagination.component';
@@ -11,13 +13,14 @@ import { OfflineFirstService } from '../../core/offline/offline-first.service';
 @Component({
   selector: 'app-inventory-table',
   standalone: true,
-  imports: [DateFilterComponent, PaginationComponent, ExportComponentComponent],
+  imports: [DateFilterComponent, PaginationComponent, ExportComponentComponent, DecimalPipe],
   templateUrl: './inventory-table.component.html'
 })
 export class InventoryTableComponent implements OnInit, OnDestroy {
   private inventoryService = inject(InventoryService);
   private notificationService = inject(NotificationService);
   private offlineFirst = inject(OfflineFirstService);
+  private router = inject(Router);
 
   allItems = signal<InventoryItem[]>([]);
   filteredItems = signal<InventoryItem[]>([]);
@@ -139,5 +142,33 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
 
   get totalExistencias(): number {
     return this.filteredItems().reduce((s, i) => s + i.stock, 0);
+  }
+
+  // ─── KPIs ─────────────────────────────────────────────────────────────────
+
+  get totalProducts(): number {
+    return this.filteredItems().length;
+  }
+
+  get totalInventoryValue(): number {
+    return this.filteredItems().reduce((sum, i) => sum + (i.stock * (i.unitPrice || 0)), 0);
+  }
+
+  get outOfStockCount(): number {
+    return this.filteredItems().filter(i => i.stock === 0).length;
+  }
+
+  get lowStockCount(): number {
+    return this.filteredItems().filter(i => i.stock > 0 && i.stock < 10).length;
+  }
+
+  formatCurrency(amount: number): string {
+    return '$' + amount.toLocaleString('es-CU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  viewMovementHistory(productCode: string): void {
+    this.router.navigate(['/inventory/movements'], {
+      queryParams: { product: productCode }
+    });
   }
 }

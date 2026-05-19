@@ -1,0 +1,297 @@
+import { Component, signal, inject, Output, EventEmitter, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
+import { MovementTypeOption, InventoryCategory, DirectEntryDto } from '../../../../../../models/inventory.models';
+import { CreatePurchasePayload } from '../../../../../../models/purchase.models';
+
+export type EntryStep = 'select-type' | 'simple-form' | 'purchase-form';
+
+// Purchase movement codes
+const PURCHASE_CODES = ['102', '202', '402'];
+
+// Códigos de centro de costo que requieren elemento de gasto
+const COST_CENTER_ENTRY_CODES = ['108', '208', '308'];
+
+// Elementos de gasto comunes en contabilidad cubana
+const EXPENSE_ELEMENTS = [
+  { code: '01', label: 'Materias primas y materiales' },
+  { code: '02', label: 'Combustibles' },
+  { code: '03', label: 'Energía' },
+  { code: '04', label: 'Salarios' },
+  { code: '05', label: 'Depreciación y amortización' },
+  { code: '06', label: 'Servicios recibidos' },
+  { code: '07', label: 'Transferencias y subsidios' },
+  { code: '08', label: 'Otros gastos monetarios' },
+];
+
+@Component({
+  selector: 'app-entry-wizard',
+  standalone: true,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
+  templateUrl: './entry-wizard.component.html',
+})
+export class EntryWizardComponent {
+  private fb = inject(FormBuilder);
+
+  @Input() isOpen = false;
+  @Input() entryTypes: MovementTypeOption[] = [];
+  @Input() warehouses: { id: string; name: string }[] = [];
+  @Output() closeEvent = new EventEmitter<void>();
+  @Output() submitDirectEntry = new EventEmitter<DirectEntryDto>();
+  @Output() submitPurchase = new EventEmitter<CreatePurchasePayload & { movementCode: string; category: InventoryCategory }>();
+
+  step = signal<EntryStep>('select-type');
+  selectedType = signal<MovementTypeOption | null>(null);
+
+  // --- Simple entry form ---
+  directEntry: DirectEntryDto = {
+    productCode: '',
+    productName: '',
+    productDescription: '',
+    quantity: 1,
+    label: '',
+    warehouseId: '',
+    entity: '',
+    unitPrice: 0,
+    unit: '',
+    location: '',
+    movementCode: '',
+    category: 'mercancia'
+  };
+
+  // --- Purchase form ---
+  purchaseForm: FormGroup = this.fb.group({
+    entity: ['', Validators.required],
+    warehouse: ['', Validators.required],
+    supplier: ['', Validators.required],
+    document: ['', Validators.required],
+    products: this.fb.array<FormGroup>([]),
+  });
+
+  get products(): FormArray<FormGroup> {
+    return this.purchaseForm.get('products') as FormArray<FormGroup>;
+  }
+
+  expenseElements = EXPENSE_ELEMENTS;
+
+  get isPurchaseType(): boolean {
+    const type = this.selectedType();
+    return type ? PURCHASE_CODES.includes(type.code) : false;
+  }
+
+  get isCostCenterType(): boolean {
+    const type = this.selectedType();
+    return type ? COST_CENTER_ENTRY_CODES.includes(type.code) : false;
+  }
+
+  get modalTitle(): string {
+    switch (this.step()) {
+      case 'select-type': return 'Nueva Entrada de Inventario';
+      case 'simple-form': return `Entrada: ${this.selectedType()?.description || ''}`;
+      case 'purchase-form': return `Compra: ${this.selectedType()?.description || ''}`;
+    }
+  }
+
+  get confirmText(): string {
+    switch (this.step()) {
+      case 'select-type': return 'Continuar';
+      case 'simple-form': return 'Registrar Entrada';
+      case 'purchase-form': return 'Registrar Compra';
+    }
+  }
+
+  // --- Type selection ---
+  selectType(type: MovementTypeOption): void {
+    this.selectedType.set(type);
+  }
+
+  // --- Navigation ---
+  onConfirm(): void {
+    switch (this.step()) {
+      case 'select-type':
+        this.goToForm();
+        break;
+      case 'simple-form':
+        this.confirmSimpleEntry();
+        break;
+      case 'purchase-form':
+        this.confirmPurchase();
+        break;
+    }
+  }
+
+  onClose(): void {
+    this.reset();
+    this.closeEvent.emit();
+  }
+
+  goBack(): void {
+    this.step.set('select-type');
+  }
+
+  private goToForm(): void {
+    const type = this.selectedType();
+    if (!type) return;
+
+    if (PURCHASE_CODES.includes(type.code)) {
+      this.initPurchaseForm(type);
+      this.step.set('purchase-form');
+    } else {
+      this.initSimpleForm(type);
+      this.step.set('simple-form');
+    }
+  }
+
+  // --- Simple entry ---
+  private initSimpleForm(type: MovementTypeOption): void {
+    this.directEntry = {
+      productCode: '',
+      productName: '',
+      productDescription: '',
+      quantity: 1,
+      label: '',
+      warehouseId: '',
+      entity: '',
+      unitPrice: 0,
+      unit: '',
+      location: '',
+      movementCode: type.code,
+      category: type.category,
+      expenseElement: ''
+    };
+  }
+
+  private confirmSimpleEntry(): void {
+    if (!this.directEntry.productCode?.trim()) return;
+    if (!this.directEntry.productName?.trim()) return;
+    if (!this.directEntry.quantity || this.directEntry.quantity <= 0) return;
+    if (!this.directEntry.warehouseId?.trim()) return;
+
+    this.submitDirectEntry.emit({ ...this.directEntry });
+    this.reset();
+    this.closeEvent.emit();
+  }
+
+  // --- Purchase ---
+  private initPurchaseForm(type: MovementTypeOption): void {
+    this.purchaseForm.reset();
+    this.products.clear();
+    this.addProduct();
+  }
+
+  addProduct(): void {
+    const group = this.fb.group({
+      code: ['', Validators.required],
+      description: ['', Validators.required],
+      unit: ['', Validators.required],
+      quantity: [1, [Validators.required, Validators.min(1)]],
+      amount: [0, [Validators.required, Validators.min(0.01)]],
+      unitPrice: [{ value: 0, disabled: true }],
+      expirationDate: ['', this.dateValidator],
+    });
+    this.subscribeToProductChanges(group);
+    this.products.push(group);
+  }
+
+  removeProduct(index: number): void {
+    this.products.removeAt(index);
+  }
+
+  private subscribeToProductChanges(group: FormGroup): void {
+    group.get('quantity')?.valueChanges.subscribe(() => this.updateUnitPrice(group));
+    group.get('amount')?.valueChanges.subscribe(() => this.updateUnitPrice(group));
+  }
+
+  private updateUnitPrice(group: FormGroup): void {
+    const qty = group.get('quantity')?.value || 0;
+    const amt = group.get('amount')?.value || 0;
+    group.get('unitPrice')?.setValue(qty > 0 ? amt / qty : 0, { emitEvent: false });
+  }
+
+  private dateValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) return null;
+    const d = new Date(control.value);
+    return isNaN(d.getTime()) ? { invalidDate: true } : null;
+  }
+
+  private formatExpirationDate(value: string | null): string | null {
+    if (!value) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return null;
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  private confirmPurchase(): void {
+    if (this.purchaseForm.invalid) return;
+
+    const raw = this.purchaseForm.value;
+    const type = this.selectedType()!;
+
+    const payload: CreatePurchasePayload & { movementCode: string; category: InventoryCategory } = {
+      entity: raw.entity,
+      warehouse: raw.warehouse,
+      supplier: raw.supplier,
+      document: raw.document,
+      movementCode: type.code,
+      category: type.category,
+      products: (raw.products as any[]).map((p: any, i: number) => ({
+        product_code: p.code,
+        product_name: p.description,
+        quantity: parseFloat(p.quantity),
+        unit_price: this.products.at(i).get('unitPrice')?.value ?? 0,
+        unit: p.unit || null,
+        expiration_date: this.formatExpirationDate(p.expirationDate),
+      })),
+    };
+
+    this.submitPurchase.emit(payload);
+    this.reset();
+    this.closeEvent.emit();
+  }
+
+  getUnitPrice(index: number): number {
+    return this.products.at(index).get('unitPrice')?.value ?? 0;
+  }
+
+  getTotalAmount(): number {
+    return this.products.controls.reduce((sum, g) => {
+      return sum + (g.get('amount')?.value || 0);
+    }, 0);
+  }
+
+  fieldInvalid(path: string): boolean {
+    const ctrl = this.purchaseForm.get(path);
+    return !!(ctrl?.invalid && (ctrl.touched || ctrl.dirty));
+  }
+
+  productFieldInvalid(group: FormGroup, field: string): boolean {
+    const ctrl = group.get(field);
+    return !!(ctrl?.invalid && (ctrl.touched || ctrl.dirty));
+  }
+
+  private reset(): void {
+    this.step.set('select-type');
+    this.selectedType.set(null);
+    this.purchaseForm.reset();
+    this.products.clear();
+  }
+
+  // --- Category helpers ---
+  categoryLabel(cat: InventoryCategory): string {
+    const map: Record<string, string> = { insumo: 'Insumo', mercancia: 'Mercancía', produccion: 'Producción' };
+    return map[cat] ?? cat;
+  }
+
+  categoryClass(cat: InventoryCategory): string {
+    switch (cat) {
+      case 'insumo': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'mercancia': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'produccion': return 'bg-teal-50 text-teal-700 border-teal-200';
+    }
+  }
+}

@@ -30,17 +30,97 @@
     </div>
       </div>
 
-  <!-- Icono de Gráfico de Barras -->
-  <div class="flex items-center justify-end mb-6">
-    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4 flex items-center gap-3">
-      <div class="p-3 bg-indigo-50 rounded-xl">
-        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-4 3h18"/>
-        </svg>
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+    <!-- Total Productos -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-blue-50 rounded-lg">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Productos</p>
+          <p class="text-lg font-bold text-slate-800">{{ totalProducts }}</p>
+        </div>
       </div>
-      <div>
-        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Análisis</p>
-        <p class="text-sm font-semibold text-slate-800">Gráfico de Barras</p>
+    </div>
+
+    <!-- Existencias -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-green-50 rounded-lg">
+          <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Existencias</p>
+          <p class="text-lg font-bold text-slate-800">{{ totalExistencias | number }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Valor del inventario -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-indigo-50 rounded-lg">
+          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Valor Total</p>
+          <p class="text-lg font-bold text-slate-800">{{ formatCurrency(totalInventoryValue) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entradas -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-emerald-50 rounded-lg">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Entradas</p>
+          <p class="text-lg font-bold text-emerald-700">{{ totalEntradas | number }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sin Stock -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4"
+         [class.border-red-300]="outOfStockCount > 0">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-lg" [class.bg-red-50]="outOfStockCount > 0" [class.bg-slate-50]="outOfStockCount === 0">
+          <svg class="w-4 h-4" [class.text-red-600]="outOfStockCount > 0" [class.text-slate-400]="outOfStockCount === 0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Sin Stock</p>
+          <p class="text-lg font-bold" [class.text-red-600]="outOfStockCount > 0" [class.text-slate-800]="outOfStockCount === 0">{{ outOfStockCount }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stock Bajo -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4"
+         [class.border-amber-300]="lowStockCount > 0">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-lg" [class.bg-amber-50]="lowStockCount > 0" [class.bg-slate-50]="lowStockCount === 0">
+          <svg class="w-4 h-4" [class.text-amber-600]="lowStockCount > 0" [class.text-slate-400]="lowStockCount === 0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Stock Bajo</p>
+          <p class="text-lg font-bold" [class.text-amber-600]="lowStockCount > 0" [class.text-slate-800]="lowStockCount === 0">{{ lowStockCount }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -93,6 +173,7 @@
               <th class="px-6 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Salidas</th>
               <th class="px-6 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Existencias</th>
               <th class="px-6 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Estado</th>
+              <th class="px-6 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -122,11 +203,20 @@
                     {{ getStockLabel(item.stock, item.stockLimit) }}
                   </span>
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <button (click)="viewMovementHistory(item.productCode)"
+                          title="Ver historial de movimientos"
+                          class="p-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </button>
+                </td>
               </tr>
             }
             @empty {
               <tr>
-                <td colspan="6" class="px-6 py-16 text-center">
+                <td colspan="7" class="px-6 py-16 text-center">
                   <div class="flex flex-col items-center gap-2 text-slate-400">
                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
