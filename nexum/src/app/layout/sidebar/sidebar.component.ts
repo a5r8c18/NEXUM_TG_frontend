@@ -94,21 +94,25 @@ export class SidebarComponent {
   navItems: NavItem[] = [
     { icon: 'Home', label: 'Dashboard', route: '/dashboard' },
     { 
-      icon: 'Package', 
-      label: 'Inventario', 
-      route: '/inventory',
+      icon: 'Settings', 
+      label: 'Configuracion', 
+      route: '/settings',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: []
+    },
+    { 
+      icon: 'Calculator', 
+      label: 'Contabilidad', 
+      route: '/accounting',
       hasSubmenu: true,
       isExpanded: false,
       submenu: [
-        { icon: 'Database', label: 'Catálogo', route: '/inventory/catalog' },
-        { icon: 'ArrowRightLeft', label: 'Movimientos', route: '/inventory/movements' },
-        { icon: 'FileText', label: 'Reportes', route: '/inventory/reports' },
-        { icon: 'Search', label: 'Conteo Físico', route: '/inventory/physical-count' },
-        { icon: 'BarChart3', label: 'Analítica', route: '/inventory/analytics' },
-        { icon: 'Truck', label: 'Proveedores', route: '/inventory/suppliers' },
-        { icon: 'ShoppingCart', label: 'Órdenes de Compra', route: '/inventory/purchase-orders' },
-        { icon: 'Warehouse', label: 'Almacenes', route: '/inventory/warehouses' },
-        { icon: 'AlertTriangle', label: 'Límites de Stock', route: '/inventory/stock-limits' }
+        { icon: 'FileText', label: 'Informes', route: '/accounting/reports' },
+        { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
+        { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
+        { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' },
+        { icon: 'BookOpen', label: 'Ejercicio Económico', route: '/accounting/fiscal-years' }
       ]
     },
     { 
@@ -125,31 +129,6 @@ export class SidebarComponent {
       ]
     },
     { 
-      icon: 'Receipt', 
-      label: 'Facturacion', 
-      route: '/billing/invoices',
-      hasSubmenu: true,
-      isExpanded: false,
-      submenu: [
-        { icon: 'FileText', label: 'Facturas', route: '/billing/invoices' }
-      ]
-    },
-    { icon: 'Building', label: 'Activos Fijos', route: '/billing/fixed-assets' },
-    { 
-      icon: 'Calculator', 
-      label: 'Contabilidad', 
-      route: '/accounting',
-      hasSubmenu: true,
-      isExpanded: false,
-      submenu: [
-        { icon: 'FileText', label: 'Informes', route: '/accounting/reports' },
-        { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
-        { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
-        { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' },
-        { icon: 'BookOpen', label: 'Años Fiscales', route: '/accounting/fiscal-years' }
-      ]
-    },
-    { 
       icon: 'Users', 
       label: 'Recursos Humanos', 
       route: '/hr',
@@ -161,12 +140,32 @@ export class SidebarComponent {
       ]
     },
     { 
-      icon: 'Settings', 
-      label: 'Configuracion', 
-      route: '/settings',
+      icon: 'Package', 
+      label: 'Inventario', 
+      route: '/inventory',
       hasSubmenu: true,
       isExpanded: false,
-      submenu: []
+      submenu: [
+        { icon: 'Database', label: 'Catálogo', route: '/inventory/catalog' },
+        { icon: 'ArrowRightLeft', label: 'Movimientos', route: '/inventory/movements' },
+        { icon: 'FileText', label: 'Reportes', route: '/inventory/reports' },
+        { icon: 'Search', label: 'Conteo Físico', route: '/inventory/physical-count' },
+        { icon: 'BarChart3', label: 'Analítica', route: '/inventory/analytics' },
+        { icon: 'Truck', label: 'Proveedores', route: '/inventory/suppliers' },
+        { icon: 'Warehouse', label: 'Almacenes', route: '/inventory/warehouses' },
+        { icon: 'AlertTriangle', label: 'Límites de Stock', route: '/inventory/stock-limits' }
+      ]
+    },
+    { icon: 'Building', label: 'Activos Fijos', route: '/billing/fixed-assets' },
+    { 
+      icon: 'Receipt', 
+      label: 'Facturacion', 
+      route: '/billing/invoices',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: [
+        { icon: 'FileText', label: 'Facturas', route: '/billing/invoices' }
+      ]
     },
     { icon: 'Mail', label: 'Mensajes', route: '/messages' }
   ];

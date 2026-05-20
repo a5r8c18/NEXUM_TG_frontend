@@ -73,11 +73,7 @@ export const routes: Routes = [
         path: 'inventory/suppliers',
         loadComponent: () => import('./modules/inventory/suppliers/suppliers.component').then(m => m.SuppliersComponent)
       },
-      {
-        path: 'inventory/purchase-orders',
-        loadComponent: () => import('./modules/inventory/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
-      },
-      {
+            {
         path: 'inventory/warehouses',
         loadComponent: () => import('./modules/inventory/submodules/warehouses/warehouse-list/warehouse-list.component').then(m => m.WarehouseListComponent)
       },

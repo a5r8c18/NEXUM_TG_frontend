@@ -11,12 +11,12 @@ import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.s
   template: `
     <div class="p-6">
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Gestión de Años Fiscales y Períodos</h2>
+        <h2 class="text-2xl font-bold text-gray-900">Gestión de Ejercicio Económico y Períodos</h2>
         <button
           (click)="openCreateModal()"
           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
         >
-          <span>+</span> Nuevo Año Fiscal
+          <span>+</span> Nuevo Ejercicio Económico
         </button>
       </div>
 
@@ -71,7 +71,7 @@ import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.s
       @if (showCreateModal()) {
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 class="text-lg font-bold mb-4">Nuevo Año Fiscal</h3>
+            <h3 class="text-lg font-bold mb-4">Nuevo Ejercicio Económico</h3>
             <form [formGroup]="fiscalYearForm" (ngSubmit)="createFiscalYear()">
               <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
@@ -211,7 +211,7 @@ export class FiscalYearsComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        this.showToast('Error al cargar años fiscales', 'error');
+        this.showToast('Error al cargar ejercicios económicos', 'error');
         this.isLoading.set(false);
       },
     });
@@ -234,12 +234,12 @@ export class FiscalYearsComponent implements OnInit {
 
     this.accountingService.createFiscalYear(data).subscribe({
       next: () => {
-        this.showToast('Año fiscal creado exitosamente', 'success');
+        this.showToast('Ejercicio económico creado exitosamente', 'success');
         this.closeCreateModal();
         this.loadFiscalYears();
       },
       error: () => {
-        this.showToast('Error al crear año fiscal', 'error');
+        this.showToast('Error al crear ejercicio económico', 'error');
         this.isLoading.set(false);
       },
     });
@@ -247,8 +247,8 @@ export class FiscalYearsComponent implements OnInit {
 
   async closeFiscalYear(id: string) {
     const confirmed = await this.confirmDialog.confirm({
-      title: 'Cerrar año fiscal',
-      message: '¿Está seguro de cerrar este año fiscal? Esta acción no se puede deshacer.',
+      title: 'Cerrar ejercicio económico',
+      message: '¿Está seguro de cerrar este ejercicio económico? Esta acción no se puede deshacer.',
       confirmText: 'Cerrar',
       type: 'warning'
     });
@@ -256,11 +256,11 @@ export class FiscalYearsComponent implements OnInit {
 
     this.accountingService.closeFiscalYear(id).subscribe({
       next: () => {
-        this.showToast('Año fiscal cerrado exitosamente', 'success');
+        this.showToast('Ejercicio económico cerrado exitosamente', 'success');
         this.loadFiscalYears();
       },
       error: () => {
-        this.showToast('Error al cerrar año fiscal', 'error');
+        this.showToast('Error al cerrar ejercicio económico', 'error');
       },
     });
   }
