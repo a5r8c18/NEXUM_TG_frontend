@@ -186,8 +186,55 @@
           </label>
         </div>
 
+        <!-- MFA Verification Section -->
+        @if (showMFA()) {
+          <div class="bg-indigo-500/10 border border-indigo-500 rounded-lg p-6 space-y-4">
+            <div class="text-center">
+              <svg class="w-12 h-12 text-indigo-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-white mb-1">Autenticación de Dos Factores</h3>
+              <p class="text-slate-400 text-sm">Ingrese el código de 6 dígitos de su aplicación de autenticación</p>
+            </div>
+            <div>
+              <input
+                type="text"
+                [value]="mfaToken()"
+                (input)="mfaToken.set($any($event.target).value)"
+                maxlength="6"
+                placeholder="123456"
+                class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+              />
+            </div>
+            <div class="flex gap-3">
+              <button
+                type="button"
+                (click)="onMFAVerify()"
+                [disabled]="isLoading()"
+                class="flex-1 bg-indigo-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                @if (isLoading()) {
+                  <div class="flex items-center justify-center">
+                    <div class="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Verificando...
+                  </div>
+                } @else {
+                  Verificar
+                }
+              </button>
+              <button
+                type="button"
+                (click)="cancelMFA()"
+                class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        }
+
         <!-- Botón Login -->
-        @if (isMultiCompanyUser() && availableCompanies().length > 0) {
+        @if (!showMFA() && isMultiCompanyUser() && availableCompanies().length > 0) {
           <button
             type="button"
             (click)="proceedToDashboard()"
@@ -206,7 +253,7 @@
               Ingresar a {{ selectedCompany()?.name || 'la empresa seleccionada' }}
             }
           </button>
-        } @else {
+        } @else if (!showMFA()) {
           <button
             type="button"
             (click)="logSubmitClick(); onLogin()"

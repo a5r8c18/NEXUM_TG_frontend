@@ -16,7 +16,7 @@ import { FinanceService } from '../../core/services/finance.service';
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       } @else {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <!-- CxC -->
           <a routerLink="/finance/receivables" class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
             <div class="flex items-center justify-between mb-3">
@@ -45,6 +45,16 @@ import { FinanceService } from '../../core/services/finance.service';
             </div>
             <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ dashboard()?.banks?.activeAccounts || 0 }}</p>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Saldo: {{ formatCurrency(dashboard()?.banks?.totalBalance) }}</p>
+          </a>
+
+          <!-- Caja -->
+          <a routerLink="/finance/cash" class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Caja (Efectivo)</span>
+              <span class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold px-2 py-1 rounded-full">Caja</span>
+            </div>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ dashboard()?.cash?.openRegisters || 0 }}/{{ dashboard()?.cash?.total || 0 }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Saldo: {{ formatCurrency(dashboard()?.cash?.totalBalance) }}</p>
           </a>
 
           <!-- Pagos -->

@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 import { ContextService } from '../../core/services/context.service';
+import { MfaService } from '../../core/services/mfa.service';
 import { Company } from '../../models/company.models';
 
 @Component({
@@ -24,10 +25,17 @@ export class LoginComponent {
   availableCompanies = signal<Company[]>([]);
   showCompanyDropdown = signal(false);
 
+  // MFA flow
+  showMFA = signal(false);
+  mfaToken = signal('');
+  pendingUserId = signal('');
+  pendingUser = signal<any>(null);
+
   private authService = inject(AuthService);
   private router = inject(Router);
   private companyService = inject(CompanyService);
   private contextService = inject(ContextService);
+  private mfaService = inject(MfaService);
 
   constructor() {
     // No cargar empresas de demo por defecto
@@ -118,21 +126,30 @@ export class LoginComponent {
 
     this.isLoading.set(true);
     this.errorMessage.set('');
-    
+
     try {
-      const success = await this.authService.login(this.email(), this.password());
-      
-      if (success) {
+      const response = await this.authService.login(this.email(), this.password());
+
+      // Check if MFA is required
+      if (response && response.requiresMFA) {
+        this.pendingUserId.set(response.userId);
+        this.pendingUser.set(response.user);
+        this.showMFA.set(true);
+        this.isLoading.set(false);
+        return;
+      }
+
+      if (response) {
         const currentUser = this.authService.currentUser();
-        
+
         // Superadmin va directo a solicitudes
         if (currentUser?.role === 'superadmin') {
           await this.router.navigate(['/admin/tenant-requests']);
           return;
         }
-        
+
         const userTenant = this.authService.getCurrentUserTenant();
-        
+
         if (userTenant?.type === 'MULTI_COMPANY') {
           await this.proceedToDashboard();
         } else {
@@ -141,11 +158,65 @@ export class LoginComponent {
       } else {
         this.errorMessage.set('Credenciales incorrectas. Intente nuevamente.');
       }
-    } catch (error) {
-      this.errorMessage.set('Error al iniciar sesión. Intente nuevamente.');
+    } catch (error: any) {
+      this.errorMessage.set(error.message || 'Error al iniciar sesión. Intente nuevamente.');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async onMFAVerify(): Promise<void> {
+    if (!this.mfaToken() || this.mfaToken().length !== 6) {
+      this.errorMessage.set('Ingrese el código de 6 dígitos');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    try {
+      const response = await firstValueFrom(
+        this.mfaService.completeLoginWithMFA(
+          this.pendingUserId(),
+          this.mfaToken()
+        )
+      );
+
+      if (response && response.accessToken) {
+        // Store tokens
+        this.authService.setTokens(response.accessToken, response.refreshToken);
+        this.authService.setCurrentUser(response.user);
+
+        const currentUser = this.authService.currentUser();
+
+        // Superadmin va directo a solicitudes
+        if (currentUser?.role === 'superadmin') {
+          await this.router.navigate(['/admin/tenant-requests']);
+          return;
+        }
+
+        const userTenant = this.authService.getCurrentUserTenant();
+
+        if (userTenant?.type === 'MULTI_COMPANY') {
+          await this.proceedToDashboard();
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
+      } else {
+        this.errorMessage.set('Código MFA inválido. Intente nuevamente.');
+      }
+    } catch (error: any) {
+      this.errorMessage.set(error.message || 'Error al verificar código MFA.');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  cancelMFA() {
+    this.showMFA.set(false);
+    this.mfaToken.set('');
+    this.pendingUserId.set('');
+    this.pendingUser.set(null);
   }
 
   toggleCompanyDropdown(): void {

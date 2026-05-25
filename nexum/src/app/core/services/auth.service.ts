@@ -56,19 +56,26 @@ export class AuthService {
     this.checkAuthStatus();
   }
 
-  async login(email: string, password: string): Promise<boolean> {
-    if (!email || !password) return false;
+  async login(email: string, password: string): Promise<any> {
+    if (!email || !password) return null;
 
     try {
       console.log('FRONTEND AUTH SERVICE - Login attempt for:', email);
       const response = await firstValueFrom(
-        this.http.post<{ user: any; accessToken: string; refreshToken: string }>(`${this.apiUrl}/auth/login`, { email, password })
+        this.http.post<any>(`${this.apiUrl}/auth/login`, { email, password })
       );
 
       console.log('FRONTEND AUTH SERVICE - Response from backend:', response);
+      console.log('FRONTEND AUTH SERVICE - Has requiresMFA:', !!response?.requiresMFA);
       console.log('FRONTEND AUTH SERVICE - Has accessToken:', !!response?.accessToken);
       console.log('FRONTEND AUTH SERVICE - Has user:', !!response?.user);
 
+      // If MFA is required, return the response without setting session
+      if (response && response.requiresMFA) {
+        return response;
+      }
+
+      // If normal login with tokens, set session
       if (response && response.accessToken) {
         const user: NexumUser = {
           id: response.user.id,
@@ -81,12 +88,13 @@ export class AuthService {
           tenantType: response.user.tenantType || 'MULTI_COMPANY'
         };
         this.setSession(user, response.accessToken);
-        
+        this.setRefreshToken(response.refreshToken);
+
         // Establecer la empresa en el ContextService
         if (response.user.companyId) {
           await this.setCompanyContext(response.user.companyId);
         }
-        
+
         // Establecer el tenant en el ContextService
         this.contextService.setCurrentTenant({
           id: response.user.tenantId || 'tenant-1',
@@ -96,15 +104,46 @@ export class AuthService {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
-        
-        return true;
+
+        return response;
       }
       console.log('FRONTEND AUTH SERVICE - Login failed - no accessToken in response');
-      return false;
+      return null;
     } catch (error) {
       console.log('FRONTEND AUTH SERVICE - Login error:', error);
-      return false;
+      return null;
     }
+  }
+
+  setTokens(accessToken: string, refreshToken: string): void {
+    localStorage.setItem('authToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+  }
+
+  setRefreshToken(refreshToken: string): void {
+    localStorage.setItem('refreshToken', refreshToken);
+  }
+
+  setCurrentUser(user: any): void {
+    const nexumUser: NexumUser = {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role || 'admin',
+      tenantId: user.tenantId || 'tenant-1',
+      tenantName: user.tenantName || 'Empresa Demo',
+      tenantType: user.tenantType || 'MULTI_COMPANY'
+    };
+    this.currentUserSignal.set(nexumUser);
+    this.isAuthenticatedSignal.set(true);
+    localStorage.setItem('currentUser', JSON.stringify(nexumUser));
+
+    // Emitir nuevo estado de autenticación
+    this.authStateSubject.next({
+      isAuthenticated: true,
+      user: nexumUser
+    });
   }
 
   isSuperadmin(): boolean {

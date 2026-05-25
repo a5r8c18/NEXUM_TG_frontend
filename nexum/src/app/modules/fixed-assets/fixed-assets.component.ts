@@ -7,7 +7,8 @@ import {
   FixedAsset, 
   CreateFixedAssetDto, 
   UpdateFixedAssetDto, 
-  DepreciationGroup 
+  DepreciationGroup,
+  DisposeAssetDto
 } from '../../core/services/fixed-assets.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
@@ -40,15 +41,20 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   // Form
   form!: FormGroup;
   editingAsset: FixedAsset | null = null;
+  showDisposeModal = signal(false);
+  disposeAsset: FixedAsset | null = null;
+  disposeForm!: FormGroup;
+  showDepreciationModal = signal(false);
+  depreciationForm!: FormGroup;
 
   // Computed
   selectedGroup = computed(() => {
-    const groupNumber = this.form?.get('group_number')?.value;
+    const groupNumber = this.form?.get('groupNumber')?.value;
     return this.catalog().find(g => g.group_number === groupNumber) ?? null;
   });
 
   totalAcquisitionValue = computed(() => 
-    this.assets().reduce((sum, asset) => sum + asset.acquisition_value, 0)
+    this.assets().reduce((sum, asset) => sum + asset.acquisitionValue, 0)
   );
 
   totalCurrentValue = computed(() => 
@@ -70,21 +76,40 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   buildForm() {
     this.form = this.fb.group({
-      asset_code: ['', Validators.required],
+      assetCode: ['', Validators.required],
       name: ['', Validators.required],
       description: [''],
-      group_number: [null, Validators.required],
+      groupNumber: [null, Validators.required],
       subgroup: ['', Validators.required],
-      subgroup_detail: [''],
-      acquisition_value: [null, [Validators.required, Validators.min(0.01)]],
-      acquisition_date: ['', Validators.required],
+      subgroupDetail: [''],
+      acquisitionValue: [null, [Validators.required, Validators.min(0.01)]],
+      acquisitionDate: ['', Validators.required],
       location: [''],
-      responsible_person: [''],
+      responsiblePerson: [''],
     });
 
-    this.form.get('group_number')?.valueChanges.subscribe(() => {
+    this.buildDisposeForm();
+    this.buildDepreciationForm();
+
+    this.form.get('groupNumber')?.valueChanges.subscribe(() => {
       this.form.patchValue({ subgroup: '' });
       this.updateFormControlsState();
+    });
+  }
+
+  buildDisposeForm() {
+    this.disposeForm = this.fb.group({
+      reason: ['', Validators.required],
+      disposalType: ['deterioro', Validators.required],
+      disposalDate: [''],
+    });
+  }
+
+  buildDepreciationForm() {
+    const currentDate = new Date();
+    this.depreciationForm = this.fb.group({
+      year: [currentDate.getFullYear(), Validators.required],
+      month: [currentDate.getMonth() + 1, [Validators.required, Validators.min(1), Validators.max(12)]],
     });
   }
 
@@ -93,10 +118,10 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     const isGroupSelected = !!this.selectedGroup();
 
     if (isEditing) {
-      this.form.get('group_number')?.disable();
+      this.form.get('groupNumber')?.disable();
       this.form.get('subgroup')?.disable();
     } else {
-      this.form.get('group_number')?.enable();
+      this.form.get('groupNumber')?.enable();
       if (isGroupSelected) {
         this.form.get('subgroup')?.enable();
       } else {
@@ -148,16 +173,16 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   openEdit(asset: FixedAsset) {
     this.editingAsset = asset;
     this.form.patchValue({
-      asset_code: asset.asset_code,
+      assetCode: asset.assetCode,
       name: asset.name,
       description: asset.description ?? '',
-      group_number: asset.group_number,
+      groupNumber: asset.groupNumber,
       subgroup: asset.subgroup,
-      subgroup_detail: asset.subgroup_detail ?? '',
-      acquisition_value: asset.acquisition_value,
-      acquisition_date: asset.acquisition_date.substring(0, 10),
+      subgroupDetail: asset.subgroupDetail ?? '',
+      acquisitionValue: asset.acquisitionValue,
+      acquisitionDate: asset.acquisitionDate.substring(0, 10),
       location: asset.location ?? '',
-      responsible_person: asset.responsible_person ?? '',
+      responsiblePerson: asset.responsiblePerson ?? '',
     });
     this.updateFormControlsState();
     this.showForm.set(true);
@@ -173,22 +198,22 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           name: this.form.value.name,
           description: this.form.value.description || undefined,
           location: this.form.value.location || undefined,
-          responsible_person: this.form.value.responsible_person || undefined,
+          responsiblePerson: this.form.value.responsiblePerson || undefined,
         };
         await this.fixedAssetsService.updateFixedAsset(this.editingAsset.id, dto).toPromise();
         this.showToast('Activo actualizado correctamente', 'success');
       } else {
         const dto: CreateFixedAssetDto = {
-          asset_code: this.form.value.asset_code,
+          assetCode: this.form.value.assetCode,
           name: this.form.value.name,
           description: this.form.value.description || undefined,
-          group_number: +this.form.value.group_number,
+          groupNumber: +this.form.value.groupNumber,
           subgroup: this.form.value.subgroup,
-          subgroup_detail: this.form.value.subgroup_detail || undefined,
-          acquisition_value: +this.form.value.acquisition_value,
-          acquisition_date: this.form.value.acquisition_date,
+          subgroupDetail: this.form.value.subgroupDetail || undefined,
+          acquisitionValue: +this.form.value.acquisitionValue,
+          acquisitionDate: this.form.value.acquisitionDate,
           location: this.form.value.location || undefined,
-          responsible_person: this.form.value.responsible_person || undefined,
+          responsiblePerson: this.form.value.responsiblePerson || undefined,
         };
         await this.fixedAssetsService.createFixedAsset(dto).toPromise();
         this.showToast('Activo creado correctamente', 'success');
@@ -217,6 +242,64 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       await this.loadAll();
     } catch (error) {
       this.showToast('Error al eliminar activo', 'error');
+    }
+  }
+
+  openDispose(asset: FixedAsset) {
+    this.disposeAsset = asset;
+    this.disposeForm.reset({
+      reason: '',
+      disposalType: 'deterioro',
+      disposalDate: new Date().toISOString().split('T')[0],
+    });
+    this.showDisposeModal.set(true);
+  }
+
+  async disposeSubmit() {
+    if (!this.disposeAsset || this.disposeForm.invalid) return;
+
+    this.isLoading.set(true);
+    try {
+      const dto: DisposeAssetDto = {
+        reason: this.disposeForm.value.reason,
+        disposalType: this.disposeForm.value.disposalType,
+        disposalDate: this.disposeForm.value.disposalDate,
+      };
+      await this.fixedAssetsService.disposeAsset(this.disposeAsset.id, dto).toPromise();
+      this.showToast('Activo dado de baja correctamente', 'success');
+      await this.loadAll();
+      this.showDisposeModal.set(false);
+      this.disposeAsset = null;
+    } catch (error) {
+      this.showToast('Error al dar de baja activo', 'error');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  openDepreciationModal() {
+    const currentDate = new Date();
+    this.depreciationForm.patchValue({
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+    });
+    this.showDepreciationModal.set(true);
+  }
+
+  async processDepreciationSubmit() {
+    if (this.depreciationForm.invalid) return;
+
+    this.isLoading.set(true);
+    try {
+      const { year, month } = this.depreciationForm.value;
+      await this.fixedAssetsService.processDepreciation(year, month).toPromise();
+      this.showToast(`Depreciación procesada para ${month}/${year}`, 'success');
+      await this.loadAll();
+      this.showDepreciationModal.set(false);
+    } catch (error) {
+      this.showToast('Error al procesar depreciación', 'error');
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
@@ -265,69 +348,40 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   }
 
   getDepreciationRate(asset: FixedAsset): string {
-    return `${asset.depreciation_rate}%`;
+    return `${asset.depreciationRate}%`;
   }
 
   getMonthlyDepreciation(asset: FixedAsset): string {
-    const monthlyDepreciation = (asset.acquisition_value * asset.depreciation_rate / 100) / 12;
+    const monthlyDepreciation = (asset.acquisitionValue * asset.depreciationRate / 100) / 12;
     return monthlyDepreciation.toFixed(2);
   }
 
   getCurrentBookValue(asset: FixedAsset): string {
-    return asset.current_value.toFixed(2);
+    return asset.currentValue.toFixed(2);
   }
 
   calculateCurrentValue(asset: FixedAsset): number {
-    const acquisitionDate = new Date(asset.acquisition_date);
-    const currentDate = new Date();
-    
-    if (currentDate <= acquisitionDate) {
-      return asset.acquisition_value;
-    }
-    
-    const monthsElapsed = this.getMonthsBetween(acquisitionDate, currentDate);
-    const monthlyDepreciation = (asset.acquisition_value * asset.depreciation_rate / 100) / 12;
-    const totalDepreciation = monthlyDepreciation * monthsElapsed;
-    
-    return Math.max(0, asset.acquisition_value - totalDepreciation);
-  }
-
-  private getMonthsBetween(startDate: Date, endDate: Date): number {
-    let years = endDate.getFullYear() - startDate.getFullYear();
-    let months = endDate.getMonth() - startDate.getMonth();
-    let days = endDate.getDate() - startDate.getDate();
-    
-    if (days < 0) {
-      months--;
-      const lastMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0);
-      days += lastMonth.getDate();
-    }
-    
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
-    
-    const totalMonths = years * 12 + months;
-    return Math.max(0, totalMonths);
+    return asset.currentValue;
   }
 
   getStatusLabel(status: string): string {
-    const map: Record<string, string> = { 
-      active: 'Activo', 
-      disposed: 'Dado de baja', 
-      transferred: 'Transferido' 
+    const labels: Record<string, string> = {
+      active: 'Activo',
+      disposed: 'Dado de baja',
+      transferred: 'Transferido',
+      'fully_depreciated': 'Completamente depreciado',
     };
-    return map[status] ?? status;
+    return labels[status] || status;
   }
 
   getStatusClass(status: string): string {
-    const map: Record<string, string> = {
+    const classes: Record<string, string> = {
       active: 'bg-green-100 text-green-800',
       disposed: 'bg-red-100 text-red-800',
-      transferred: 'bg-yellow-100 text-yellow-800',
+      transferred: 'bg-blue-100 text-blue-800',
+      'fully_depreciated': 'bg-amber-100 text-amber-800',
     };
-    return map[status] ?? 'bg-gray-100 text-gray-800';
+    return classes[status] || 'bg-slate-100 text-slate-800';
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info'): void {

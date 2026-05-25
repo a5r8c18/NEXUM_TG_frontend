@@ -115,9 +115,9 @@ export class SidebarComponent {
         { icon: 'BookOpen', label: 'Ejercicio Económico', route: '/accounting/fiscal-years' }
       ]
     },
-    { 
-      icon: 'DollarSign', 
-      label: 'Finanzas', 
+    {
+      icon: 'DollarSign',
+      label: 'Finanzas',
       route: '/finance',
       hasSubmenu: true,
       isExpanded: false,
@@ -125,7 +125,8 @@ export class SidebarComponent {
         { icon: 'TrendingUp', label: 'Cuentas por Cobrar', route: '/finance/receivables' },
         { icon: 'TrendingDown', label: 'Cuentas por Pagar', route: '/finance/payables' },
         { icon: 'CreditCard', label: 'Cuentas Bancarias', route: '/finance/banks' },
-        { icon: 'Banknote', label: 'Cobros y Pagos', route: '/finance/payments' }
+        { icon: 'Banknote', label: 'Caja (Efectivo)', route: '/finance/cash' },
+        { icon: 'DollarSign', label: 'Cobros y Pagos', route: '/finance/payments' }
       ]
     },
     { 

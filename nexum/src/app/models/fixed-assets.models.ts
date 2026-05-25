@@ -11,46 +11,53 @@ export interface DepreciationGroup {
 
 export interface FixedAsset {
   id: string;
-  asset_code: string;
+  assetCode: string;
   name: string;
   description?: string;
-  group_number: number;
+  groupNumber: number;
   subgroup: string;
-  subgroup_detail?: string;
-  acquisition_value: number;
-  acquisition_date: string;
+  subgroupDetail?: string;
+  acquisitionValue: number;
+  acquisitionDate: string;
   location?: string;
-  responsible_person?: string;
-  depreciation_rate: number;
-  current_value: number;
+  responsiblePerson?: string;
+  depreciationRate: number;
+  currentValue: number;
   status: 'active' | 'disposed' | 'transferred';
   created_at: string;
   updated_at: string;
+  companyId?: number;
 }
 
 export interface CreateFixedAssetDto {
-  asset_code: string;
+  assetCode: string;
   name: string;
   description?: string;
-  group_number: number;
+  groupNumber: number;
   subgroup: string;
-  subgroup_detail?: string;
-  acquisition_value: number;
-  acquisition_date: string;
+  subgroupDetail?: string;
+  acquisitionValue: number;
+  acquisitionDate: string;
   location?: string;
-  responsible_person?: string;
+  responsiblePerson?: string;
 }
 
 export interface UpdateFixedAssetDto {
   name?: string;
   description?: string;
   location?: string;
-  responsible_person?: string;
+  responsiblePerson?: string;
   status?: 'active' | 'disposed' | 'transferred';
 }
 
 export interface FixedAssetFilters {
   status?: string;
-  group_number?: number;
+  groupNumber?: number;
   search?: string;
+}
+
+export interface DisposeAssetDto {
+  reason: string;
+  disposalType: 'deterioro' | 'obsolescencia' | 'rotura' | 'faltante' | 'venta' | 'donacion';
+  disposalDate?: string;
 }

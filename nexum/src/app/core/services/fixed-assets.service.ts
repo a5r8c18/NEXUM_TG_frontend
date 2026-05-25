@@ -8,7 +8,8 @@ import {
   CreateFixedAssetDto, 
   UpdateFixedAssetDto, 
   DepreciationGroup,
-  FixedAssetFilters 
+  FixedAssetFilters,
+  DisposeAssetDto
 } from '../../models/fixed-assets.models';
 
 @Injectable({
@@ -23,7 +24,7 @@ export class FixedAssetsService {
     let params = new URLSearchParams();
     if (filters) {
       if (filters.status) params.set('status', filters.status);
-      if (filters.group_number) params.set('group_number', filters.group_number.toString());
+      if (filters.groupNumber) params.set('group_number', filters.groupNumber.toString());
       if (filters.search) params.set('search', filters.search);
     }
     const url = params.toString() ? `${this.apiUrl}?${params}` : this.apiUrl;
@@ -50,6 +51,14 @@ export class FixedAssetsService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
+  disposeAsset(id: string, data: DisposeAssetDto): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/dispose`, data);
+  }
+
+  processDepreciation(year: number, month: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/depreciation/process`, { year, month });
+  }
+
   getDepreciationCatalog(): Observable<DepreciationGroup[]> {
     return this.http.get<{ catalog: DepreciationGroup[] }>(`${this.apiUrl}/depreciation-catalog`)
       .pipe(map(response => response.catalog || []));
@@ -68,4 +77,4 @@ export class FixedAssetsService {
   }
 }
 
-export type { FixedAsset, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters };
+export type { FixedAsset, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters, DisposeAssetDto };

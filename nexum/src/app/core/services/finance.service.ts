@@ -102,4 +102,53 @@ export class FinanceService {
   createPayment(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/finance/payments`, data);
   }
+
+  // ── Caja (Efectivo - Cuenta 101) ──
+  getCashRegisters(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/cash-registers`);
+  }
+
+  getCashStats(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/cash-registers/statistics`);
+  }
+
+  getCashRegister(id: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/cash-registers/${id}`);
+  }
+
+  createCashRegister(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-registers`, data);
+  }
+
+  updateCashRegister(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/finance/cash-registers/${id}`, data);
+  }
+
+  openCashRegister(id: string, openingBalance?: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-registers/${id}/open`, { openingBalance });
+  }
+
+  closeCashRegister(id: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-registers/${id}/close`, {});
+  }
+
+  performCashAudit(id: string, physicalBalance: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-registers/${id}/audit`, { physicalBalance });
+  }
+
+  depositToBank(id: string, bankAccountId: string, amount: number, description?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-registers/${id}/deposit-to-bank`, {
+      bankAccountId,
+      amount,
+      description,
+    });
+  }
+
+  getCashMovements(cashRegisterId: string, filters?: any): Observable<any> {
+    let params = new HttpParams();
+    if (filters?.fromDate) params = params.set('fromDate', filters.fromDate);
+    if (filters?.toDate) params = params.set('toDate', filters.toDate);
+    if (filters?.movementType) params = params.set('movementType', filters.movementType);
+    return this.http.get(`${this.apiUrl}/finance/cash-registers/${cashRegisterId}/movements`, { params });
+  }
 }

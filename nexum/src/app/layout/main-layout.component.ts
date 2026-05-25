@@ -11,6 +11,7 @@ import { NetworkStatusComponent } from '../shared/components/network-status/netw
 import { SyncStatusComponent } from '../shared/components/sync-status/sync-status.component';
 import { ThemeService } from '../core/services/theme.service';
 import { OfflineSyncManagerService } from '../core/offline/offline-sync-manager.service';
+import { IdleTimeoutService } from '../core/services/idle-timeout.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -23,6 +24,7 @@ export class MainLayoutComponent implements OnInit {
   private authService = inject(AuthService);
   private syncManager = inject(OfflineSyncManagerService);
   private themeService = inject(ThemeService);
+  idleTimeout = inject(IdleTimeoutService);
   
   sidebarCollapsed = this.sidebarService.isCollapsed;
   
@@ -30,5 +32,6 @@ export class MainLayoutComponent implements OnInit {
 
   ngOnInit(): void {
     this.syncManager.initialize();
+    this.idleTimeout.initialize();
   }
 }

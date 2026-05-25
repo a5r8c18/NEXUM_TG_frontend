@@ -30,6 +30,11 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/setup-password/setup-password.component').then(m => m.SetupPasswordComponent)
   },
   {
+    path: 'mfa-setup',
+    loadComponent: () => import('./auth/mfa-setup/mfa-setup.component').then(m => m.MfaSetupComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'company-selection',
     loadComponent: () => import('./shared/components/context-selector/company-selector/company-selector.component').then(m => m.CompanySelectorComponent),
     canActivate: [authGuard]
@@ -117,6 +122,10 @@ export const routes: Routes = [
       {
         path: 'finance/banks',
         loadComponent: () => import('./modules/finance/banks/banks.component').then(m => m.BanksComponent)
+      },
+      {
+        path: 'finance/cash',
+        loadComponent: () => import('./modules/finance/cash/cash.component').then(m => m.CashComponent)
       },
       {
         path: 'finance/payments',
