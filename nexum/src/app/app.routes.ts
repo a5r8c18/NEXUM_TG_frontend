@@ -131,6 +131,10 @@ export const routes: Routes = [
         path: 'finance/payments',
         loadComponent: () => import('./modules/finance/payments/payments.component').then(m => m.PaymentsComponent)
       },
+      {
+        path: 'finance/bank-reconciliation',
+        loadComponent: () => import('./modules/finance/bank-reconciliation/bank-reconciliation.component').then(m => m.BankReconciliationComponent)
+      },
       // Billing Module
       {
         path: 'billing/invoices',
@@ -165,6 +169,10 @@ export const routes: Routes = [
       {
         path: 'accounting/fiscal-years',
         loadComponent: () => import('./modules/accounting/submodules/fiscal-years/fiscal-years.component').then(m => m.FiscalYearsComponent)
+      },
+      {
+        path: 'accounting/budget',
+        loadComponent: () => import('./modules/accounting/submodules/budget/budget.component').then(m => m.BudgetComponent)
       },
       // HR Module
       {
