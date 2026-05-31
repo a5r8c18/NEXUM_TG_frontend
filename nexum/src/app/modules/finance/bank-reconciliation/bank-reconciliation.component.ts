@@ -8,131 +8,7 @@ import { FinanceService } from '../../../core/services/finance.service';
   selector: 'app-bank-reconciliation',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold dark:text-white">Conciliación Bancaria</h1>
-        <div class="flex gap-3">
-          <select [(ngModel)]="bankFilter" (ngModelChange)="loadReconciliations()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-            <option value="">Todas las cuentas</option>
-            @for (account of bankAccounts(); track account.id) {
-              <option [value]="account.id">{{ account.accountNumber }} - {{ account.bankName }}</option>
-            }
-          </select>
-          <button (click)="showCreate.set(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">+ Nueva Conciliación</button>
-        </div>
-      </div>
-
-      @if (isLoading()) {
-        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-      } @else {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Fecha</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Cuenta</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Saldo Extracto</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Saldo Libro</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Diferencia</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (rec of reconciliations(); track rec.id) {
-                <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td class="px-4 py-3 dark:text-slate-300">{{ formatDate(rec.reconciliationDate) }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ rec.bankAccount?.accountNumber || '-' }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300 font-mono">${{ formatNumber(rec.statementBalance) }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300 font-mono">${{ formatNumber(rec.bookBalance) }}</td>
-                  <td class="px-4 py-3 text-right font-mono" [class]="rec.difference === 0 ? 'text-green-600' : 'text-red-600'">${{ formatNumber(rec.difference) }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <span [class]="getStatusClass(rec.status)" class="px-2 py-1 rounded-full text-xs font-medium">
-                      {{ getStatusLabel(rec.status) }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-center">
-                    <div class="flex justify-center gap-2">
-                      @if (rec.status === 'draft') {
-                        <button (click)="completeReconciliation(rec.id)" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" title="Completar">✓</button>
-                      }
-                    </div>
-                  </td>
-                </tr>
-              }
-              @if (reconciliations().length === 0) {
-                <tr>
-                  <td colspan="7" class="px-4 py-8 text-center text-slate-500">No hay conciliaciones registradas</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-
-      @if (showCreate()) {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="showCreate.set(false)">
-          <div class="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-lg" (click)="$event.stopPropagation()">
-            <h2 class="text-xl font-bold mb-4 dark:text-white">Nueva Conciliación</h2>
-            <form (ngSubmit)="createReconciliation()">
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta Bancaria</label>
-                  <select [(ngModel)]="newRec.bankAccountId" required class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                    <option value="">Seleccionar cuenta</option>
-                    @for (account of bankAccounts(); track account.id) {
-                      <option [value]="account.id">{{ account.accountNumber }} - {{ account.bankName }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha de Conciliación</label>
-                  <input [(ngModel)]="newRec.reconciliationDate" type="date" required class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo del Extracto</label>
-                  <input [(ngModel)]="newRec.statementBalance" type="number" step="0.01" required class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo del Libro</label>
-                  <input [(ngModel)]="newRec.bookBalance" type="number" step="0.01" required class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Depósitos en Tránsito</label>
-                    <input [(ngModel)]="newRec.depositsInTransit" type="number" step="0.01" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cheques Pendientes</label>
-                    <input [(ngModel)]="newRec.outstandingChecks" type="number" step="0.01" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                  </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cargos Bancarios</label>
-                    <input [(ngModel)]="newRec.bankCharges" type="number" step="0.01" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Intereses Ganados</label>
-                    <input [(ngModel)]="newRec.interestEarned" type="number" step="0.01" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white">
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notas</label>
-                  <textarea [(ngModel)]="newRec.notes" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white"></textarea>
-                </div>
-              </div>
-              <div class="flex justify-end gap-3 mt-6">
-                <button type="button" (click)="showCreate.set(false)" class="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Crear</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
-    </div>
-  `,
+  templateUrl: './bank-reconciliation.component.html',
 })
 export class BankReconciliationComponent implements OnInit {
   private bankReconciliationService = inject(BankReconciliationService);
@@ -141,10 +17,10 @@ export class BankReconciliationComponent implements OnInit {
   reconciliations = signal<BankReconciliation[]>([]);
   bankAccounts = signal<any[]>([]);
   isLoading = signal(false);
-  bankFilter = signal('');
+  bankFilter = '';
   showCreate = signal(false);
 
-  newRec = signal<Partial<BankReconciliation>>({
+  newRec: Partial<BankReconciliation> = {
     reconciliationDate: new Date().toISOString().split('T')[0],
     statementBalance: 0,
     bookBalance: 0,
@@ -153,7 +29,7 @@ export class BankReconciliationComponent implements OnInit {
     bankCharges: 0,
     interestEarned: 0,
     status: 'draft',
-  });
+  };
 
   ngOnInit() {
     this.loadBankAccounts();
@@ -168,7 +44,7 @@ export class BankReconciliationComponent implements OnInit {
 
   loadReconciliations() {
     this.isLoading.set(true);
-    this.bankReconciliationService.findAll(this.bankFilter() || undefined).subscribe({
+    this.bankReconciliationService.findAll(this.bankFilter || undefined).subscribe({
       next: (data) => {
         this.reconciliations.set(data);
         this.isLoading.set(false);
@@ -178,10 +54,10 @@ export class BankReconciliationComponent implements OnInit {
   }
 
   createReconciliation() {
-    this.bankReconciliationService.create(this.newRec()).subscribe({
+    this.bankReconciliationService.create(this.newRec).subscribe({
       next: () => {
         this.showCreate.set(false);
-        this.newRec.set({
+        this.newRec = {
           reconciliationDate: new Date().toISOString().split('T')[0],
           statementBalance: 0,
           bookBalance: 0,
@@ -190,7 +66,7 @@ export class BankReconciliationComponent implements OnInit {
           bankCharges: 0,
           interestEarned: 0,
           status: 'draft',
-        });
+        };
         this.loadReconciliations();
       },
     });

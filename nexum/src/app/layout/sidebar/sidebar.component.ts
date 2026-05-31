@@ -112,7 +112,8 @@ export class SidebarComponent {
         { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
         { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
         { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' },
-        { icon: 'BookOpen', label: 'Ejercicio Económico', route: '/accounting/fiscal-years' }
+        { icon: 'BookOpen', label: 'Ejercicio Económico', route: '/accounting/fiscal-years' },
+        { icon: 'BarChart3', label: 'Presupuesto', route: '/accounting/budget' }
       ]
     },
     {
@@ -126,7 +127,8 @@ export class SidebarComponent {
         { icon: 'TrendingDown', label: 'Cuentas por Pagar', route: '/finance/payables' },
         { icon: 'CreditCard', label: 'Cuentas Bancarias', route: '/finance/banks' },
         { icon: 'Banknote', label: 'Caja (Efectivo)', route: '/finance/cash' },
-        { icon: 'DollarSign', label: 'Cobros y Pagos', route: '/finance/payments' }
+        { icon: 'DollarSign', label: 'Cobros y Pagos', route: '/finance/payments' },
+        { icon: 'Database', label: 'Conciliación Bancaria', route: '/finance/bank-reconciliation' }
       ]
     },
     { 
@@ -149,6 +151,7 @@ export class SidebarComponent {
       submenu: [
         { icon: 'Database', label: 'Catálogo', route: '/inventory/catalog' },
         { icon: 'ArrowRightLeft', label: 'Movimientos', route: '/inventory/movements' },
+        { icon: 'ShoppingCart', label: 'Órdenes de Compra', route: '/inventory/purchase-orders' },
         { icon: 'FileText', label: 'Reportes', route: '/inventory/reports' },
         { icon: 'Search', label: 'Conteo Físico', route: '/inventory/physical-count' },
         { icon: 'BarChart3', label: 'Analítica', route: '/inventory/analytics' },

@@ -106,6 +106,10 @@ export const routes: Routes = [
         path: 'inventory/movements',
         loadComponent: () => import('./modules/inventory/submodules/movements/movements-list.component').then(m => m.MovementsListComponent)
       },
+      {
+        path: 'inventory/purchase-orders',
+        loadComponent: () => import('./modules/inventory/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
+      },
       // Finance Module
       {
         path: 'finance',
