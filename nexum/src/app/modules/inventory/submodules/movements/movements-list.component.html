@@ -32,8 +32,22 @@
     </div>
     <div class="flex items-center gap-3">
       <app-export-component [exportData]="exportData" (exportComplete)="onExportComplete($event)" />
+      <button (click)="openTransferWizard()"
+              class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 shadow-sm shadow-blue-200 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        Transferencia
+      </button>
+      <button (click)="openExitWizard()"
+              class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white text-sm font-medium rounded-lg hover:from-red-700 hover:to-rose-700 shadow-sm shadow-red-200 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+        </svg>
+        Nueva Salida
+      </button>
       <button (click)="openEntryWizard()"
-              class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-sm shadow-green-200 transition-all">
+              class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-sm shadow-green-200 transition-all">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -191,31 +205,14 @@
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap">
                   <div class="flex items-center justify-center gap-1">
-                    @if (m.product && (m.product.stock > 0 || isEntry(m))) {
+                    @if (m.product && m.product.stock > 0 && isEntry(m)) {
                       <button (click)="openExit(m)"
-                              title="Registrar salida"
+                              title="Salida rápida"
                               class="p-1.5 bg-red-50 text-red-700 rounded-lg border border-red-200 hover:bg-red-100 transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
                         </svg>
                       </button>
-                      <button (click)="openTransfer(m)"
-                              title="Transferir a otro almacén"
-                              class="p-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                        </svg>
-                      </button>
-                      @if (m.purchaseId) {
-                        <button (click)="openReturnConfirm(m)"
-                                title="Registrar devolución"
-                                class="p-1.5 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200 hover:bg-yellow-100 transition-colors">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                          </svg>
-                        </button>
-                      }
                     }
                   </div>
                 </td>
@@ -261,7 +258,16 @@
   (submitPurchase)="onPurchaseSubmit($event)">
 </app-entry-wizard>
 
-<!-- Exit Form -->
+<!-- Exit Wizard (multi-product) -->
+<app-exit-wizard
+  [isOpen]="isExitWizardOpen()"
+  [exitTypes]="exitTypes()"
+  [warehouses]="warehouses"
+  (closeEvent)="closeExitWizard()"
+  (submitExit)="onExitWizardSubmit($event)">
+</app-exit-wizard>
+
+<!-- Exit Form (single product) -->
 <app-exit-form
   [isOpen]="isExitFormOpen()"
   [exitTypes]="exitTypes()"
@@ -270,7 +276,15 @@
   (submitExit)="onExitSubmit($event)">
 </app-exit-form>
 
-<!-- Transfer Form -->
+<!-- Transfer Wizard (multi-product) -->
+<app-transfer-wizard
+  [isOpen]="isTransferWizardOpen()"
+  [warehouses]="warehouses"
+  (closeEvent)="closeTransferWizard()"
+  (submitTransfer)="onTransferWizardSubmit($event)">
+</app-transfer-wizard>
+
+<!-- Transfer Form (single product - legacy) -->
 <app-transfer-form
   [isOpen]="isTransferFormOpen()"
   [selectedMovement]="selectedForTransfer"

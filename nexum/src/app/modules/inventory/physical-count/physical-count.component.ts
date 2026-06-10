@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PhysicalCountService } from '../../../core/services/physical-count.service';
+import { WarehouseService } from '../../../core/services/warehouse.service';
 
 @Component({
   selector: 'app-physical-count',
@@ -25,8 +26,9 @@ import { PhysicalCountService } from '../../../core/services/physical-count.serv
         </select>
         <select [(ngModel)]="warehouseFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
           <option value="">Todos los almacenes</option>
-          <option value="1">Almacén 1</option>
-          <option value="2">Almacén 2</option>
+          @for (wh of warehouses(); track wh.id) {
+            <option [value]="wh.id">{{ wh.name }}</option>
+          }
         </select>
         <input type="date" [(ngModel)]="fromDate" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm" />
         <input type="date" [(ngModel)]="toDate" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm" />
@@ -86,7 +88,9 @@ import { PhysicalCountService } from '../../../core/services/physical-count.serv
 })
 export class PhysicalCountComponent implements OnInit {
   private physicalCountService = inject(PhysicalCountService);
+  private warehouseService = inject(WarehouseService);
   items = signal<any[]>([]);
+  warehouses = signal<any[]>([]);
   isLoading = signal(false);
   showCreate = signal(false);
   statusFilter = '';
@@ -94,7 +98,17 @@ export class PhysicalCountComponent implements OnInit {
   fromDate = '';
   toDate = '';
 
-  ngOnInit() { this.loadData(); }
+  ngOnInit() {
+    this.loadWarehouses();
+    this.loadData();
+  }
+
+  loadWarehouses() {
+    this.warehouseService.getWarehouses().subscribe({
+      next: (data) => this.warehouses.set(data),
+      error: () => this.warehouses.set([]),
+    });
+  }
 
   loadData() {
     this.isLoading.set(true);

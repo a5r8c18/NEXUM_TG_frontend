@@ -399,7 +399,14 @@ export class OfflineFirstService {
   createPurchase(data: any): Observable<any> {
     if (this.network.isOnline()) {
       return this.purchasesService.createPurchase(data, this.companyId).pipe(
-        catchError(() => from(this.createPurchaseOffline(data)))
+        catchError((err) => {
+          // Solo guardar offline si es error de red real (no conexión o timeout)
+          if (err.status === 0 || err.status === 504 || err.status === 503) {
+            return from(this.createPurchaseOffline(data));
+          }
+          // Para 401, 404, 500, etc. propagar el error para que el usuario lo vea
+          throw err;
+        })
       );
     }
     return from(this.createPurchaseOffline(data));

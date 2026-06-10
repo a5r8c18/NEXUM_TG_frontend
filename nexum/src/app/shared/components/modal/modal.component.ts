@@ -19,7 +19,7 @@ import { CommonModule } from '@angular/common';
       <!-- Panel -->
       <div
         [ngClass]="maxWidthClass"
-        class="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full mx-4 p-6 animate-in fade-in zoom-in-95 duration-200"
+        class="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full mx-4 p-6 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
       >
         <!-- Header -->
         <div class="flex items-center gap-3 mb-5">
@@ -40,12 +40,14 @@ import { CommonModule } from '@angular/common';
         </div>
 
         <!-- Content -->
-        <div class="mb-6">
+        <div class="mb-6 overflow-y-auto flex-1 min-h-0">
           <ng-content></ng-content>
         </div>
 
         <!-- Actions -->
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <ng-content select="[modal-actions]"></ng-content>
+          <div class="flex-1"></div>
           <button
             (click)="onClose()"
             class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"

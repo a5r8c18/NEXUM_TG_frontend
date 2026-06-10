@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductsService } from '../../../core/services/products.service';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-catalog',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
   template: `
     <div class="p-6">
       <div class="flex items-center justify-between mb-6">
@@ -20,7 +21,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
         <select [(ngModel)]="categoryFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
           <option value="">Todas las categorías</option>
           <option value="insumo">Insumo</option>
-          <option value="mercaduria">Mercancía</option>
+          <option value="mercancia">Mercancía</option>
           <option value="produccion">Producción</option>
         </select>
         <select [(ngModel)]="activeFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
@@ -75,6 +76,41 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
         <app-pagination [config]="paginationConfig()" (pageChange)="currentPage.set($event)"></app-pagination>
       }
     </div>
+
+    <!-- Modal: Crear Producto -->
+    <app-modal
+      [isOpen]="showCreate()"
+      title="Nuevo Producto"
+      confirmText="Guardar"
+      iconEmoji="📦"
+      iconBgClass="bg-blue-50"
+      confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+      maxWidthClass="max-w-lg"
+      (closeEvent)="closeCreate()"
+      (confirmEvent)="saveProduct()">
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Código <span class="text-red-500">*</span></label>
+            <input type="text" [(ngModel)]="newProduct.productCode" placeholder="PROD-001"
+                   class="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Nombre <span class="text-red-500">*</span></label>
+            <input type="text" [(ngModel)]="newProduct.productName" placeholder="Nombre del producto"
+                   class="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+          </div>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Descripción</label>
+          <textarea [(ngModel)]="newProduct.productDescription" rows="2" placeholder="Descripción del producto..."
+                    class="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"></textarea>
+        </div>
+        @if (createError()) {
+          <p class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ createError() }}</p>
+        }
+      </div>
+    </app-modal>
   `
 })
 export class CatalogComponent implements OnInit {
@@ -82,11 +118,18 @@ export class CatalogComponent implements OnInit {
   products = signal<any[]>([]);
   isLoading = signal(false);
   showCreate = signal(false);
+  createError = signal('');
   searchTerm = '';
   categoryFilter = '';
   activeFilter = '';
   currentPage = signal(1);
   pageSize = 20;
+
+  newProduct = {
+    productCode: '',
+    productName: '',
+    productDescription: '',
+  };
 
   filteredProducts = computed(() => {
     let filtered = this.products();
@@ -138,14 +181,39 @@ export class CatalogComponent implements OnInit {
   getCategoryClass(category: string): string {
     const map: Record<string, string> = {
       insumo: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      mercaduria: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      mercancia: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
       produccion: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
     };
     return map[category] || 'bg-slate-100 text-slate-800';
   }
 
   getCategoryLabel(category: string): string {
-    const map: Record<string, string> = { insumo: 'Insumo', mercaduria: 'Mercancía', produccion: 'Producción' };
+    const map: Record<string, string> = { insumo: 'Insumo', mercancia: 'Mercancía', produccion: 'Producción' };
     return map[category] || category;
+  }
+
+  closeCreate(): void {
+    this.showCreate.set(false);
+    this.createError.set('');
+    this.newProduct = {
+      productCode: '', productName: '', productDescription: '',
+    };
+  }
+
+  saveProduct(): void {
+    if (!this.newProduct.productCode.trim() || !this.newProduct.productName.trim()) {
+      this.createError.set('Código y nombre son obligatorios');
+      return;
+    }
+    this.createError.set('');
+    this.productsService.create(this.newProduct).subscribe({
+      next: () => {
+        this.closeCreate();
+        this.loadData();
+      },
+      error: (err) => {
+        this.createError.set(err?.error?.message || 'Error al crear producto');
+      }
+    });
   }
 }

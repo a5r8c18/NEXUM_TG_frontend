@@ -1,9 +1,10 @@
-import { Component, signal, inject, Output, EventEmitter, Input } from '@angular/core';
+import { Component, signal, inject, Output, EventEmitter, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
 import { MovementTypeOption, InventoryCategory, DirectEntryDto } from '../../../../../../models/inventory.models';
 import { CreatePurchasePayload } from '../../../../../../models/purchase.models';
+import { ProductsService } from '../../../../../../core/services/products.service';
 
 export type EntryStep = 'select-type' | 'simple-form' | 'purchase-form';
 
@@ -31,8 +32,9 @@ const EXPENSE_ELEMENTS = [
   imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
   templateUrl: './entry-wizard.component.html',
 })
-export class EntryWizardComponent {
+export class EntryWizardComponent implements OnInit, OnChanges {
   private fb = inject(FormBuilder);
+  private productsService = inject(ProductsService);
 
   @Input() isOpen = false;
   @Input() entryTypes: MovementTypeOption[] = [];
@@ -43,6 +45,68 @@ export class EntryWizardComponent {
 
   step = signal<EntryStep>('select-type');
   selectedType = signal<MovementTypeOption | null>(null);
+
+  // --- Product autocomplete (simple form) ---
+  allProducts: any[] = [];
+  filteredProducts: any[] = [];
+  showProductDropdown = false;
+  productSearchTerm = '';
+
+  // --- Product autocomplete (purchase form) ---
+  purchaseFilteredProducts: any[] = [];
+  purchaseDropdownRow: number = -1;
+  purchaseDropdownField: 'code' | 'description' | null = null;
+
+  // --- Warehouse autocomplete ---
+  warehouseSearchTerm = '';
+  filteredWarehouses: { id: string; name: string }[] = [];
+  showWarehouseDropdown = false;
+
+  ngOnInit(): void {
+    this.loadProducts();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && changes['isOpen'].currentValue === true) {
+      this.loadProducts();
+    }
+  }
+
+  private loadProducts(): void {
+    this.productsService.getAll({ isActive: true }).subscribe({
+      next: (data) => { this.allProducts = data.items || data; },
+      error: () => { this.allProducts = []; }
+    });
+  }
+
+  onProductSearch(term: string): void {
+    this.productSearchTerm = term;
+    if (!term || term.length < 1) {
+      this.filteredProducts = [];
+      this.showProductDropdown = false;
+      return;
+    }
+    const lower = term.toLowerCase();
+    this.filteredProducts = this.allProducts.filter(p =>
+      p.productName.toLowerCase().includes(lower) ||
+      p.productCode.toLowerCase().includes(lower)
+    ).slice(0, 10);
+    this.showProductDropdown = this.filteredProducts.length > 0;
+  }
+
+  selectProduct(product: any): void {
+    this.directEntry.productCode = product.productCode;
+    this.directEntry.productName = product.productName;
+    this.directEntry.productDescription = product.productDescription || '';
+    this.directEntry.unit = product.productUnit || '';
+    this.directEntry.unitPrice = product.unitPrice || product.defaultUnitPrice || 0;
+    this.productSearchTerm = product.productName;
+    this.showProductDropdown = false;
+  }
+
+  hideProductDropdown(): void {
+    setTimeout(() => { this.showProductDropdown = false; }, 200);
+  }
 
   // --- Simple entry form ---
   directEntry: DirectEntryDto = {
@@ -160,6 +224,9 @@ export class EntryWizardComponent {
       category: type.category,
       expenseElement: ''
     };
+    this.productSearchTerm = '';
+    this.filteredProducts = [];
+    this.showProductDropdown = false;
   }
 
   private confirmSimpleEntry(): void {
@@ -192,6 +259,78 @@ export class EntryWizardComponent {
     });
     this.subscribeToProductChanges(group);
     this.products.push(group);
+  }
+
+  // --- Purchase autocomplete methods ---
+  onPurchaseCodeSearch(term: string, rowIndex: number): void {
+    if (!term || term.length < 1) {
+      this.closePurchaseDropdown();
+      return;
+    }
+    const lower = term.toLowerCase();
+    this.purchaseFilteredProducts = this.allProducts.filter(p =>
+      p.productCode.toLowerCase().includes(lower)
+    ).slice(0, 8);
+    this.purchaseDropdownRow = rowIndex;
+    this.purchaseDropdownField = 'code';
+  }
+
+  onPurchaseDescSearch(term: string, rowIndex: number): void {
+    if (!term || term.length < 1) {
+      this.closePurchaseDropdown();
+      return;
+    }
+    const lower = term.toLowerCase();
+    this.purchaseFilteredProducts = this.allProducts.filter(p =>
+      p.productName.toLowerCase().includes(lower)
+    ).slice(0, 8);
+    this.purchaseDropdownRow = rowIndex;
+    this.purchaseDropdownField = 'description';
+  }
+
+  selectPurchaseProduct(product: any, rowIndex: number): void {
+    const group = this.products.at(rowIndex);
+    group.get('code')?.setValue(product.productCode);
+    group.get('description')?.setValue(product.productName);
+    if (product.productUnit) {
+      group.get('unit')?.setValue(product.productUnit);
+    }
+    this.closePurchaseDropdown();
+  }
+
+  closePurchaseDropdown(): void {
+    this.purchaseFilteredProducts = [];
+    this.purchaseDropdownRow = -1;
+    this.purchaseDropdownField = null;
+  }
+
+  hidePurchaseDropdown(): void {
+    setTimeout(() => this.closePurchaseDropdown(), 200);
+  }
+
+  // --- Warehouse autocomplete methods ---
+  onWarehouseSearch(term: string): void {
+    this.warehouseSearchTerm = term;
+    if (!term || term.length < 1) {
+      this.filteredWarehouses = this.warehouses;
+      this.showWarehouseDropdown = this.warehouses.length > 0;
+      return;
+    }
+    const lower = term.toLowerCase();
+    this.filteredWarehouses = this.warehouses.filter(wh =>
+      wh.name.toLowerCase().includes(lower)
+    );
+    this.showWarehouseDropdown = this.filteredWarehouses.length > 0;
+  }
+
+  selectWarehouse(wh: { id: string; name: string }): void {
+    this.warehouseSearchTerm = wh.name;
+    this.purchaseForm.get('warehouse')?.setValue(wh.id);
+    this.showWarehouseDropdown = false;
+  }
+
+  hideWarehouseDropdown(): void {
+    setTimeout(() => { this.showWarehouseDropdown = false; }, 200);
   }
 
   removeProduct(index: number): void {
@@ -279,6 +418,12 @@ export class EntryWizardComponent {
     this.selectedType.set(null);
     this.purchaseForm.reset();
     this.products.clear();
+    this.productSearchTerm = '';
+    this.filteredProducts = [];
+    this.showProductDropdown = false;
+    this.warehouseSearchTerm = '';
+    this.filteredWarehouses = [];
+    this.showWarehouseDropdown = false;
   }
 
   // --- Category helpers ---

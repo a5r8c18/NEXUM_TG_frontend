@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MovementsService } from '../../../../core/services/movements.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
+import { WarehouseService } from '../../../../core/services/warehouse.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -13,7 +14,9 @@ import { CreatePurchasePayload } from '../../../../models/purchase.models';
 import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 import { EntryWizardComponent } from './components/entry-wizard/entry-wizard.component';
 import { ExitFormComponent } from './components/exit-form/exit-form.component';
+import { ExitWizardComponent } from './components/exit-wizard/exit-wizard.component';
 import { TransferFormComponent } from './components/transfer-form/transfer-form.component';
+import { TransferWizardComponent } from './components/transfer-wizard/transfer-wizard.component';
 import { ExportComponentComponent, ExportData } from '../../../../shared/components/export/export-component.component';
 
 @Component({
@@ -21,13 +24,14 @@ import { ExportComponentComponent, ExportData } from '../../../../shared/compone
   standalone: true,
   imports: [
     CommonModule, FormsModule, PaginationComponent, ModalComponent,
-    EntryWizardComponent, ExitFormComponent, TransferFormComponent, ExportComponentComponent
+    EntryWizardComponent, ExitFormComponent, ExitWizardComponent, TransferFormComponent, TransferWizardComponent, ExportComponentComponent
   ],
   templateUrl: './movements-list.component.html',
 })
 export class MovementsListComponent implements OnInit, OnDestroy {
   private movementsService = inject(MovementsService);
   private inventoryService = inject(InventoryService);
+  private warehouseService = inject(WarehouseService);
   private notificationService = inject(NotificationService);
   private offlineFirst = inject(OfflineFirstService);
   private route = inject(ActivatedRoute);
@@ -52,7 +56,9 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   // --- Sub-component state ---
   isEntryWizardOpen = signal(false);
+  isExitWizardOpen = signal(false);
   isExitFormOpen = signal(false);
+  isTransferWizardOpen = signal(false);
   isTransferFormOpen = signal(false);
   selectedForExit: MovementItem | null = null;
   selectedForTransfer: MovementItem | null = null;
@@ -104,15 +110,13 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   }
 
   loadWarehouses(): void {
-    this.offlineFirst.getInventory().subscribe(data => {
-      const uniqueWarehouses = [...new Map(data.map(item => [
-        item.warehouseId || item.warehouse || 'default',
-        {
-          id: item.warehouseId || item.warehouse || 'default',
-          name: item.warehouse || 'Almacén por Defecto'
-        }
-      ])).values()];
-      this.warehouses = uniqueWarehouses;
+    this.warehouseService.getWarehouses().subscribe({
+      next: (data) => {
+        this.warehouses = data.map(wh => ({ id: wh.id, name: wh.name }));
+      },
+      error: () => {
+        this.warehouses = [];
+      }
     });
   }
 
@@ -311,7 +315,28 @@ export class MovementsListComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Exit Form ─────────────────────────────────────────────────────────────
+  // ─── Exit Wizard (multi-product) ─────────────────────────────────────────
+
+  openExitWizard(): void {
+    this.isExitWizardOpen.set(true);
+  }
+
+  closeExitWizard(): void {
+    this.isExitWizardOpen.set(false);
+  }
+
+  onExitWizardSubmit(exitData: ExitDto): void {
+    this.offlineFirst.registerExit(exitData).subscribe({
+      next: () => {
+        this.notificationService.showSuccess('Salida registrada correctamente');
+        this.loadMovements();
+        this.refreshStock();
+      },
+      error: () => this.notificationService.showError('Error al registrar salida')
+    });
+  }
+
+  // ─── Exit Form (single product) ─────────────────────────────────────────────
 
   openExit(m: MovementItem): void {
     this.selectedForExit = m;
@@ -334,7 +359,28 @@ export class MovementsListComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Transfer Form ─────────────────────────────────────────────────────────
+  // ─── Transfer Wizard (multi-product) ────────────────────────────────────────
+
+  openTransferWizard(): void {
+    this.isTransferWizardOpen.set(true);
+  }
+
+  closeTransferWizard(): void {
+    this.isTransferWizardOpen.set(false);
+  }
+
+  onTransferWizardSubmit(transferData: TransferDto): void {
+    this.offlineFirst.createTransfer(transferData).subscribe({
+      next: () => {
+        this.notificationService.showSuccess('Transferencia registrada correctamente');
+        this.loadMovements();
+        this.refreshStock();
+      },
+      error: () => this.notificationService.showError('Error al registrar transferencia')
+    });
+  }
+
+  // ─── Transfer Form (single product) ───────────────────────────────────────────
 
   openTransfer(m: MovementItem): void {
     this.selectedForTransfer = m;
@@ -390,9 +436,14 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       this.notificationService.showError('El motivo de devolución es obligatorio');
       return;
     }
+    const warehouseId = this.selectedForReturn!.product.warehouseId;
+    if (!warehouseId) {
+      this.notificationService.showError('El producto no tiene almacén asignado');
+      return;
+    }
     const returnData: ReturnDto = {
       movementCode: '1107',
-      warehouseId: this.selectedForReturn!.product.warehouseId || '',
+      warehouseId,
       reason: this.returnComment,
       purchase_id: this.selectedForReturn!.purchaseId!,
       items: [{

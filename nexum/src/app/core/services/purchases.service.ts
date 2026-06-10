@@ -13,8 +13,7 @@ export class PurchasesService {
   constructor(private http: HttpClient) {}
 
   createPurchase(data: CreatePurchasePayload, companyId?: number): Observable<Purchase> {
-    const payload = companyId ? { ...data, companyId } : data;
-    return this.http.post<Purchase>(this.apiUrl, payload);
+    return this.http.post<Purchase>(this.apiUrl, data);
   }
 
   getPurchases(companyId?: number): Observable<Purchase[]> {

@@ -1,0 +1,227 @@
+<app-modal
+  [isOpen]="isOpen"
+  [title]="step() === 'select-type' ? 'Nueva Salida - Tipo de Movimiento' : 'Nueva Salida - Productos'"
+  [confirmText]="step() === 'select-products' ? 'Registrar Salida' : ''"
+  iconEmoji="📤"
+  iconBgClass="bg-red-50"
+  confirmButtonClass="bg-red-600 hover:bg-red-700"
+  maxWidthClass="max-w-4xl"
+  (closeEvent)="onClose()"
+  (confirmEvent)="step() === 'select-products' ? onConfirm() : null">
+
+  <!-- Step 1: Select exit type -->
+  @if (step() === 'select-type') {
+    <div class="space-y-3">
+      <p class="text-sm text-slate-600 mb-4">Seleccione el tipo de salida a registrar:</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
+        @for (type of exitTypes; track type.code) {
+          <button (click)="selectType(type)"
+                  class="flex items-start gap-3 p-4 border border-slate-200 rounded-xl hover:border-red-300 hover:bg-red-50/50 transition-all text-left group">
+            <div class="flex-shrink-0 p-2 rounded-lg bg-red-50 text-red-600 group-hover:bg-red-100 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-slate-800 font-mono">{{ type.code }}</span>
+                <span class="text-[10px] font-medium px-2 py-0.5 rounded-full border"
+                      [ngClass]="categoryClass(type.category)">
+                  {{ categoryLabel(type.category) }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-600 mt-0.5 truncate">{{ type.description }}</p>
+            </div>
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Step 2: Select products -->
+  @if (step() === 'select-products') {
+    <div class="space-y-4">
+      <!-- Type badge + back button -->
+      <div class="flex items-center gap-3">
+        <button (click)="goBack()"
+                class="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        @if (selectedType(); as type) {
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-800 font-mono bg-slate-100 px-2 py-1 rounded">{{ type.code }}</span>
+            <span class="text-xs text-slate-600">{{ type.description }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Warehouse + entity + reason -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Almacén de origen *</label>
+          <select [(ngModel)]="warehouseId"
+                  (ngModelChange)="onWarehouseChange()"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+            <option value="">Seleccionar almacén...</option>
+            @for (wh of warehouses; track wh.id) {
+              <option [value]="wh.id">{{ wh.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Entidad destino</label>
+          <input type="text" [(ngModel)]="entity"
+                 placeholder="Ej: Dpto. Producción"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Motivo / Observación</label>
+          <input type="text" [(ngModel)]="reason"
+                 placeholder="Motivo de salida..."
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"/>
+        </div>
+      </div>
+
+      <!-- Stock available -->
+      @if (warehouseId) {
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-700">Stock disponible</span>
+            <input type="text"
+                   [(ngModel)]="stockSearch"
+                   (ngModelChange)="filterStock()"
+                   placeholder="Buscar producto..."
+                   class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg w-56 focus:outline-none focus:ring-2 focus:ring-red-400"/>
+          </div>
+
+          @if (isLoadingStock()) {
+            <div class="flex items-center justify-center py-8 text-slate-400">
+              <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              <span class="text-xs">Cargando stock...</span>
+            </div>
+          } @else {
+            <div class="max-h-[180px] overflow-y-auto divide-y divide-slate-100">
+              @for (product of filteredStock(); track product.productCode) {
+                <div class="flex items-center px-4 py-2 hover:bg-slate-50/80 transition-colors"
+                     [class.opacity-50]="isAlreadyAdded(product.productCode)">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-800 truncate">{{ product.productName }}</p>
+                    <p class="text-xs text-slate-500 font-mono">{{ product.productCode }} · {{ product.productUnit }}</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs font-semibold text-slate-700">Stock: {{ product.stock }}</span>
+                    <span class="text-xs text-slate-500">{{ formatCurrency(product.unitPrice) }}/u</span>
+                    <button (click)="addProduct(product)"
+                            [disabled]="isAlreadyAdded(product.productCode)"
+                            class="p-1.5 bg-red-50 text-red-600 rounded-lg border border-red-200 hover:bg-red-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="py-6 text-center text-xs text-slate-400">
+                  @if (stockSearch) {
+                    No se encontraron productos que coincidan
+                  } @else {
+                    No hay productos con stock en este almacén
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Selected items table -->
+      @if (exitItems().length > 0) {
+        <div class="border border-red-200 rounded-xl overflow-hidden">
+          <div class="bg-red-50 px-4 py-2 border-b border-red-200 flex items-center justify-between">
+            <span class="text-xs font-semibold text-red-800">Productos a dar salida ({{ totalItems }})</span>
+            <span class="text-xs font-bold text-red-700">Total: {{ formatCurrency(totalAmount) }}</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-red-50/50">
+                <tr>
+                  <th class="px-3 py-2 text-left text-[10px] font-medium text-red-700 uppercase">Producto</th>
+                  <th class="px-3 py-2 text-center text-[10px] font-medium text-red-700 uppercase">Stock</th>
+                  <th class="px-3 py-2 text-center text-[10px] font-medium text-red-700 uppercase">Cantidad</th>
+                  <th class="px-3 py-2 text-right text-[10px] font-medium text-red-700 uppercase">P. Unit.</th>
+                  <th class="px-3 py-2 text-right text-[10px] font-medium text-red-700 uppercase">Importe</th>
+                  @if (isCostCenterExit) {
+                    <th class="px-3 py-2 text-left text-[10px] font-medium text-red-700 uppercase">Elem. Gasto</th>
+                  }
+                  <th class="px-3 py-2 text-center text-[10px] font-medium text-red-700 uppercase w-10"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-red-100">
+                @for (item of exitItems(); track item.productCode; let i = $index) {
+                  <tr class="hover:bg-red-50/30">
+                    <td class="px-3 py-2">
+                      <p class="text-xs font-medium text-slate-800">{{ item.productName }}</p>
+                      <p class="text-[10px] text-slate-500 font-mono">{{ item.productCode }} · {{ item.unit }}</p>
+                    </td>
+                    <td class="px-3 py-2 text-center">
+                      <span class="text-xs text-slate-600">{{ item.stock }}</span>
+                    </td>
+                    <td class="px-3 py-2 text-center">
+                      <input type="number"
+                             [ngModel]="item.quantity"
+                             (ngModelChange)="updateQuantity(i, $event)"
+                             [min]="1"
+                             [max]="item.stock"
+                             class="w-16 px-2 py-1 text-xs text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+                             [class.border-red-400]="item.quantity > item.stock"
+                             [class.border-slate-300]="item.quantity <= item.stock"/>
+                      @if (item.quantity > item.stock) {
+                        <p class="text-[9px] text-red-500 mt-0.5">Excede stock</p>
+                      }
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <span class="text-xs text-slate-700">{{ formatCurrency(item.unitPrice) }}</span>
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <span class="text-xs font-semibold text-slate-800">{{ formatCurrency(item.quantity * item.unitPrice) }}</span>
+                    </td>
+                    @if (isCostCenterExit) {
+                      <td class="px-3 py-2">
+                        <select [ngModel]="item.expenseElement"
+                                (ngModelChange)="updateExpenseElement(i, $event)"
+                                class="w-full px-2 py-1 text-[10px] border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400">
+                          <option value="">Seleccionar...</option>
+                          @for (el of expenseElements; track el.code) {
+                            <option [value]="el.code">{{ el.code }} - {{ el.label }}</option>
+                          }
+                        </select>
+                      </td>
+                    }
+                    <td class="px-3 py-2 text-center">
+                      <button (click)="removeProduct(i)"
+                              class="p-1 text-red-500 hover:bg-red-100 rounded transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Validation message -->
+      @if (warehouseId && exitItems().length === 0) {
+        <p class="text-xs text-slate-400 text-center py-2">Agregue productos desde el stock disponible para registrar la salida</p>
+      }
+    </div>
+  }
+</app-modal>
