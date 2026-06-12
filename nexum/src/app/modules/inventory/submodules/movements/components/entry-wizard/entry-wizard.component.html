@@ -11,33 +11,107 @@
 
   <!-- ═══ PASO 1: Seleccionar tipo de movimiento ═══ -->
   @if (step() === 'select-type') {
-    <div class="space-y-4">
-      <p class="text-sm text-slate-600">Seleccione el tipo de entrada que desea registrar:</p>
+    <div class="space-y-6">
+      <!-- Header profesional -->
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <span class="text-sm font-semibold text-blue-800">Tipos de Movimiento de Entrada</span>
+        </div>
+        <p class="text-sm text-slate-600 max-w-md mx-auto">
+          Seleccione el tipo de entrada a registrar según la normativa contable cubana
+        </p>
+      </div>
 
-      <div class="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-1">
-        @for (type of entryTypes; track type.code) {
-          <button type="button"
-                  (click)="selectType(type)"
-                  class="flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all hover:shadow-sm"
-                  [class.border-green-500]="selectedType()?.code === type.code"
-                  [class.bg-green-50]="selectedType()?.code === type.code"
-                  [class.border-slate-200]="selectedType()?.code !== type.code"
-                  [class.hover:border-slate-300]="selectedType()?.code !== type.code">
-            <div class="flex-shrink-0 w-12 h-8 flex items-center justify-center bg-slate-100 rounded font-mono text-xs font-bold text-slate-700">
-              {{ type.code }}
+      <!-- Agrupación por categorías -->
+      <div class="space-y-6">
+        @for (category of getCategoriesByTypes(); track category.name) {
+          <div class="space-y-3">
+            <!-- Header de categoría -->
+            <div class="flex items-center gap-3">
+              <div class="w-1 h-6 rounded-full {{ category.color }}"></div>
+              <div class="flex-1">
+                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">{{ category.name }}</h3>
+                <p class="text-xs text-slate-500">{{ category.description }}</p>
+              </div>
+              <div class="flex items-center gap-1 text-xs text-slate-400">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                <span>{{ category.types.length }} tipos</span>
+              </div>
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-800 truncate">{{ type.description }}</p>
+
+            <!-- Tarjetas de tipos de movimiento -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              @for (type of category.types; track type.code) {
+                <button type="button"
+                        (click)="selectType(type)"
+                        class="group relative bg-white border-2 rounded-xl p-4 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+                        [class.border-blue-500]="selectedType()?.code === type.code"
+                        [class.bg-blue-50]="selectedType()?.code === type.code"
+                        [class.border-slate-200]="selectedType()?.code !== type.code"
+                        [class.hover:border-blue-300]="selectedType()?.code !== type.code">
+                  
+                  <!-- Indicador de selección -->
+                  @if (selectedType()?.code === type.code) {
+                    <div class="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </div>
+                  }
+
+                  <!-- Contenido de la tarjeta -->
+                  <div class="flex items-start gap-4">
+                    <!-- Código del movimiento -->
+                    <div class="flex-shrink-0">
+                      <div class="w-14 h-14 {{ category.bgColor }} rounded-lg flex items-center justify-center border-2 {{ category.borderColor }}">
+                        <span class="font-mono text-sm font-bold {{ category.textColor }}">{{ type.code }}</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Información -->
+                    <div class="flex-1 min-w-0 space-y-2">
+                      <div>
+                        <h4 class="text-sm font-semibold text-slate-900 leading-tight">{{ type.description }}</h4>
+                        <p class="text-xs text-slate-500 mt-1">Código: {{ type.code }}</p>
+                      </div>
+                      
+                      <!-- Badge de categoría -->
+                      <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded-full {{ category.badgeClass }}">
+                          <span class="w-1.5 h-1.5 rounded-full {{ category.dotColor }}"></span>
+                          {{ category.name }}
+                        </span>
+                        @if (isPurchaseTypeByCode(type.code)) {
+                          <span class="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                            Compra
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              }
             </div>
-            <span class="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border {{ categoryClass(type.category) }}">
-              {{ categoryLabel(type.category) }}
-            </span>
-          </button>
+          </div>
         }
       </div>
 
+      <!-- Mensaje de validación -->
       @if (!selectedType()) {
-        <p class="text-xs text-slate-400 text-center">Debe seleccionar un tipo para continuar</p>
+        <div class="flex items-center justify-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"/>
+          </svg>
+          <span class="text-sm font-medium text-amber-800">Debe seleccionar un tipo de movimiento para continuar</span>
+        </div>
       }
     </div>
   }

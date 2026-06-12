@@ -439,4 +439,50 @@ export class EntryWizardComponent implements OnInit, OnChanges {
       case 'produccion': return 'bg-teal-50 text-teal-700 border-teal-200';
     }
   }
+
+  // --- Nueva UI: Métodos para categorización profesional ---
+  getCategoriesByTypes() {
+    const categories = [
+      {
+        name: 'Insumos',
+        description: 'Materias primas, materiales y suministros de producción',
+        color: 'bg-purple-500',
+        bgColor: 'bg-purple-100',
+        borderColor: 'border-purple-300',
+        textColor: 'text-purple-700',
+        badgeClass: 'bg-purple-100 text-purple-700 border-purple-200',
+        dotColor: 'bg-purple-500',
+        types: this.entryTypes.filter(t => t.category === 'insumo')
+      },
+      {
+        name: 'Mercancías',
+        description: 'Productos terminados y bienes para la venta',
+        color: 'bg-indigo-500',
+        bgColor: 'bg-indigo-100',
+        borderColor: 'border-indigo-300',
+        textColor: 'text-indigo-700',
+        badgeClass: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+        dotColor: 'bg-indigo-500',
+        types: this.entryTypes.filter(t => t.category === 'mercancia')
+      },
+      {
+        name: 'Producción',
+        description: 'Productos de proceso y producción interna',
+        color: 'bg-teal-500',
+        bgColor: 'bg-teal-100',
+        borderColor: 'border-teal-300',
+        textColor: 'text-teal-700',
+        badgeClass: 'bg-teal-100 text-teal-700 border-teal-200',
+        dotColor: 'bg-teal-500',
+        types: this.entryTypes.filter(t => t.category === 'produccion')
+      }
+    ];
+    
+    return categories.filter(cat => cat.types.length > 0);
+  }
+
+  // Helper para verificar si un código específico es de compra
+  isPurchaseTypeByCode(code: string): boolean {
+    return PURCHASE_CODES.includes(code);
+  }
 }
