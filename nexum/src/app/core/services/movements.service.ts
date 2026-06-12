@@ -95,7 +95,7 @@ export class MovementsService {
     return this.http.get<any[]>(`${this.apiUrl}/transfers/${warehouseId}`, { params });
   }
 
-  getMovementTypes(direction?: 'entry' | 'exit', category?: string): Observable<MovementTypeOption[]> {
+  getMovementTypes(direction?: 'entry' | 'exit' | 'transfer', category?: string): Observable<MovementTypeOption[]> {
     let params = new HttpParams();
     if (direction) params = params.set('direction', direction);
     if (category) params = params.set('category', category);
