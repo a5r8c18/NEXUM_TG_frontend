@@ -14,6 +14,12 @@ export class InventoryService {
   constructor(private http: HttpClient) {}
 
   getInventory(filters?: InventoryFilters, companyId?: number): Observable<InventoryItem[]> {
+    console.log('📦 INVENTORY SERVICE - Obteniendo inventario:', {
+      filters,
+      companyId,
+      apiUrl: this.apiUrl
+    });
+    
     let params = new HttpParams();
     if (companyId) params = params.set('companyId', companyId.toString());
     if (filters) {
@@ -24,9 +30,20 @@ export class InventoryService {
       if (filters.warehouse) params = params.set('warehouse', filters.warehouse);
       if (filters.minStock) params = params.set('minStock', filters.minStock.toString());
       if (filters.maxStock) params = params.set('maxStock', filters.maxStock.toString());
+      if (filters.search) params = params.set('search', filters.search);
+      if (filters.isActive !== undefined) params = params.set('isActive', String(filters.isActive));
     }
+    
+    console.log('📦 INVENTORY SERVICE - Parámetros finales:', params.toString());
+    
     return this.http
       .get<{ inventory: InventoryItem[] }>(this.apiUrl, { params })
-      .pipe(map((res) => res.inventory ?? []));
+      .pipe(map((res) => {
+        console.log('✅ INVENTORY SERVICE - Respuesta recibida:', {
+          totalItems: res.inventory?.length || 0,
+          data: res
+        });
+        return res.inventory ?? [];
+      }));
   }
 }

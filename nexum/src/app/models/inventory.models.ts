@@ -24,6 +24,12 @@ export interface InventoryFilters {
   warehouse?: string;
   minStock?: number;
   maxStock?: number;
+  search?: string;
+  isActive?: boolean;
+}
+
+export interface InventoryResponse {
+  inventory: InventoryItem[];
 }
 
 // ========== MOVEMENTS ==========

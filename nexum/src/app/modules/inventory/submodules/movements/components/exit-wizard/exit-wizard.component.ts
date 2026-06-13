@@ -2,9 +2,10 @@ import { Component, signal, inject, Output, EventEmitter, Input } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
-import { ExitDto, MovementTypeOption, InventoryCategory } from '../../../../../../models/inventory.models';
+import { ExitDto, MovementTypeOption, InventoryCategory, InventoryResponse } from '../../../../../../models/inventory.models';
 import { MovementsService } from '../../../../../../core/services/movements.service';
 import { WarehouseService } from '../../../../../../core/services/warehouse.service';
+import { InventoryService } from '../../../../../../core/services/inventory.service';
 
 @Component({
   selector: 'app-exit-wizard',
@@ -23,6 +24,7 @@ export class ExitWizardComponent {
   private fb = inject(FormBuilder);
   private movementsService = inject(MovementsService);
   private warehouseService = inject(WarehouseService);
+  private inventoryService = inject(InventoryService);
 
   isLoading = signal(false);
   stockSearch = '';
@@ -65,6 +67,7 @@ export class ExitWizardComponent {
   }
 
   open(): void {
+    console.log('📤 EXIT WIZARD - Abriendo modal de salidas');
     this.isOpen = true;
     this.loadWarehouses();
     this.loadExitTypes();
@@ -94,9 +97,64 @@ export class ExitWizardComponent {
   }
 
   filterStock(): void {
-    // This would filter available stock items
-    // For now, return empty array as placeholder
-    this.filteredStock.set([]);
+    console.log('📤 EXIT WIZARD - Filtrando stock por almacén:', {
+      warehouseId: this.warehouseId,
+      searchTerm: this.stockSearch,
+      currentStock: this.filteredStock().length
+    });
+
+    if (!this.warehouseId) {
+      console.log('❌ EXIT WIZARD - No hay almacén seleccionado');
+      this.filteredStock.set([]);
+      return;
+    }
+
+    this.isLoadingStock.set(true);
+    
+    // Obtener inventario del almacén seleccionado
+    this.inventoryService.getInventory({
+      warehouse: this.warehouseId,
+      search: this.stockSearch || undefined,
+      isActive: true
+    }).subscribe({
+      next: (data: InventoryResponse | InventoryItem[]) => {
+        console.log('✅ EXIT WIZARD - Respuesta del backend recibida:', {
+          warehouseId: this.warehouseId,
+          responseType: typeof data,
+          isArray: Array.isArray(data),
+          hasInventory: data && typeof data === 'object' && 'inventory' in data,
+          total: data?.length || (data as InventoryResponse)?.inventory?.length || 0,
+          data: data
+        });
+        
+        // El backend retorna { inventory: [...] }, necesitamos extraer el array
+        const stockItems = data?.inventory || data || [];
+        console.log('📤 EXIT WIZARD - Items extraídos:', {
+          isArray: Array.isArray(stockItems),
+          total: stockItems.length,
+          items: stockItems
+        });
+        
+        // Filtrar solo productos con stock disponible (> 0)
+        const availableStock = stockItems.filter(item => 
+          item.stock && item.stock > 0
+        );
+        
+        console.log('📤 EXIT WIZARD - Stock disponible:', {
+          totalItems: stockItems.length,
+          availableItems: availableStock.length,
+          items: availableStock
+        });
+        
+        this.filteredStock.set(availableStock);
+        this.isLoadingStock.set(false);
+      },
+      error: (error) => {
+        console.log('❌ EXIT WIZARD - Error cargando inventario:', error);
+        this.filteredStock.set([]);
+        this.isLoadingStock.set(false);
+      }
+    });
   }
 
   isAlreadyAdded(productCode: string): boolean {
@@ -104,7 +162,14 @@ export class ExitWizardComponent {
   }
 
   addProduct(product: any): void {
+    console.log('📤 EXIT WIZARD - Intentando agregar producto:', {
+      product: product,
+      currentItems: this.items().length,
+      isAlreadyAdded: this.isAlreadyAdded(product.productCode)
+    });
+    
     if (this.isAlreadyAdded(product.productCode)) {
+      console.log('❌ EXIT WIZARD - Producto ya agregado:', product.productCode);
       return;
     }
     const newItem = {
@@ -112,10 +177,14 @@ export class ExitWizardComponent {
       productName: product.productName,
       quantity: 1,
       unitPrice: product.unitPrice || 0,
-      totalAmount: product.unitPrice || 0
+      totalAmount: product.unitPrice || 0,
+      stock: product.quantity || product.stock || 0,
+      unit: product.productUnit || product.unit || 'UN'
     };
+    console.log('📤 EXIT WIZARD - Nuevo item creado:', newItem);
     this.items.set([...this.items(), newItem]);
     this.updateTotals();
+    console.log('✅ EXIT WIZARD - Producto agregado exitosamente. Total items:', this.items().length);
   }
 
   private updateTotals(): void {
@@ -152,7 +221,25 @@ export class ExitWizardComponent {
   }
 
   onWarehouseChange(): void {
-    // Handle warehouse change
+    console.log('📤 EXIT WIZARD - Cambio de almacén detectado:', {
+      newWarehouseId: this.warehouseId,
+      formValue: this.headerForm.get('warehouseId')?.value
+    });
+    
+    // Actualizar warehouseId desde el formulario
+    this.warehouseId = this.headerForm.get('warehouseId')?.value || '';
+    
+    // Limpiar productos seleccionados
+    this.items.set([]);
+    this.filteredStock.set([]);
+    
+    // Cargar stock del nuevo almacén
+    if (this.warehouseId) {
+      console.log('📤 EXIT WIZARD - Cargando productos para almacén:', this.warehouseId);
+      this.filterStock();
+    } else {
+      console.log('❌ EXIT WIZARD - No se seleccionó almacén válido');
+    }
   }
 
   get step() {
@@ -160,6 +247,10 @@ export class ExitWizardComponent {
   }
 
   selectType(type: any): void {
+    console.log('📤 EXIT WIZARD - Tipo de salida seleccionado:', {
+      type: type,
+      currentStep: this.currentStep
+    });
     this.currentStep = 'select-products';
   }
 

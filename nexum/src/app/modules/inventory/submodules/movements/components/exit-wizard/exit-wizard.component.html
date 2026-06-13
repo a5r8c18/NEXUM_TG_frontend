@@ -41,6 +41,7 @@
   <!-- Step 2: Select products -->
   @if (step === 'select-products') {
     <div class="space-y-4">
+      <form [formGroup]="headerForm">
       <!-- Type badge + back button -->
       <div class="flex items-center gap-3">
         <button (click)="goBack()"
@@ -61,7 +62,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Almacén de origen *</label>
-          <select [(ngModel)]="warehouseId"
+          <select formControlName="warehouseId"
                   (ngModelChange)="onWarehouseChange()"
                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
             <option value="">Seleccionar almacén...</option>
@@ -85,7 +86,7 @@
       </div>
 
       <!-- Stock available -->
-      @if (warehouseId) {
+      @if (headerForm.get('warehouseId')?.value) {
         <div class="border border-slate-200 rounded-xl overflow-hidden">
           <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
             <span class="text-xs font-semibold text-slate-700">Stock disponible</span>
@@ -219,9 +220,10 @@
       }
 
       <!-- Validation message -->
-      @if (warehouseId && exitItems().length === 0) {
+      @if (headerForm.get('warehouseId')?.value && exitItems().length === 0) {
         <p class="text-xs text-slate-400 text-center py-2">Agregue productos desde el stock disponible para registrar la salida</p>
       }
+    </form>
     </div>
   }
 </app-modal>
