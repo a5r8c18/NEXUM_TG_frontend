@@ -301,17 +301,47 @@
               <tbody class="divide-y divide-slate-100">
                 @for (productGroup of products.controls; track $index; let i = $index) {
                   <tr [formGroupName]="i" class="hover:bg-slate-50/30">
-                    <td class="px-2 py-1.5">
+                    <td class="px-2 py-1.5 relative">
                       <input formControlName="code" type="text" placeholder="PROD-001"
+                             (input)="onPurchaseCodeSearch($event.target.value, i)"
+                             (blur)="hidePurchaseDropdown()"
                              class="w-full px-2 py-1.5 border rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
                              [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'code')"
                              [class.border-red-400]="productFieldInvalid($any(productGroup), 'code')"/>
+                      
+                      <!-- Dropdown para código -->
+                      @if (purchaseDropdownField === 'code' && purchaseDropdownRow === i && purchaseFilteredProducts.length > 0) {
+                        <div class="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                          @for (product of purchaseFilteredProducts; track product.productCode) {
+                            <div class="px-2 py-1.5 hover:bg-green-50 cursor-pointer text-xs border-b border-slate-100 last:border-b-0"
+                                 (click)="selectPurchaseProduct(product, i)">
+                              <div class="font-medium text-slate-900">{{ product.productCode }}</div>
+                              <div class="text-slate-500">{{ product.productName }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
                     </td>
-                    <td class="px-2 py-1.5">
+                    <td class="px-2 py-1.5 relative">
                       <input formControlName="description" type="text" placeholder="Nombre del producto"
+                             (input)="onPurchaseDescSearch($event.target.value, i)"
+                             (blur)="hidePurchaseDropdown()"
                              class="w-full px-2 py-1.5 border rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
                              [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'description')"
                              [class.border-red-400]="productFieldInvalid($any(productGroup), 'description')"/>
+                      
+                      <!-- Dropdown para descripción -->
+                      @if (purchaseDropdownField === 'description' && purchaseDropdownRow === i && purchaseFilteredProducts.length > 0) {
+                        <div class="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                          @for (product of purchaseFilteredProducts; track product.productCode) {
+                            <div class="px-2 py-1.5 hover:bg-green-50 cursor-pointer text-xs border-b border-slate-100 last:border-b-0"
+                                 (click)="selectPurchaseProduct(product, i)">
+                              <div class="font-medium text-slate-900">{{ product.productName }}</div>
+                              <div class="text-slate-500">{{ product.productCode }}</div>
+                            </div>
+                          }
+                        </div>
+                      }
                     </td>
                     <td class="px-2 py-1.5">
                       <input formControlName="unit" type="text" placeholder="UN"

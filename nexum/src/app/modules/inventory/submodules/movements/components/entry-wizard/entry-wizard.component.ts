@@ -73,9 +73,20 @@ export class EntryWizardComponent implements OnInit, OnChanges {
   }
 
   private loadProducts(): void {
+    console.log('📦 ENTRY WIZARD - Cargando productos...');
     this.productsService.getAll({ isActive: true }).subscribe({
-      next: (data) => { this.allProducts = data.items || data; },
-      error: () => { this.allProducts = []; }
+      next: (data) => {
+        console.log('✅ ENTRY WIZARD - Productos cargados:', {
+          total: data?.items?.length || data?.length || 0,
+          data: data
+        });
+        this.allProducts = data.items || data;
+        console.log('📦 ENTRY WIZARD - allProducts actualizado:', this.allProducts.length);
+      },
+      error: (error) => {
+        console.log('❌ ENTRY WIZARD - Error cargando productos:', error);
+        this.allProducts = [];
+      }
     });
   }
 
@@ -263,6 +274,12 @@ export class EntryWizardComponent implements OnInit, OnChanges {
 
   // --- Purchase autocomplete methods ---
   onPurchaseCodeSearch(term: string, rowIndex: number): void {
+    console.log('🔍 ENTRY WIZARD - Buscando producto por código:', {
+      term,
+      rowIndex,
+      totalProducts: this.allProducts.length
+    });
+    
     if (!term || term.length < 1) {
       this.closePurchaseDropdown();
       return;
@@ -271,6 +288,13 @@ export class EntryWizardComponent implements OnInit, OnChanges {
     this.purchaseFilteredProducts = this.allProducts.filter(p =>
       p.productCode.toLowerCase().includes(lower)
     ).slice(0, 8);
+    
+    console.log('✅ ENTRY WIZARD - Productos filtrados por código:', {
+      term,
+      resultados: this.purchaseFilteredProducts.length,
+      productos: this.purchaseFilteredProducts
+    });
+    
     this.purchaseDropdownRow = rowIndex;
     this.purchaseDropdownField = 'code';
   }
