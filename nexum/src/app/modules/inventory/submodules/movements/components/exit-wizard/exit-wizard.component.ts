@@ -1,8 +1,8 @@
-import { Component, signal, inject, Output, EventEmitter, Input } from '@angular/core';
+import { Component, signal, inject, Output, EventEmitter, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
-import { ExitDto, MovementTypeOption, InventoryCategory, InventoryResponse } from '../../../../../../models/inventory.models';
+import { ExitDto, MovementTypeOption, InventoryCategory, InventoryResponse, InventoryItem } from '../../../../../../models/inventory.models';
 import { MovementsService } from '../../../../../../core/services/movements.service';
 import { WarehouseService } from '../../../../../../core/services/warehouse.service';
 import { InventoryService } from '../../../../../../core/services/inventory.service';
@@ -13,12 +13,12 @@ import { InventoryService } from '../../../../../../core/services/inventory.serv
   imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
   templateUrl: './exit-wizard.component.html',
 })
-export class ExitWizardComponent {
+export class ExitWizardComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() exitTypes: MovementTypeOption[] = [];
   @Input() warehouses: { id: string; name: string }[] = [];
   
-  @Output() close = new EventEmitter<void>();
+  @Output() closeEvent = new EventEmitter<void>();
   @Output() submitExit = new EventEmitter<ExitDto>();
 
   private fb = inject(FormBuilder);
@@ -66,17 +66,19 @@ export class ExitWizardComponent {
     });
   }
 
-  open(): void {
-    console.log('📤 EXIT WIZARD - Abriendo modal de salidas');
-    this.isOpen = true;
-    this.loadWarehouses();
-    this.loadExitTypes();
-    this.resetForm();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && changes['isOpen'].currentValue === true) {
+      console.log('📤 EXIT WIZARD - Modal abierto, inicializando datos...');
+      this.loadWarehouses();
+      this.loadExitTypes();
+      this.resetForm();
+    }
   }
 
+  
   closeWizard(): void {
     this.isOpen = false;
-    this.close.emit();
+    this.closeEvent.emit();
   }
 
   formatCurrency(amount?: number): string {
@@ -117,18 +119,17 @@ export class ExitWizardComponent {
       search: this.stockSearch || undefined,
       isActive: true
     }).subscribe({
-      next: (data: InventoryResponse | InventoryItem[]) => {
+      next: (data: InventoryItem[]) => {
         console.log('✅ EXIT WIZARD - Respuesta del backend recibida:', {
           warehouseId: this.warehouseId,
           responseType: typeof data,
           isArray: Array.isArray(data),
-          hasInventory: data && typeof data === 'object' && 'inventory' in data,
-          total: data?.length || (data as InventoryResponse)?.inventory?.length || 0,
+          total: data?.length || 0,
           data: data
         });
         
-        // El backend retorna { inventory: [...] }, necesitamos extraer el array
-        const stockItems = data?.inventory || data || [];
+        // El servicio ya extrae el array del response
+        const stockItems: InventoryItem[] = data || [];
         console.log('📤 EXIT WIZARD - Items extraídos:', {
           isArray: Array.isArray(stockItems),
           total: stockItems.length,
@@ -136,7 +137,7 @@ export class ExitWizardComponent {
         });
         
         // Filtrar solo productos con stock disponible (> 0)
-        const availableStock = stockItems.filter(item => 
+        const availableStock = stockItems.filter((item: InventoryItem) => 
           item.stock && item.stock > 0
         );
         

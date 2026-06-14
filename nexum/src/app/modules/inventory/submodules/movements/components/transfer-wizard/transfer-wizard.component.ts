@@ -1,4 +1,4 @@
-import { Component, signal, inject, Output, EventEmitter, Input } from '@angular/core';
+import { Component, signal, inject, Output, EventEmitter, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
@@ -12,11 +12,11 @@ import { WarehouseService } from '../../../../../../core/services/warehouse.serv
   imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
   templateUrl: './transfer-wizard.component.html',
 })
-export class TransferWizardComponent {
+export class TransferWizardComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() warehouses: { id: string; name: string }[] = [];
   
-  @Output() close = new EventEmitter<void>();
+  @Output() closeEvent = new EventEmitter<void>();
   @Output() submitTransfer = new EventEmitter<TransferDto>();
 
   private fb = inject(FormBuilder);
@@ -60,16 +60,19 @@ export class TransferWizardComponent {
     });
   }
 
-  open(): void {
-    this.isOpen = true;
-    this.loadWarehouses();
-    this.loadTransferTypes();
-    this.resetForm();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && changes['isOpen'].currentValue === true) {
+      console.log('📦 TRANSFER WIZARD - Modal abierto, inicializando datos...');
+      this.loadWarehouses();
+      this.loadTransferTypes();
+      this.resetForm();
+    }
   }
 
+  
   closeWizard(): void {
     this.isOpen = false;
-    this.close.emit();
+    this.closeEvent.emit();
   }
 
   formatCurrency(amount?: number): string {
