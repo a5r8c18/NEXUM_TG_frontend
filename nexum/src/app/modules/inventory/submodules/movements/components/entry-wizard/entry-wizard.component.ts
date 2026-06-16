@@ -2,9 +2,11 @@ import { Component, signal, inject, Output, EventEmitter, Input, OnInit, OnChang
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
+import { AccountSelectorComponent } from '../../../../../../shared/components/account-selector/account-selector.component';
 import { MovementTypeOption, InventoryCategory, DirectEntryDto } from '../../../../../../models/inventory.models';
 import { CreatePurchasePayload } from '../../../../../../models/purchase.models';
 import { ProductsService } from '../../../../../../core/services/products.service';
+import { Account } from '../../../../../../core/services/accounting.service';
 
 export type EntryStep = 'select-type' | 'simple-form' | 'purchase-form';
 
@@ -29,7 +31,7 @@ const EXPENSE_ELEMENTS = [
 @Component({
   selector: 'app-entry-wizard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent, AccountSelectorComponent],
   templateUrl: './entry-wizard.component.html',
 })
 export class EntryWizardComponent implements OnInit, OnChanges {
@@ -61,6 +63,10 @@ export class EntryWizardComponent implements OnInit, OnChanges {
   warehouseSearchTerm = '';
   filteredWarehouses: { id: string; name: string }[] = [];
   showWarehouseDropdown = false;
+
+  // --- Accounting account selection ---
+  selectedDebitAccount = signal<Account | null>(null);
+  selectedCreditAccount = signal<Account | null>(null);
 
   ngOnInit(): void {
     this.loadProducts();
@@ -246,7 +252,11 @@ export class EntryWizardComponent implements OnInit, OnChanges {
     if (!this.directEntry.quantity || this.directEntry.quantity <= 0) return;
     if (!this.directEntry.warehouseId?.trim()) return;
 
-    this.submitDirectEntry.emit({ ...this.directEntry });
+    this.submitDirectEntry.emit({ 
+      ...this.directEntry,
+      debitAccountCode: this.selectedDebitAccount()?.code,
+      creditAccountCode: this.selectedCreditAccount()?.code,
+    });
     this.reset();
     this.closeEvent.emit();
   }
@@ -412,7 +422,11 @@ export class EntryWizardComponent implements OnInit, OnChanges {
       })),
     };
 
-    this.submitPurchase.emit(payload);
+    this.submitPurchase.emit({
+      ...payload,
+      debitAccountCode: this.selectedDebitAccount()?.code,
+      creditAccountCode: this.selectedCreditAccount()?.code,
+    });
     this.reset();
     this.closeEvent.emit();
   }
@@ -462,6 +476,34 @@ export class EntryWizardComponent implements OnInit, OnChanges {
       case 'mercancia': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       case 'produccion': return 'bg-teal-50 text-teal-700 border-teal-200';
     }
+  }
+
+  // --- Métodos para selección de cuentas contables ---
+  onDebitAccountSelected(account: Account | null): void {
+    this.selectedDebitAccount.set(account);
+  }
+
+  onCreditAccountSelected(account: Account | null): void {
+    this.selectedCreditAccount.set(account);
+  }
+
+  // Determinar tipos de cuenta sugeridos según el movimiento
+  getDebitAccountType(): 'asset' | 'liability' | 'equity' | 'income' | 'expense' | undefined {
+    const code = this.selectedType()?.code;
+    if (!code) return undefined;
+    
+    // Entradas: generalmente débito a cuentas de inventario (activo)
+    return 'asset';
+  }
+
+  getCreditAccountType(): 'asset' | 'liability' | 'equity' | 'income' | 'expense' | undefined {
+    const code = this.selectedType()?.code;
+    if (!code) return undefined;
+    
+    // Compras: crédito a cuentas por pagar (pasivo)
+    if (PURCHASE_CODES.includes(code)) return 'liability';
+    // Otras entradas: crédito a cuentas de ingresos o según tipo
+    return undefined;
   }
 
   // --- Nueva UI: Métodos para categorización profesional ---

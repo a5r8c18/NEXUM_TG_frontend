@@ -105,6 +105,9 @@ export interface DirectEntryDto {
   label?: string;
   entity?: string;
   warehouseId: string;
+  // Cuentas contables seleccionadas por el usuario (override de defaults)
+  debitAccountCode?: string;
+  creditAccountCode?: string;
   items?: EntryItemDto[];
   // Backward compat (single product)
   productCode?: string;
@@ -131,6 +134,9 @@ export interface ExitDto {
   reason?: string;
   entity?: string;
   expenseElement?: string;
+  // Cuentas contables seleccionadas por el usuario (override de defaults)
+  debitAccountCode?: string;
+  creditAccountCode?: string;
   items?: ExitItemDto[];
   // Backward compat (single product)
   productCode?: string;

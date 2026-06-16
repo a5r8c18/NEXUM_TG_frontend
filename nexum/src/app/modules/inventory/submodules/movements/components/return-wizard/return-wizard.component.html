@@ -1,0 +1,158 @@
+<app-modal
+  [isOpen]="isOpen"
+  title="Devolución de Compra"
+  [confirmText]="canSubmit ? 'Registrar Devolución' : ''"
+  iconEmoji="↩️"
+  iconBgClass="bg-amber-50"
+  confirmButtonClass="bg-amber-600 hover:bg-amber-700"
+  maxWidthClass="max-w-3xl"
+  (closeEvent)="onClose()"
+  (confirmEvent)="onConfirm()">
+
+  <div class="space-y-4">
+    <!-- Purchase + warehouse selectors -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Compra a devolver *</label>
+        <select [(ngModel)]="selectedPurchaseId"
+                (ngModelChange)="onPurchaseChange()"
+                [disabled]="isLoadingPurchases()"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+          <option value="">{{ isLoadingPurchases() ? 'Cargando compras...' : 'Seleccionar compra...' }}</option>
+          @for (p of purchases(); track p.id) {
+            <option [value]="p.id">{{ p.document }} · {{ p.supplier }}</option>
+          }
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-600">Almacén de origen *</label>
+        <select [(ngModel)]="warehouseId"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+          <option value="">Seleccionar almacén...</option>
+          @for (wh of warehouses; track wh.id) {
+            <option [value]="wh.id">{{ wh.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- Category conflict warning -->
+    @if (categoryConflict) {
+      <div class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+        </svg>
+        <span>Los productos seleccionados deben ser de la misma categoría para registrar la devolución.</span>
+      </div>
+    }
+
+    <!-- Unsupported category warning -->
+    @if (unsupportedCategory) {
+      <div class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+        </svg>
+        <span>No existe un código de devolución de compra para esta categoría.</span>
+      </div>
+    }
+
+    <!-- Loading -->
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-10 text-slate-400">
+        <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-xs">Cargando productos de la compra...</span>
+      </div>
+    } @else if (loadError()) {
+      <div class="py-8 text-center text-sm text-red-500">
+        No se pudieron cargar los productos de la compra.
+      </div>
+    } @else if (!selectedPurchaseId) {
+      <div class="py-10 text-center text-sm text-slate-400">
+        Seleccione una compra para ver sus productos.
+      </div>
+    } @else {
+      <!-- Products to return -->
+      <div class="border border-slate-200 rounded-xl overflow-hidden">
+        <div class="bg-slate-50 px-4 py-2 border-b border-slate-200">
+          <span class="text-xs font-semibold text-slate-700">Seleccione los productos a devolver</span>
+        </div>
+        <div class="max-h-[280px] overflow-y-auto">
+          <table class="w-full">
+            <thead class="bg-slate-50/60">
+              <tr>
+                <th class="px-3 py-2 text-center text-[10px] font-medium text-slate-500 uppercase w-10"></th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-500 uppercase">Producto</th>
+                <th class="px-3 py-2 text-center text-[10px] font-medium text-slate-500 uppercase">Comprado</th>
+                <th class="px-3 py-2 text-center text-[10px] font-medium text-slate-500 uppercase">A devolver</th>
+                <th class="px-3 py-2 text-right text-[10px] font-medium text-slate-500 uppercase">P. Unit.</th>
+                <th class="px-3 py-2 text-right text-[10px] font-medium text-slate-500 uppercase">Valor</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (line of lines(); track line.productCode; let i = $index) {
+                <tr class="hover:bg-slate-50/60" [class.opacity-50]="!line.selected">
+                  <td class="px-3 py-2 text-center">
+                    <input type="checkbox"
+                           [checked]="line.selected"
+                           (change)="toggleSelect(i)"
+                           class="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"/>
+                  </td>
+                  <td class="px-3 py-2">
+                    <p class="text-xs font-medium text-slate-800">{{ line.productName }}</p>
+                    <p class="text-[10px] text-slate-500 font-mono">{{ line.productCode }} · {{ line.productUnit }}</p>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <span class="text-xs text-slate-600">{{ line.maxQuantity }}</span>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <input type="number"
+                           [ngModel]="line.quantity"
+                           (ngModelChange)="updateQuantity(i, $event)"
+                           [disabled]="!line.selected"
+                           [min]="1"
+                           [max]="line.maxQuantity"
+                           class="w-16 px-2 py-1 text-xs text-center border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-slate-100 disabled:cursor-not-allowed"/>
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    <span class="text-xs text-slate-700">{{ formatCurrency(line.unitPrice) }}</span>
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    <span class="text-xs font-semibold text-slate-800">{{ formatCurrency(line.unitPrice * line.quantity) }}</span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="py-6 text-center text-xs text-slate-400">
+                    Esta compra no tiene productos para devolver.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (selectedLines.length > 0) {
+          <div class="bg-amber-50 px-4 py-2 border-t border-amber-200 flex items-center justify-between">
+            <span class="text-xs font-semibold text-amber-800">{{ selectedLines.length }} producto(s) a devolver</span>
+            <span class="text-xs font-bold text-amber-700">Total: {{ formatCurrency(totalAmount) }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Reason -->
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">
+          Motivo de la devolución <span class="text-red-500">*</span>
+        </label>
+        <textarea [(ngModel)]="reason" rows="3"
+                  placeholder="Describa el motivo de la devolución..."
+                  class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"></textarea>
+        @if (!reason.trim() && selectedLines.length > 0) {
+          <p class="text-[11px] text-amber-600">El motivo es obligatorio para registrar la devolución.</p>
+        }
+      </div>
+    }
+  </div>
+</app-modal>

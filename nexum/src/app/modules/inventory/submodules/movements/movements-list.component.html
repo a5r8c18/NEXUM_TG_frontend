@@ -31,7 +31,13 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <app-export-component [exportData]="exportData" (exportComplete)="onExportComplete($event)" />
+      <button (click)="openReturnWizard()"
+              class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 shadow-sm shadow-amber-200 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4"/>
+        </svg>
+        Devolución
+      </button>
       <button (click)="openTransferWizard()"
               class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 shadow-sm shadow-blue-200 transition-all">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +110,7 @@
           <option value="return">Devolución</option>
         </select>
       </div>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2">
         <button (click)="applyFilters()"
                 class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
           Filtrar
@@ -113,6 +119,7 @@
                 class="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
           Limpiar
         </button>
+        <app-export-component [exportData]="exportData" (exportComplete)="onExportComplete($event)" />
       </div>
     </div>
   </div>
@@ -293,46 +300,10 @@
   (submitTransfer)="onTransferSubmit($event)">
 </app-transfer-form>
 
-<!-- ─── Modal: Confirmar Devolución ───────────────────────────────────────── -->
-<app-modal
-  [isOpen]="isConfirmReturnOpen()"
-  title="Confirmar Devolución"
-  confirmText="Continuar"
-  iconEmoji="⚠️"
-  iconBgClass="bg-yellow-50"
-  confirmButtonClass="bg-yellow-500 hover:bg-yellow-600"
-  maxWidthClass="max-w-md"
-  (closeEvent)="closeConfirmReturn()"
-  (confirmEvent)="continueToReturnComment()">
-  <div class="space-y-3">
-    <p class="text-sm text-slate-700">¿Estás seguro de que deseas devolver esta compra?</p>
-    <div class="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
-      <p class="text-xs text-slate-600">
-        <span class="font-semibold text-yellow-800">Advertencia:</span>
-        Esta acción devolverá los productos de la compra y la cancelará.
-      </p>
-    </div>
-  </div>
-</app-modal>
-
-<!-- ─── Modal: Motivo de Devolución ───────────────────────────────────────── -->
-<app-modal
-  [isOpen]="isReturnOpen()"
-  title="Motivo de Devolución"
-  confirmText="Registrar Devolución"
-  iconEmoji="📝"
-  iconBgClass="bg-blue-50"
-  confirmButtonClass="bg-blue-600 hover:bg-blue-700"
-  maxWidthClass="max-w-md"
-  (closeEvent)="closeReturn()"
-  (confirmEvent)="confirmReturn()">
-  <div class="space-y-2">
-    <label class="text-sm font-semibold text-slate-700">
-      Motivo de la devolución <span class="text-red-500">*</span>
-    </label>
-    <textarea [(ngModel)]="returnComment" rows="4"
-              placeholder="Describa el motivo de la devolución..."
-              class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"></textarea>
-    <p class="text-xs text-slate-400">Proporcione detalles específicos sobre la razón.</p>
-  </div>
-</app-modal>
+<!-- Return Wizard (devolución de compra, multi-producto) -->
+<app-return-wizard
+  [isOpen]="isReturnWizardOpen()"
+  [warehouses]="warehouses"
+  (closeEvent)="closeReturnWizard()"
+  (submitReturn)="onReturnWizardSubmit($event)">
+</app-return-wizard>

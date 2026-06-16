@@ -17,6 +17,7 @@ import { ExitFormComponent } from './components/exit-form/exit-form.component';
 import { ExitWizardComponent } from './components/exit-wizard/exit-wizard.component';
 import { TransferFormComponent } from './components/transfer-form/transfer-form.component';
 import { TransferWizardComponent } from './components/transfer-wizard/transfer-wizard.component';
+import { ReturnWizardComponent } from './components/return-wizard/return-wizard.component';
 import { ExportComponentComponent, ExportData } from '../../../../shared/components/export/export-component.component';
 
 @Component({
@@ -24,7 +25,7 @@ import { ExportComponentComponent, ExportData } from '../../../../shared/compone
   standalone: true,
   imports: [
     CommonModule, FormsModule, PaginationComponent, ModalComponent,
-    EntryWizardComponent, ExitFormComponent, ExitWizardComponent, TransferFormComponent, TransferWizardComponent, ExportComponentComponent
+    EntryWizardComponent, ExitFormComponent, ExitWizardComponent, TransferFormComponent, TransferWizardComponent, ReturnWizardComponent, ExportComponentComponent
   ],
   templateUrl: './movements-list.component.html',
 })
@@ -63,13 +64,8 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   selectedForExit: MovementItem | null = null;
   selectedForTransfer: MovementItem | null = null;
 
-  // --- Modal: Confirmar devolución ---
-  isConfirmReturnOpen = signal(false);
-  selectedForReturn: MovementItem | null = null;
-
-  // --- Modal: Motivo devolución ---
-  isReturnOpen = signal(false);
-  returnComment = '';
+  // --- Return Wizard (devolución de compra, multi-producto) ---
+  isReturnWizardOpen = signal(false);
 
   // --- Warehouses (for transfer and filters) ---
   warehouses: { id: string; name: string }[] = [];
@@ -405,56 +401,19 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   // ─── Devolución ───────────────────────────────────────────────────────────
 
-  openReturnConfirm(m: MovementItem): void {
-    if (!m.purchaseId) {
-      this.notificationService.showError('Este movimiento no tiene compra asociada');
-      return;
-    }
-    this.selectedForReturn = m;
-    this.isConfirmReturnOpen.set(true);
+  openReturnWizard(): void {
+    this.isReturnWizardOpen.set(true);
   }
 
-  closeConfirmReturn(): void {
-    this.isConfirmReturnOpen.set(false);
-    this.selectedForReturn = null;
+  closeReturnWizard(): void {
+    this.isReturnWizardOpen.set(false);
   }
 
-  continueToReturnComment(): void {
-    this.isConfirmReturnOpen.set(false);
-    this.returnComment = '';
-    this.isReturnOpen.set(true);
-  }
-
-  closeReturn(): void {
-    this.isReturnOpen.set(false);
-    this.returnComment = '';
-    this.selectedForReturn = null;
-  }
-
-  confirmReturn(): void {
-    if (!this.returnComment?.trim()) {
-      this.notificationService.showError('El motivo de devolución es obligatorio');
-      return;
-    }
-    const warehouseId = this.selectedForReturn!.product.warehouseId;
-    if (!warehouseId) {
-      this.notificationService.showError('El producto no tiene almacén asignado');
-      return;
-    }
-    const returnData: ReturnDto = {
-      movementCode: '1107',
-      warehouseId,
-      reason: this.returnComment,
-      purchase_id: this.selectedForReturn!.purchaseId!,
-      items: [{
-        productCode: this.selectedForReturn!.product.productCode,
-        quantity: 1,
-      }],
-    };
+  onReturnWizardSubmit(returnData: ReturnDto): void {
     this.offlineFirst.createReturn(returnData).subscribe({
       next: () => {
         this.notificationService.showSuccess('Devolución registrada correctamente');
-        this.closeReturn();
+        this.closeReturnWizard();
         this.loadMovements();
         this.refreshStock();
       },

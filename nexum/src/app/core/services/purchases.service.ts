@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { CreatePurchasePayload, Purchase } from '../../models/purchase.models';
+import { CreatePurchasePayload, Purchase, PurchaseDetailResponse } from '../../models/purchase.models';
 
 @Injectable({
   providedIn: 'root',
@@ -20,5 +20,9 @@ export class PurchasesService {
     let params = new HttpParams();
     if (companyId) params = params.set('companyId', companyId.toString());
     return this.http.get<Purchase[]>(this.apiUrl, { params });
+  }
+
+  getPurchaseById(id: string): Observable<PurchaseDetailResponse> {
+    return this.http.get<PurchaseDetailResponse>(`${this.apiUrl}/${id}`);
   }
 }

@@ -2,9 +2,10 @@ import { Component, signal, inject, Output, EventEmitter, Input, OnChanges, Simp
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
-import { TransferDto, MovementTypeOption, InventoryCategory } from '../../../../../../models/inventory.models';
+import { TransferDto, MovementTypeOption, InventoryCategory, InventoryItem } from '../../../../../../models/inventory.models';
 import { MovementsService } from '../../../../../../core/services/movements.service';
 import { WarehouseService } from '../../../../../../core/services/warehouse.service';
+import { InventoryService } from '../../../../../../core/services/inventory.service';
 
 @Component({
   selector: 'app-transfer-wizard',
@@ -22,6 +23,7 @@ export class TransferWizardComponent implements OnChanges {
   private fb = inject(FormBuilder);
   private movementsService = inject(MovementsService);
   private warehouseService = inject(WarehouseService);
+  private inventoryService = inject(InventoryService);
 
   isLoading = signal(false);
   stockSearch = '';
@@ -32,6 +34,9 @@ export class TransferWizardComponent implements OnChanges {
   transferTypes = signal<MovementTypeOption[]>([]);
   selectedCategory = '';
   reason = '';
+  movementCode = '';
+  sourceWarehouseId = '';
+  destinationWarehouseId = '';
   categoryOptions = [
     { value: 'insumo', label: 'Insumo', code: '100' },
     { value: 'mercancia', label: 'Mercancía', code: '200' },
@@ -93,9 +98,27 @@ export class TransferWizardComponent implements OnChanges {
   }
 
   filterStock(): void {
-    // This would filter available stock items
-    // For now, return empty array as placeholder
-    this.filteredStock.set([]);
+    if (!this.sourceWarehouseId) {
+      this.filteredStock.set([]);
+      return;
+    }
+
+    this.isLoadingStock.set(true);
+    this.inventoryService.getInventory({
+      warehouse: this.sourceWarehouseId,
+      search: this.stockSearch || undefined,
+      isActive: true
+    }).subscribe({
+      next: (data: InventoryItem[]) => {
+        const available = (data || []).filter((item: InventoryItem) => item.stock && item.stock > 0);
+        this.filteredStock.set(available);
+        this.isLoadingStock.set(false);
+      },
+      error: () => {
+        this.filteredStock.set([]);
+        this.isLoadingStock.set(false);
+      }
+    });
   }
 
   isAlreadyAdded(productCode: string): boolean {
@@ -126,14 +149,6 @@ export class TransferWizardComponent implements OnChanges {
     return this.items;
   }
 
-  get sourceWarehouseId() {
-    return this.headerForm.get('sourceWarehouseId')?.value;
-  }
-
-  get destinationWarehouseId() {
-    return this.headerForm.get('destinationWarehouseId')?.value;
-  }
-
   get destinationWarehouses() {
     return this.availableDestinationWarehouses;
   }
@@ -147,11 +162,18 @@ export class TransferWizardComponent implements OnChanges {
   }
 
   onCategoryChange(): void {
-    // Handle category change if needed
+    // Asignar el código de movimiento de transferencia según la categoría
+    const type = this.transferTypes().find(t => t.category === this.selectedCategory);
+    const fallback: Record<string, string> = { insumo: '1102', mercancia: '2102', produccion: '3102' };
+    this.movementCode = type?.code || fallback[this.selectedCategory] || '';
   }
 
   onSourceWarehouseChange(): void {
-    // Handle source warehouse change if needed
+    // Al cambiar el origen, limpiar destino y productos, y recargar stock
+    this.destinationWarehouseId = '';
+    this.items.set([]);
+    this.updateTotals();
+    this.filterStock();
   }
 
   private loadWarehouses(): void {
@@ -173,14 +195,22 @@ export class TransferWizardComponent implements OnChanges {
   }
 
   private resetForm(): void {
-    this.headerForm.reset();
-    this.itemsForm.reset();
+    this.itemsForm.reset({ productCode: '', quantity: 1, unitPrice: 0 });
     this.items.set([]);
+    this.filteredStock.set([]);
+    this.selectedCategory = '';
+    this.movementCode = '';
+    this.sourceWarehouseId = '';
+    this.destinationWarehouseId = '';
+    this.reason = '';
+    this.stockSearch = '';
+    this.totalItems = 0;
+    this.totalAmount = 0;
+    this.isLoadingStock.set(false);
   }
 
   get availableDestinationWarehouses(): { id: string; name: string }[] {
-    const sourceId = this.headerForm.get('sourceWarehouseId')?.value;
-    return this.warehouses.filter(wh => wh.id !== sourceId);
+    return this.warehouses.filter(wh => wh.id !== this.sourceWarehouseId);
   }
 
   addItem(): void {
@@ -214,24 +244,19 @@ export class TransferWizardComponent implements OnChanges {
   }
 
   onSubmit(): void {
-    if (this.headerForm.invalid || this.items().length === 0) {
-      this.headerForm.markAllAsTouched();
+    if (!this.movementCode || !this.sourceWarehouseId || !this.destinationWarehouseId || this.items().length === 0) {
       return;
     }
 
-    const sourceWarehouseId = this.headerForm.get('sourceWarehouseId')?.value;
-    const destinationWarehouseId = this.headerForm.get('destinationWarehouseId')?.value;
-
-    if (sourceWarehouseId === destinationWarehouseId) {
+    if (this.sourceWarehouseId === this.destinationWarehouseId) {
       return;
     }
 
-    const headerData = this.headerForm.value;
     const transferData: TransferDto = {
-      movementCode: headerData.movementCode,
-      sourceWarehouseId: headerData.sourceWarehouseId,
-      destinationWarehouseId: headerData.destinationWarehouseId,
-      reason: headerData.reason,
+      movementCode: this.movementCode,
+      sourceWarehouseId: this.sourceWarehouseId,
+      destinationWarehouseId: this.destinationWarehouseId,
+      reason: this.reason,
       items: this.items().map(item => ({
         productCode: item.productCode,
         quantity: item.quantity

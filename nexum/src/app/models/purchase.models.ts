@@ -14,6 +14,9 @@ export interface CreatePurchasePayload {
   warehouse: string;
   supplier: string;
   document: string;
+  // Cuentas contables seleccionadas por el usuario (override de defaults)
+  debitAccountCode?: string;
+  creditAccountCode?: string;
   products: CreatePurchaseProductPayload[];
 }
 
@@ -35,4 +38,19 @@ export interface Purchase {
   status: string;
   created_at: string;
   updated_at?: string;
+}
+
+export interface PurchaseDetailProduct {
+  productCode: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  productUnit: string;
+  category?: string | null;
+}
+
+export interface PurchaseDetailResponse {
+  purchase: Purchase;
+  products: PurchaseDetailProduct[];
 }

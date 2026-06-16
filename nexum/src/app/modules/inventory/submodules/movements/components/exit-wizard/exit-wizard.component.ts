@@ -2,15 +2,17 @@ import { Component, signal, inject, Output, EventEmitter, Input, OnChanges, Simp
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
+import { AccountSelectorComponent } from '../../../../../../shared/components/account-selector/account-selector.component';
 import { ExitDto, MovementTypeOption, InventoryCategory, InventoryResponse, InventoryItem } from '../../../../../../models/inventory.models';
 import { MovementsService } from '../../../../../../core/services/movements.service';
 import { WarehouseService } from '../../../../../../core/services/warehouse.service';
 import { InventoryService } from '../../../../../../core/services/inventory.service';
+import { Account } from '../../../../../../core/services/accounting.service';
 
 @Component({
   selector: 'app-exit-wizard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent, AccountSelectorComponent],
   templateUrl: './exit-wizard.component.html',
 })
 export class ExitWizardComponent implements OnChanges {
@@ -34,12 +36,18 @@ export class ExitWizardComponent implements OnChanges {
   totalAmount = 0;
   selectedCategory = '';
   reason = '';
+  
+  // --- Accounting account selection ---
+  selectedDebitAccount = signal<Account | null>(null);
+  selectedCreditAccount = signal<Account | null>(null);
+  
   categoryOptions = [
     { value: 'insumo', label: 'Insumo', code: '100' },
     { value: 'mercancia', label: 'Mercancía', code: '200' },
     { value: 'produccion', label: 'Producción', code: '300' }
   ];
   warehouseId = '';
+  selectedTypeData: MovementTypeOption | null = null;
   isCostCenterExit = false;
   expenseElements: { code: string; label: string }[] = [];
   entity = '';
@@ -217,29 +225,27 @@ export class ExitWizardComponent implements OnChanges {
     this.closeWizard();
   }
 
-  get selectedType() {
-    return this.headerForm.get('movementCode')?.value;
+  get selectedType(): MovementTypeOption | null {
+    return this.selectedTypeData;
   }
 
-  onWarehouseChange(): void {
-    console.log('📤 EXIT WIZARD - Cambio de almacén detectado:', {
-      newWarehouseId: this.warehouseId,
-      formValue: this.headerForm.get('warehouseId')?.value
-    });
-    
-    // Actualizar warehouseId desde el formulario
-    this.warehouseId = this.headerForm.get('warehouseId')?.value || '';
-    
+  onWarehouseChange(event?: Event): void {
+    // Leer el valor directamente del select (determinista e inmediato)
+    const selectedId = event
+      ? (event.target as HTMLSelectElement).value
+      : (this.headerForm.get('warehouseId')?.value || '');
+
+    this.warehouseId = selectedId;
+    // Mantener el control reactivo sincronizado (validación / onSubmit)
+    this.headerForm.get('warehouseId')?.setValue(selectedId, { emitEvent: false });
+
     // Limpiar productos seleccionados
     this.items.set([]);
     this.filteredStock.set([]);
-    
+
     // Cargar stock del nuevo almacén
     if (this.warehouseId) {
-      console.log('📤 EXIT WIZARD - Cargando productos para almacén:', this.warehouseId);
       this.filterStock();
-    } else {
-      console.log('❌ EXIT WIZARD - No se seleccionó almacén válido');
     }
   }
 
@@ -248,10 +254,8 @@ export class ExitWizardComponent implements OnChanges {
   }
 
   selectType(type: any): void {
-    console.log('📤 EXIT WIZARD - Tipo de salida seleccionado:', {
-      type: type,
-      currentStep: this.currentStep
-    });
+    this.selectedTypeData = type;
+    this.headerForm.get('movementCode')?.setValue(type.code);
     this.currentStep = 'select-products';
   }
 
@@ -292,9 +296,16 @@ export class ExitWizardComponent implements OnChanges {
   }
 
   private resetForm(): void {
-    this.headerForm.reset();
-    this.itemsForm.reset();
+    this.headerForm.reset({ movementCode: '', warehouseId: '', reason: '' });
+    this.itemsForm.reset({ productCode: '', quantity: 1, unitPrice: 0 });
     this.items.set([]);
+    this.filteredStock.set([]);
+    this.currentStep = 'select-type';
+    this.selectedTypeData = null;
+    this.warehouseId = '';
+    this.stockSearch = '';
+    this.entity = '';
+    this.reason = '';
   }
 
   addItem(): void {
@@ -327,17 +338,47 @@ export class ExitWizardComponent implements OnChanges {
     return this.items().reduce((sum, item) => sum + item.totalAmount, 0);
   }
 
+  // --- Métodos para selección de cuentas contables ---
+  onDebitAccountSelected(account: Account | null): void {
+    this.selectedDebitAccount.set(account);
+  }
+
+  onCreditAccountSelected(account: Account | null): void {
+    this.selectedCreditAccount.set(account);
+  }
+
+  // Determinar tipos de cuenta sugeridos según el movimiento
+  getDebitAccountType(): 'asset' | 'liability' | 'equity' | 'income' | 'expense' | undefined {
+    const code = this.headerForm.get('movementCode')?.value;
+    if (!code) return undefined;
+    
+    // Salidas: generalmente débito a cuentas de gastos o costo de ventas
+    if (['105', '205', '305'].includes(code)) return 'expense'; // Sobrantes
+    if (['1104', '2104', '3104'].includes(code)) return 'expense'; // Faltantes
+    return undefined;
+  }
+
+  getCreditAccountType(): 'asset' | 'liability' | 'equity' | 'income' | 'expense' | undefined {
+    const code = this.headerForm.get('movementCode')?.value;
+    if (!code) return undefined;
+    
+    // Salidas: crédito a cuentas de inventario (activo)
+    return 'asset';
+  }
+
   onSubmit(): void {
-    if (this.headerForm.invalid || this.items().length === 0) {
+    const movementCode = this.headerForm.get('movementCode')?.value;
+    if (!movementCode || !this.warehouseId || this.items().length === 0) {
       this.headerForm.markAllAsTouched();
       return;
     }
 
-    const headerData = this.headerForm.value;
     const exitData: ExitDto = {
-      movementCode: headerData.movementCode,
-      warehouseId: headerData.warehouseId,
-      reason: headerData.reason,
+      movementCode: movementCode,
+      warehouseId: this.warehouseId,
+      reason: this.reason,
+      debitAccountCode: this.selectedDebitAccount()?.code,
+      creditAccountCode: this.selectedCreditAccount()?.code,
       items: this.items().map(item => ({
         productCode: item.productCode,
         quantity: item.quantity
