@@ -294,23 +294,30 @@ export class MovementsListComponent implements OnInit, OnDestroy {
     });
   }
 
-  onPurchaseSubmit(payload: CreatePurchasePayload & { movementCode: string; category: InventoryCategory }): void {
-    this.offlineFirst.createPurchase({
-      entity: payload.entity,
-      warehouse: payload.warehouse,
-      supplier: payload.supplier,
-      document: payload.document,
-      products: payload.products,
-    }).subscribe({
-      next: () => {
-        this.notificationService.showSuccess('Compra registrada correctamente');
-        this.loadMovements();
-        this.refreshStock();
-      },
-      error: () => this.notificationService.showError('Error al registrar compra')
-    });
-  }
-
+  // movements-list.component.ts (fragmento modificado)
+onPurchaseSubmit(payload: CreatePurchasePayload & { movementCode: string; category: InventoryCategory }): void {
+    console.log('📦 Enviando compra con cuentas:', {
+    debit: payload.debitAccountCode,
+    credit: payload.creditAccountCode,
+    products: payload.products.length
+  });
+  this.offlineFirst.createPurchase({
+    entity: payload.entity,
+    warehouse: payload.warehouse,
+    supplier: payload.supplier,
+    document: payload.document,
+    products: payload.products,
+    debitAccountCode: payload.debitAccountCode,   // 👈 AÑADIDO
+    creditAccountCode: payload.creditAccountCode, // 👈 AÑADIDO
+  }).subscribe({
+    next: () => {
+      this.notificationService.showSuccess('Compra registrada correctamente');
+      this.loadMovements();
+      this.refreshStock();
+    },
+    error: () => this.notificationService.showError('Error al registrar compra')
+  });
+}
   // ─── Exit Wizard (multi-product) ─────────────────────────────────────────
 
   openExitWizard(): void {

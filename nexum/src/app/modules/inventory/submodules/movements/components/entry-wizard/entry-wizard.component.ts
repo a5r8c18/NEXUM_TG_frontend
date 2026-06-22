@@ -405,6 +405,16 @@ export class EntryWizardComponent implements OnInit, OnChanges {
     const raw = this.purchaseForm.value;
     const type = this.selectedType()!;
 
+    const debitCode = this.selectedDebitAccount()?.code;
+    const creditCode = this.selectedCreditAccount()?.code;
+
+    console.log('🧾 [Wizard] Confirmando compra - Cuentas seleccionadas:', {
+      debit: debitCode,
+      credit: creditCode,
+      debitAccount: this.selectedDebitAccount(),
+      creditAccount: this.selectedCreditAccount()
+    });
+
     const payload: CreatePurchasePayload & { movementCode: string; category: InventoryCategory } = {
       entity: raw.entity,
       warehouse: raw.warehouse,
@@ -424,8 +434,8 @@ export class EntryWizardComponent implements OnInit, OnChanges {
 
     this.submitPurchase.emit({
       ...payload,
-      debitAccountCode: this.selectedDebitAccount()?.code,
-      creditAccountCode: this.selectedCreditAccount()?.code,
+      debitAccountCode: debitCode,
+      creditAccountCode: creditCode,
     });
     this.reset();
     this.closeEvent.emit();
@@ -480,30 +490,22 @@ export class EntryWizardComponent implements OnInit, OnChanges {
 
   // --- Métodos para selección de cuentas contables ---
   onDebitAccountSelected(account: Account | null): void {
+    console.log(`🔹 [Wizard] Débito seleccionado:`, account?.code);
     this.selectedDebitAccount.set(account);
   }
 
   onCreditAccountSelected(account: Account | null): void {
+    console.log(`🔹 [Wizard] Crédito seleccionado:`, account?.code);
     this.selectedCreditAccount.set(account);
   }
 
-  // Determinar tipos de cuenta sugeridos según el movimiento
-  getDebitAccountType(): 'asset' | 'liability' | 'equity' | 'income' | 'expense' | undefined {
-    const code = this.selectedType()?.code;
-    if (!code) return undefined;
-    
-    // Entradas: generalmente débito a cuentas de inventario (activo)
-    return 'asset';
+  // === NUEVOS MÉTODOS: NATURALEZA PARA DÉBITO Y CRÉDITO ===
+  getDebitNature(): 'deudora' | undefined {
+    return 'deudora';
   }
 
-  getCreditAccountType(): 'asset' | 'liability' | 'equity' | 'income' | 'expense' | undefined {
-    const code = this.selectedType()?.code;
-    if (!code) return undefined;
-    
-    // Compras: crédito a cuentas por pagar (pasivo)
-    if (PURCHASE_CODES.includes(code)) return 'liability';
-    // Otras entradas: crédito a cuentas de ingresos o según tipo
-    return undefined;
+  getCreditNature(): 'acreedora' | undefined {
+    return 'acreedora';
   }
 
   // --- Nueva UI: Métodos para categorización profesional ---

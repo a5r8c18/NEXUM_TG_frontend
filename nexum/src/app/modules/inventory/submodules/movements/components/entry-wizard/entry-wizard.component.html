@@ -198,13 +198,15 @@
         <app-account-selector
           label="Cuenta de Débito (opcional)"
           placeholder="Buscar cuenta de débito..."
-          [accountType]="getDebitAccountType()"
+          [nature]="getDebitNature()"
+          [allowsMovementsOnly]="false"
           (accountSelected)="onDebitAccountSelected($event)">
         </app-account-selector>
         <app-account-selector
           label="Cuenta de Crédito (opcional)"
           placeholder="Buscar cuenta de crédito..."
-          [accountType]="getCreditAccountType()"
+          [nature]="getCreditNature()"
+          [allowsMovementsOnly]="false"
           (accountSelected)="onCreditAccountSelected($event)">
         </app-account-selector>
       </div>
@@ -289,13 +291,15 @@
           <app-account-selector
             label="Cuenta de Débito (opcional)"
             placeholder="Buscar cuenta de débito..."
-            [accountType]="getDebitAccountType()"
+            [nature]="getDebitNature()"
+            [allowsMovementsOnly]="false"
             (accountSelected)="onDebitAccountSelected($event)">
           </app-account-selector>
           <app-account-selector
             label="Cuenta de Crédito (opcional)"
             placeholder="Buscar cuenta de crédito..."
-            [accountType]="getCreditAccountType()"
+            [nature]="getCreditNature()"
+            [allowsMovementsOnly]="false"
             (accountSelected)="onCreditAccountSelected($event)">
           </app-account-selector>
         </div>

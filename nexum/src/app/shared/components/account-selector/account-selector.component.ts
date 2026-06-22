@@ -105,6 +105,7 @@ export class AccountSelectorComponent {
   @Input() label: string = 'Cuenta Contable';
   @Input() placeholder: string = 'Buscar cuenta por código o nombre...';
   @Input() accountType?: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  @Input() nature?: 'deudora' | 'acreedora';
   @Input() allowsMovementsOnly: boolean = true;
   @Input() activeOnly: boolean = true;
   
@@ -121,7 +122,6 @@ export class AccountSelectorComponent {
   private searchSubject = new Subject<string>();
   
   constructor() {
-    // Configurar búsqueda con debounce
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -148,20 +148,29 @@ export class AccountSelectorComponent {
     const filters: any = {
       search: term,
       activeOnly: this.activeOnly ? 'true' : 'false',
-      allowsMovements: this.allowsMovementsOnly ? 'true' : 'false'
     };
-    
+
+    if (this.allowsMovementsOnly === true) {
+      filters.allowsMovements = 'true';
+    }
+
     if (this.accountType) {
       filters.type = this.accountType;
     }
-    
+
+    if (this.nature) {
+      filters.nature = this.nature;
+    }
+
     return this.accountingService.getAccounts(filters);
   }
   
   selectAccount(account: Account): void {
+    console.log(`🔹 [AccountSelector] Cuenta seleccionada: ${account.code} - ${account.name} (${this.label})`);
     this.selectedAccount.set(account);
     this.searchTerm.set(`${account.code} - ${account.name}`);
     this.showDropdown.set(false);
+    console.log(`🔹 [AccountSelector] Emitiendo accountSelected con:`, account);
     this.accountSelected.emit(account);
   }
   

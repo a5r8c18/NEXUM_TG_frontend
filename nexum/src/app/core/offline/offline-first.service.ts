@@ -397,9 +397,12 @@ export class OfflineFirstService {
   // ═══════════════════════════════════════════════════════
 
   createPurchase(data: any): Observable<any> {
+    console.log('📦 offline-first: createPurchase llamado con:', data);
     if (this.network.isOnline()) {
+      console.log('📦 Online, llamando a purchasesService.createPurchase');
       return this.purchasesService.createPurchase(data, this.companyId).pipe(
         catchError((err) => {
+          console.error('❌ Error en createPurchase (online):', err);
           // Solo guardar offline si es error de red real (no conexión o timeout)
           if (err.status === 0 || err.status === 504 || err.status === 503) {
             return from(this.createPurchaseOffline(data));
