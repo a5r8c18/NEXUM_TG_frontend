@@ -277,24 +277,36 @@
           <tbody class="divide-y divide-slate-200">
             @for (account of pagedAccounts(); track account.id) {
               <tr class="hover:bg-slate-50/50 transition-colors"
-                  [class.opacity-50]="!account.isActive">
+                  [class.opacity-50]="!account.isActive"
+                  [class.bg-slate-50/30]="account.level === 4">
                 <td class="px-5 py-3">
-                  <span class="text-sm font-mono font-semibold text-slate-900"
-                        [style.padding-left]="getLevelIndent(account.level)">
-                    {{ account.code }}
-                  </span>
+                  <div class="flex items-center gap-1.5">
+                    @if (account.level === 4) {
+                      <span class="text-slate-300 select-none pl-4">└</span>
+                    }
+                    <span class="font-mono font-semibold"
+                          [class.text-sm]="account.level === 3"
+                          [class.text-xs]="account.level === 4"
+                          [class.text-slate-900]="account.level === 3"
+                          [class.text-slate-600]="account.level === 4">
+                      {{ account.code }}
+                    </span>
+                    @if (account.level === 4) {
+                      <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">Subcuenta</span>
+                    }
+                  </div>
                 </td>
                 <td class="px-5 py-3">
-                  <div class="text-sm font-medium text-slate-700"
-                       [style.padding-left]="getLevelIndent(account.level)"
-                       [class.font-bold]="account.level <= 2">
+                  <div [class.text-sm]="account.level === 3"
+                       [class.text-xs]="account.level === 4"
+                       [class.font-medium]="account.level === 3"
+                       [class.text-slate-700]="account.level === 3"
+                       [class.text-slate-500]="account.level === 4"
+                       [class.pl-6]="account.level === 4">
                     {{ account.name }}
                   </div>
-                  @if (account.description) {
-                    <div class="text-xs text-slate-500 mt-0.5"
-                         [style.padding-left]="getLevelIndent(account.level)">
-                      {{ account.description }}
-                    </div>
+                  @if (account.description && account.level === 3) {
+                    <div class="text-xs text-slate-400 mt-0.5">{{ account.description }}</div>
                   }
                 </td>
                 <td class="px-5 py-3 text-center">

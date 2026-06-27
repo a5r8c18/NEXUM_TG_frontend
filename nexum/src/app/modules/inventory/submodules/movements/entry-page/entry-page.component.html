@@ -1,0 +1,359 @@
+<div class="min-h-screen bg-slate-50">
+
+  <!-- Header -->
+  <div class="bg-white border-b border-slate-200 px-6 py-4">
+    <div class="max-w-6xl mx-auto flex items-center gap-4">
+      <button type="button" (click)="goBack()"
+              class="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Movimientos
+      </button>
+      <span class="text-slate-300">/</span>
+      <h1 class="text-lg font-semibold text-slate-800">Nueva Entrada de Inventario</h1>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-6 py-6 space-y-6">
+
+    <!-- ── Loading ───────────────────────────────────────────────────────── -->
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-24">
+        <div class="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }
+
+    @if (!isLoading()) {
+
+      <!-- ═══ SECCIÓN 1: Tipo de movimiento (plegable) ═══ -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <!-- Cabecera clickeable -->
+        <button type="button"
+                (click)="typesPanelOpen.set(!typesPanelOpen())"
+                class="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left">
+          <div class="w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center shrink-0">1</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-slate-700">Tipo de Movimiento</span>
+            @if (selectedType()) {
+              <span class="ml-2 text-xs text-slate-500">
+                — <span class="font-mono font-bold">{{ selectedType()!.code }}</span> {{ selectedType()!.description }}
+              </span>
+            }
+          </div>
+          <!-- Chevron animado -->
+          <svg class="w-4 h-4 text-slate-400 transition-transform shrink-0"
+               [class.rotate-180]="typesPanelOpen()"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Panel colapsable -->
+        @if (typesPanelOpen()) {
+          <div class="px-5 pb-5 pt-1 border-t border-slate-100">
+            @if (getCategoriesByTypes().length === 0) {
+              <p class="text-sm text-slate-400 italic mt-3">Cargando tipos...</p>
+            }
+            @for (cat of getCategoriesByTypes(); track cat.cat) {
+              <div class="mt-3 last:mb-0">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">{{ cat.name }}</p>
+                <div class="flex flex-wrap gap-2">
+                  @for (type of cat.types; track type.code) {
+                    <button type="button"
+                            (click)="onTypeChange(type.code)"
+                            [class.ring-2]="selectedTypeCode() === type.code"
+                            [class.ring-green-500]="selectedTypeCode() === type.code"
+                            [class.bg-green-50]="selectedTypeCode() === type.code"
+                            [class.border-green-300]="selectedTypeCode() === type.code"
+                            class="flex items-center gap-2 px-3 py-2 border-2 border-slate-200 rounded-lg text-sm hover:border-green-300 hover:bg-green-50 transition-all">
+                      <span class="font-mono text-xs font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{{ type.code }}</span>
+                      <span class="text-slate-700 text-xs">{{ type.description }}</span>
+                      @if (isPurchaseCode(type.code)) {
+                        <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">Compra</span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ═══ SECCIÓN 2: Cuentas contables ═══ -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">2</div>
+          <h2 class="text-sm font-semibold text-slate-700">Cuentas Contables</h2>
+          <span class="text-xs text-slate-400 ml-1">(opcional)</span>
+        </div>
+        <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <app-account-selector
+            label="Cuenta de Débito"
+            placeholder="Buscar cuenta de débito..."
+            [allowsMovementsOnly]="false"
+            (accountSelected)="onDebitAccountSelected($event)">
+          </app-account-selector>
+          <app-account-selector
+            label="Cuenta de Crédito"
+            placeholder="Buscar cuenta de crédito..."
+            [allowsMovementsOnly]="false"
+            (accountSelected)="onCreditAccountSelected($event)">
+          </app-account-selector>
+        </div>
+      </div>
+
+      <!-- ═══ SECCIÓN 3: Formulario unificado ═══ -->
+      <form [formGroup]="entryForm">
+
+        <!-- Cabecera -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+          <div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">3</div>
+            <h2 class="text-sm font-semibold text-slate-700">
+              @if (isPurchaseMode()) { Datos de la Compra } @else { Datos de la Entrada }
+            </h2>
+          </div>
+          <div class="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+            <!-- Entidad -->
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700">Entidad <span class="text-red-500">*</span></label>
+              <input formControlName="entity" type="text" placeholder="Hospital Central"
+                     class="w-full px-3 py-2.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                     [class.border-slate-200]="!fieldInvalid('entity')"
+                     [class.border-red-400]="fieldInvalid('entity')"/>
+            </div>
+
+            <!-- Almacén con dropdown fixed -->
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700">Almacén <span class="text-red-500">*</span></label>
+              <input #warehouseInput type="text"
+                     [(ngModel)]="warehouseSearchTerm" [ngModelOptions]="{standalone: true}"
+                     placeholder="Buscar almacén..."
+                     (input)="onWarehouseSearch(warehouseSearchTerm, warehouseInput)"
+                     (focus)="onWarehouseFocus(warehouseInput)"
+                     (blur)="hideWarehouseDropdown()"
+                     class="w-full px-3 py-2.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                     [class.border-slate-200]="!fieldInvalid('warehouseId')"
+                     [class.border-red-400]="fieldInvalid('warehouseId')"/>
+            </div>
+
+            <!-- Proveedor (solo en modo compra) -->
+            @if (isPurchaseMode()) {
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-slate-700">Proveedor <span class="text-red-500">*</span></label>
+                <input formControlName="supplier" type="text" placeholder="Empresa S.A."
+                       class="w-full px-3 py-2.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                       [class.border-slate-200]="!fieldInvalid('supplier')"
+                       [class.border-red-400]="fieldInvalid('supplier')"/>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-slate-700">Factura/Contrato <span class="text-red-500">*</span></label>
+                <input formControlName="document" type="text" placeholder="FAC-0001"
+                       class="w-full px-3 py-2.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                       [class.border-slate-200]="!fieldInvalid('document')"
+                       [class.border-red-400]="fieldInvalid('document')"/>
+              </div>
+            }
+
+            <!-- Elemento de gasto (centro de costo) -->
+            @if (isCostCenterType()) {
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-slate-700">Elemento de Gasto</label>
+                <select formControlName="expenseElement"
+                        class="w-full px-3 py-2.5 border-2 border-amber-200 bg-amber-50/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all">
+                  <option value="">Sin especificar</option>
+                  @for (elem of expenseElements; track elem.code) {
+                    <option [value]="elem.code + ' - ' + elem.label">{{ elem.code }} — {{ elem.label }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- Comentario -->
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700">Comentario</label>
+              <input formControlName="label" type="text" placeholder="Observaciones..."
+                     class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de productos (siempre visible) -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">4</div>
+              <h2 class="text-sm font-semibold text-slate-700">
+                Productos
+                <span class="ml-1.5 bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ products.length }}</span>
+              </h2>
+            </div>
+            <button type="button" (click)="addProduct()"
+                    class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Agregar producto
+            </button>
+          </div>
+
+          <div class="overflow-x-auto" formArrayName="products">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50/80 border-b border-slate-200">
+                <tr>
+                  <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide w-[130px]">Código</th>
+                  <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Descripción</th>
+                  <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide w-[70px]">U/M</th>
+                  <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide w-[100px]">Monto ($)</th>
+                  <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide w-[90px]">Cantidad</th>
+                  <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide w-[100px]">P. Unit.</th>
+                  <th class="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide w-[130px]">Vencimiento</th>
+                  <th class="px-3 py-2.5 w-10"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                @for (productGroup of products.controls; track $index; let i = $index) {
+                  <tr [formGroupName]="i" class="hover:bg-slate-50/50 transition-colors">
+
+                    <!-- Código -->
+                    <td class="px-2 py-2">
+                      <input #codeInput formControlName="code" type="text" placeholder="PROD-001"
+                             (input)="onProdCodeSearch($any($event.target).value, i, codeInput)"
+                             (blur)="hideProdDropdown()"
+                             class="w-full px-2 py-2 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
+                             [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'code')"
+                             [class.border-red-400]="productFieldInvalid($any(productGroup), 'code')"/>
+                    </td>
+
+                    <!-- Descripción -->
+                    <td class="px-2 py-2">
+                      <input #descInput formControlName="description" type="text" placeholder="Nombre del producto"
+                             (input)="onProdDescSearch($any($event.target).value, i, descInput)"
+                             (blur)="hideProdDropdown()"
+                             class="w-full px-2 py-2 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
+                             [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'description')"
+                             [class.border-red-400]="productFieldInvalid($any(productGroup), 'description')"/>
+                    </td>
+
+                    <td class="px-2 py-2">
+                      <input formControlName="unit" type="text" placeholder="UN"
+                             class="w-full px-2 py-2 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
+                             [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'unit')"
+                             [class.border-red-400]="productFieldInvalid($any(productGroup), 'unit')"/>
+                    </td>
+                    <td class="px-2 py-2">
+                      <input formControlName="amount" type="number" min="0.01" step="0.01" placeholder="0.00"
+                             class="w-full px-2 py-2 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
+                             [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'amount')"
+                             [class.border-red-400]="productFieldInvalid($any(productGroup), 'amount')"/>
+                    </td>
+                    <td class="px-2 py-2">
+                      <input formControlName="quantity" type="number" min="1" placeholder="1"
+                             class="w-full px-2 py-2 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
+                             [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'quantity')"
+                             [class.border-red-400]="productFieldInvalid($any(productGroup), 'quantity')"/>
+                    </td>
+                    <td class="px-2 py-2">
+                      <div class="px-2 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 text-center">
+                        {{ getUnitPrice(i) | number:'1.2-2' }}
+                      </div>
+                    </td>
+                    <td class="px-2 py-2">
+                      <input formControlName="expirationDate" type="date"
+                             class="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500"/>
+                    </td>
+                    <td class="px-2 py-2 text-center">
+                      @if (products.length > 1) {
+                        <button type="button" (click)="removeProduct(i)"
+                                class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                          </svg>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Totales -->
+          <div class="flex items-center justify-between px-5 py-3 bg-slate-50 border-t border-slate-200">
+            <p class="text-[11px] text-slate-400"><span class="text-red-500">*</span> Código, descripción, U/M, monto y cantidad son obligatorios</p>
+            <div class="flex items-center gap-6">
+              <span class="text-xs text-slate-600">Productos: <strong>{{ products.length }}</strong></span>
+              <span class="text-sm font-semibold text-green-700">
+                Total: ${{ getTotalAmount() | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- ═══ Barra de acciones flotante ═══ -->
+      <div class="sticky bottom-0 bg-white border-t border-slate-200 shadow-lg -mx-6 px-6 py-4">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+          <button type="button" (click)="goBack()"
+                  class="px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-slate-500">
+              Total: <strong class="text-green-700">${{ getTotalAmount() | number:'1.2-2' }}</strong>
+            </span>
+            <button type="button" (click)="onSubmit()"
+                    [disabled]="isSubmitting()"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
+              @if (isSubmitting()) {
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Guardando...
+              } @else {
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                @if (isPurchaseMode()) { Registrar Compra } @else { Registrar Entrada }
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+
+    }<!-- end !isLoading -->
+  </div>
+
+  <!-- Dropdown almacén (fixed, fuera del flujo del DOM) -->
+  @if (showWarehouseDropdown && filteredWarehouses.length > 0) {
+    <div class="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto"
+         [style.top.px]="warehouseDropdownTop"
+         [style.left.px]="warehouseDropdownLeft"
+         [style.width.px]="warehouseDropdownWidth">
+      @for (wh of filteredWarehouses; track wh.id) {
+        <div class="px-3 py-2.5 hover:bg-green-50 cursor-pointer text-xs border-b border-slate-100 last:border-b-0"
+             (mousedown)="selectWarehouse(wh)">{{ wh.name }}</div>
+      }
+    </div>
+  }
+
+  <!-- Dropdown productos tabla (fixed, fuera del flujo del DOM) -->
+  @if (prodDropdownRow >= 0 && prodFilteredProducts.length > 0) {
+    @let activeRow = prodDropdownRow;
+    <div class="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto"
+         [style.top.px]="prodDropdownTop"
+         [style.left.px]="prodDropdownLeft"
+         [style.width.px]="prodDropdownWidth">
+      @for (product of prodFilteredProducts; track product.productCode) {
+        <div class="px-3 py-2 hover:bg-green-50 cursor-pointer text-xs border-b border-slate-100 last:border-b-0"
+             (mousedown)="$event.preventDefault(); selectProdProduct(product, activeRow)">
+          <div class="font-medium text-slate-900">{{ product.productCode }}</div>
+          <div class="text-slate-500">{{ product.productName }}</div>
+        </div>
+      }
+    </div>
+  }
+
+</div>

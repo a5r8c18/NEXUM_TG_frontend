@@ -1,14 +1,13 @@
 import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MovementsService } from '../../../../core/services/movements.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
 import { WarehouseService } from '../../../../core/services/warehouse.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
-import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { MovementItem, MovementFilters, DirectEntryDto, ExitDto, TransferDto, ReturnDto, MovementTypeOption, InventoryCategory } from '../../../../models/inventory.models';
 import { CreatePurchasePayload } from '../../../../models/purchase.models';
 import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
@@ -24,7 +23,7 @@ import { ExportComponentComponent, ExportData } from '../../../../shared/compone
   selector: 'app-movements-list',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, PaginationComponent, ModalComponent,
+    CommonModule, FormsModule, PaginationComponent,
     EntryWizardComponent, ExitFormComponent, ExitWizardComponent, TransferFormComponent, TransferWizardComponent, ReturnWizardComponent, ExportComponentComponent
   ],
   templateUrl: './movements-list.component.html',
@@ -36,6 +35,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
   private offlineFirst = inject(OfflineFirstService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   movements = signal<MovementItem[]>([]);
   isLoading = signal(false);
@@ -276,7 +276,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   // ─── Entry Wizard ──────────────────────────────────────────────────────────
 
   openEntryWizard(): void {
-    this.isEntryWizardOpen.set(true);
+    this.router.navigate(['/inventory/entry/new']);
   }
 
   closeEntryWizard(): void {

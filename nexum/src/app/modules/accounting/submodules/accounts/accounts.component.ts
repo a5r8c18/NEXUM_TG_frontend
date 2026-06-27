@@ -119,8 +119,6 @@ export class AccountsComponent implements OnInit {
     this.hasError.set(false);
     this.accountingService.getAccounts().subscribe({
       next: (accounts) => {
-        console.log('Cuentas cargadas:', accounts);
-        console.log('Cuenta 101:', accounts.find(a => a.code === '101'));
         this.accounts.set(accounts);
         this.isLoading.set(false);
       },
@@ -206,15 +204,26 @@ export class AccountsComponent implements OnInit {
     if (this.activeOnly()) {
       filtered = filtered.filter((a) => a.isActive);
     }
-    
-    // En vista de tabla, mostrar solo cuentas (level 3), las subcuentas (level 4) solo en dropdown
-    filtered = filtered.filter((a) => a.level === 3);
-    
-    console.log('TableAccounts (level 3):', filtered);
-    console.log('Cuenta 101 en tableAccounts:', filtered.find(a => a.code === '101'));
-    
-    // Ordenar por código (sin jerarquía)
-    return filtered.sort((a, b) => a.code.localeCompare(b.code));
+
+    // Mostrar cuentas nivel 3 y subcuentas nivel 4 juntas, ordenadas jerárquicamente
+    const accounts3 = filtered.filter((a) => a.level === 3).sort((a, b) => a.code.localeCompare(b.code));
+    const accounts4 = filtered.filter((a) => a.level === 4);
+
+    // Intercalar subcuentas debajo de su cuenta padre
+    const result: Account[] = [];
+    for (const acc of accounts3) {
+      result.push(acc);
+      const children = accounts4
+        .filter((s) => s.parentCode === acc.code)
+        .sort((a, b) => a.code.localeCompare(b.code));
+      result.push(...children);
+    }
+    // Subcuentas huérfanas (padre no en nivel 3 del filtro actual) al final
+    const parentCodes = new Set(accounts3.map((a) => a.code));
+    const orphans = accounts4.filter((s) => !parentCodes.has(s.parentCode ?? ''));
+    result.push(...orphans.sort((a, b) => a.code.localeCompare(b.code)));
+
+    return result;
   });
 
   pagedAccounts = computed(() => {
@@ -337,19 +346,11 @@ export class AccountsComponent implements OnInit {
 
   // Método para verificar si una cuenta tiene subcuentas
   hasSubaccounts(accountId: string): boolean {
-    console.log(`hasSubaccounts called for accountId: ${accountId}`);
-    console.log('Subaccounts loaded:', this.subaccounts());
-    
-    // Si no están cargadas, cargarlas primero
     if (!this.subaccounts()[accountId]) {
-      console.log('Loading subaccounts for account:', accountId);
-      // Disparar carga asíncrona pero no esperar aquí
       this.loadSubaccountsForAccount(accountId);
     }
     
-    // Verificar si hay subcuentas cargadas
     const subaccounts = this.getSubaccountsForAccount(accountId);
-    console.log(`Subaccounts for ${accountId}:`, subaccounts);
     return subaccounts.length > 0;
   }
 
@@ -362,12 +363,6 @@ export class AccountsComponent implements OnInit {
       await new Promise(resolve => setTimeout(resolve, 300));
     }
     return this.hasSubaccounts(accountId);
-  }
-
-  // Método de depuración para el template
-  debugDropdown(account: Account) {
-    console.log('Dropdown condition true for account:', account.code, 'level:', account.level);
-    return true;
   }
 
   // Filter methods
@@ -651,21 +646,15 @@ export class AccountsComponent implements OnInit {
   // ── Subaccount operations ──
 
   loadSubaccountsForAccount(accountId: string) {
-    console.log(`loadSubaccountsForAccount called for accountId: ${accountId}`);
-    
     if (this.subaccounts()[accountId]) {
-      console.log(`Subcuentas ya cargadas para ${accountId}:`, this.subaccounts()[accountId]);
-      return; // Ya cargadas
+      return;
     }
 
-    console.log(`Cargando subcuentas para ${accountId}...`);
     this.accountingService.getSubaccountsByAccount(accountId).subscribe({
       next: (subaccounts) => {
-        console.log(`Respuesta del backend para ${accountId}:`, subaccounts);
         const current = { ...this.subaccounts() };
         current[accountId] = subaccounts as unknown as Account[];
         this.subaccounts.set(current);
-        console.log(`Subcuentas guardadas para ${accountId}:`, subaccounts);
       },
       error: (err) => {
         console.error('Error loading subaccounts:', err);
