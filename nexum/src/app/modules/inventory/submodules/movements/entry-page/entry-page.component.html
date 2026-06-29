@@ -341,14 +341,13 @@
 
   <!-- Dropdown productos tabla (fixed, fuera del flujo del DOM) -->
   @if (prodDropdownRow >= 0 && prodFilteredProducts.length > 0) {
-    @let activeRow = prodDropdownRow;
     <div class="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto"
          [style.top.px]="prodDropdownTop"
          [style.left.px]="prodDropdownLeft"
          [style.width.px]="prodDropdownWidth">
       @for (product of prodFilteredProducts; track product.productCode) {
         <div class="px-3 py-2 hover:bg-green-50 cursor-pointer text-xs border-b border-slate-100 last:border-b-0"
-             (mousedown)="$event.preventDefault(); selectProdProduct(product, activeRow)">
+             (mousedown)="onProdDropdownMousedown($event, product)">
           <div class="font-medium text-slate-900">{{ product.productCode }}</div>
           <div class="text-slate-500">{{ product.productName }}</div>
         </div>

@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, computed, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, signal, inject, OnInit, computed, ElementRef, ViewChildren, QueryList, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
@@ -39,6 +39,7 @@ export class EntryPageComponent implements OnInit {
   private productsService = inject(ProductsService);
   private notificationService = inject(NotificationService);
   private offlineFirst = inject(OfflineFirstService);
+  private cdr = inject(ChangeDetectorRef);
 
   // State
   isLoading = signal(false);
@@ -93,6 +94,9 @@ export class EntryPageComponent implements OnInit {
   prodDropdownLeft = 0;
   prodDropdownWidth = 0;
   private _pendingClose: any = null;
+
+  @ViewChildren('codeInput') codeInputs!: QueryList<ElementRef<HTMLInputElement>>;
+  @ViewChildren('descInput') descInputs!: QueryList<ElementRef<HTMLInputElement>>;
 
   get products(): FormArray<FormGroup> {
     return this.entryForm.get('products') as FormArray<FormGroup>;
@@ -173,7 +177,12 @@ export class EntryPageComponent implements OnInit {
 
   removeProduct(i: number): void { if (this.products.length > 1) this.products.removeAt(i); }
 
-  getUnitPrice(i: number): number { return this.products.at(i).get('unitPrice')?.value ?? 0; }
+  getUnitPrice(i: number): number {
+    const g = this.products.at(i);
+    const qty = Number(g.get('quantity')?.value) || 0;
+    const amt = Number(g.get('amount')?.value) || 0;
+    return qty > 0 ? amt / qty : 0;
+  }
 
   getTotalAmount(): number {
     return this.products.controls.reduce((s, g) => s + (g.get('amount')?.value || 0), 0);
@@ -225,19 +234,25 @@ export class EntryPageComponent implements OnInit {
     this.prodDropdownWidth = r.width;
   }
 
-  selectProdProduct(product: any, row: number): void {
-    // Cancelar el cierre pendiente por blur
-    if (this._pendingClose) { clearTimeout(this._pendingClose); this._pendingClose = null; }
-    const targetRow = row >= 0 ? row : this.prodDropdownRow;
-    if (targetRow < 0 || targetRow >= this.products.length) return;
-    const g = this.products.at(targetRow);
-    g.get('code')?.setValue(product.productCode);
-    g.get('description')?.setValue(product.productName);
-    g.get('unit')?.setValue(product.productUnit || 'und');
-    if (product.defaultUnitPrice > 0) {
-      g.get('amount')?.setValue(product.defaultUnitPrice);
-    }
+  onProdDropdownMousedown(event: MouseEvent, product: any): void {
+    event.preventDefault();   // evita que el input pierda el foco (blur no se dispara)
+    event.stopPropagation();
+    // En este punto prodDropdownRow aún es válido porque blur no se ejecutó
+    const row = this.prodDropdownRow;
+    if (row < 0 || row >= this.products.length) return;
+    const g = this.products.at(row);
+    g.patchValue({
+      code: product.productCode,
+      description: product.productName,
+      unit: product.productUnit || 'und',
+    });
+    // Forzar el reflejo en el DOM (writeValue del accessor no siempre llega aquí)
+    const codeEl = this.codeInputs?.get(row)?.nativeElement;
+    const descEl = this.descInputs?.get(row)?.nativeElement;
+    if (codeEl) codeEl.value = product.productCode;
+    if (descEl) descEl.value = product.productName;
     this.closeProdDropdown();
+    this.cdr.detectChanges();
   }
 
   closeProdDropdown(): void { this.prodFilteredProducts = []; this.prodDropdownRow = -1; this.prodDropdownField = null; }
@@ -320,7 +335,7 @@ export class EntryPageComponent implements OnInit {
         productName: p.description,
         productDescription: '',
         quantity: parseFloat(p.quantity),
-        unitPrice: this.products.at(i).get('unitPrice')?.value ?? 0,
+        unitPrice: this.getUnitPrice(i),
         unit: p.unit || '',
         warehouseId: raw.warehouseId,
         entity: raw.entity || '',
@@ -356,7 +371,7 @@ export class EntryPageComponent implements OnInit {
         product_code: p.code,
         product_name: p.description,
         quantity: parseFloat(p.quantity),
-        unit_price: this.products.at(i).get('unitPrice')?.value ?? 0,
+        unit_price: this.getUnitPrice(i),
         unit: p.unit || null,
         expiration_date: this.formatDate(p.expirationDate),
       })),
