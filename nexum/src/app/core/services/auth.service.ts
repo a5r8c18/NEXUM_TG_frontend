@@ -85,13 +85,20 @@ export class AuthService {
           role: response.user.role || 'admin',
           tenantId: response.user.tenantId || 'tenant-1',
           tenantName: response.user.tenantName || 'Empresa Demo',
-          tenantType: response.user.tenantType || 'MULTI_COMPANY'
+          tenantType: response.user.tenantType || 'MULTI_COMPANY',
+          companyId: response.user.companyId,
+          currentCompanyId: response.user.companyId,
         };
         this.setSession(user, response.accessToken);
         this.setRefreshToken(response.refreshToken);
 
         // Establecer la empresa en el ContextService
         if (response.user.companyId) {
+          // Establecer el id de empresa SINCRÓNICAMENTE para que el header
+          // X-Company-ID esté disponible en la primera petición de datos.
+          // Evita la race del primer login (datos vacíos hasta re-loguear).
+          this.setCompanyContextSync(response.user.companyId, response.user.companyName);
+          // Enriquecer con los datos completos de la empresa (no crítico).
           await this.setCompanyContext(response.user.companyId);
         }
 
@@ -133,11 +140,19 @@ export class AuthService {
       role: user.role || 'admin',
       tenantId: user.tenantId || 'tenant-1',
       tenantName: user.tenantName || 'Empresa Demo',
-      tenantType: user.tenantType || 'MULTI_COMPANY'
+      tenantType: user.tenantType || 'MULTI_COMPANY',
+      companyId: user.companyId,
+      currentCompanyId: user.companyId,
     };
     this.currentUserSignal.set(nexumUser);
     this.isAuthenticatedSignal.set(true);
     localStorage.setItem('currentUser', JSON.stringify(nexumUser));
+
+    // Establecer el contexto de empresa sincrónicamente (flujo MFA)
+    if (user.companyId) {
+      this.setCompanyContextSync(user.companyId, user.companyName);
+      this.setCompanyContext(user.companyId);
+    }
 
     // Emitir nuevo estado de autenticación
     this.authStateSubject.next({
@@ -233,9 +248,15 @@ export class AuthService {
   logout(): void {
     this.currentUserSignal.set(null);
     this.isAuthenticatedSignal.set(false);
+    this.currentCompanyIdSignal.set(1);
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
-    
+    localStorage.removeItem('refreshToken');
+
+    // Limpiar el contexto de empresa/tenant/almacén para que no quede
+    // estado obsoleto que se filtre al siguiente usuario que inicie sesión.
+    this.contextService.clearContext();
+
     // Emitir estado de no autenticación
     this.authStateSubject.next({
       isAuthenticated: false,
@@ -338,6 +359,18 @@ export class AuthService {
     console.log('Token saved to localStorage');
   }
 
+  // Establece el contexto de empresa de forma SÍNCRONA usando solo el id
+  // (y el nombre si está disponible). Garantiza que el header X-Company-ID
+  // esté presente en la primera petición de datos tras el login.
+  private setCompanyContextSync(companyId: number, companyName?: string): void {
+    this.currentCompanyIdSignal.set(companyId);
+    const existing = this.contextService.currentCompany();
+    this.contextService.setCurrentCompany({
+      id: companyId.toString(),
+      name: companyName ?? existing?.name ?? '',
+    } as any);
+  }
+
   private async setCompanyContext(companyId: number): Promise<void> {
     try {
       const company = await firstValueFrom(this.companyService.getCompany(companyId));
@@ -392,8 +425,12 @@ export class AuthService {
         });
         
         // Restaurar el contexto de la empresa si el usuario tiene companyId
-        if (user.companyId) {
-          this.setCompanyContext(user.companyId);
+        const restoredCompanyId = user.currentCompanyId ?? user.companyId;
+        if (restoredCompanyId) {
+          // Síncrono primero (header X-Company-ID disponible al instante),
+          // luego enriquecer con los datos completos de la empresa.
+          this.setCompanyContextSync(restoredCompanyId);
+          this.setCompanyContext(restoredCompanyId);
         }
         
         // Restaurar el tenant si el usuario tiene tenantId
