@@ -29,6 +29,7 @@ export interface CreatePurchasePayload {
     anotadoPor?: string;
     contabilizadoPor?: string;
   };
+  notes?: string;
   products: CreatePurchaseProductPayload[];
 }
 

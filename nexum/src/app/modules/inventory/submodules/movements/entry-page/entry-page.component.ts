@@ -84,6 +84,8 @@ export class EntryPageComponent implements OnInit {
     recepcionadoPor: [''],
     anotadoPor: [''],
     contabilizadoPor: [''],
+    // Observaciones generales
+    notes: [''],
     products: this.fb.array<FormGroup>([]),
   });
 
@@ -412,6 +414,7 @@ export class EntryPageComponent implements OnInit {
         anotadoPor: raw.anotadoPor || null,
         contabilizadoPor: raw.contabilizadoPor || null,
       },
+      notes: raw.notes || null,
     };
     this.isSubmitting.set(true);
     this.offlineFirst.createPurchase(payload).subscribe({
