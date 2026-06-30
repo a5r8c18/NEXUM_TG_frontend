@@ -184,6 +184,20 @@ export class EntryPageComponent implements OnInit {
     return qty > 0 ? amt / qty : 0;
   }
 
+  onAmountInput(value: string, row: number, inputEl: HTMLInputElement): void {
+    const num = parseFloat(value);
+    const g = this.products.at(row);
+    g.get('amount')?.setValue(isNaN(num) ? 0 : num);
+    this.cdr.detectChanges();
+  }
+
+  onQuantityInput(value: string, row: number, inputEl: HTMLInputElement): void {
+    const num = parseInt(value, 10);
+    const g = this.products.at(row);
+    g.get('quantity')?.setValue(isNaN(num) || num < 1 ? 1 : num);
+    this.cdr.detectChanges();
+  }
+
   getTotalAmount(): number {
     return this.products.controls.reduce((s, g) => s + (g.get('amount')?.value || 0), 0);
   }
