@@ -118,7 +118,7 @@
           </thead>
           <tbody class="divide-y divide-slate-200">
             @for (comprobante of pagedComprobantes(); track comprobante.id) {
-              @for (line of (comprobante.lines || []); track line.id || $index) {
+              @for (line of (comprobante.lines || []).sort((a, b) => (a.lineOrder || 0) - (b.lineOrder || 0)); track line.id || $index) {
                 <tr class="hover:bg-slate-50 transition-colors">
                   <!-- Show voucher number only on first line -->
                   @if ($index === 0) {

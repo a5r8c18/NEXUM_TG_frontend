@@ -17,6 +17,18 @@ export interface CreatePurchasePayload {
   // Cuentas contables seleccionadas por el usuario (override de defaults)
   debitAccountCode?: string;
   creditAccountCode?: string;
+  // Transportista y responsables (para reportes de recepción)
+  transportista?: {
+    nombre?: string;
+    ci?: string;
+    chapa?: string;
+  };
+  responsables?: {
+    jefeAlmacen?: string;
+    recepcionadoPor?: string;
+    anotadoPor?: string;
+    contabilizadoPor?: string;
+  };
   products: CreatePurchaseProductPayload[];
 }
 

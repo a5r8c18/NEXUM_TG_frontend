@@ -75,6 +75,15 @@ export class EntryPageComponent implements OnInit {
     document: [''],
     expenseElement: [''],
     label: [''],
+    // Transportista (solo compra)
+    transportistaNombre: [''],
+    transportistaCi: [''],
+    transportistaChapa: [''],
+    // Responsables (solo compra)
+    jefeAlmacen: [''],
+    recepcionadoPor: [''],
+    anotadoPor: [''],
+    contabilizadoPor: [''],
     products: this.fb.array<FormGroup>([]),
   });
 
@@ -391,6 +400,18 @@ export class EntryPageComponent implements OnInit {
       })),
       debitAccountCode: this.selectedDebitAccount()?.code,
       creditAccountCode: this.selectedCreditAccount()?.code,
+      // Transportista y responsables
+      transportista: {
+        nombre: raw.transportistaNombre || null,
+        ci: raw.transportistaCi || null,
+        chapa: raw.transportistaChapa || null,
+      },
+      responsables: {
+        jefeAlmacen: raw.jefeAlmacen || null,
+        recepcionadoPor: raw.recepcionadoPor || null,
+        anotadoPor: raw.anotadoPor || null,
+        contabilizadoPor: raw.contabilizadoPor || null,
+      },
     };
     this.isSubmitting.set(true);
     this.offlineFirst.createPurchase(payload).subscribe({

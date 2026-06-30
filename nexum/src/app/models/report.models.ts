@@ -26,6 +26,17 @@ export interface ReceptionReport {
     }>;
     totalAmount: number;
   };
+  transportista?: {
+    nombre?: string;
+    ci?: string;
+    chapa?: string;
+  };
+  responsables?: {
+    jefeAlmacen?: string;
+    recepcionadoPor?: string;
+    anotadoPor?: string;
+    contabilizadoPor?: string;
+  };
   created_at: string;
   updated_at?: string;
 }
