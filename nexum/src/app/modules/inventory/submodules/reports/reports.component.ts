@@ -183,76 +183,290 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   exportToPdf(report: Report): void {
     const products = (report as any).details?.products || [];
-    const type = this.isReception(report) ? 'Recepción' : 'Entrega';
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       this.showToast('No se pudo abrir la ventana de impresión', 'error');
       return;
     }
 
-    const productsHtml = products.map((p: any) =>
-      `<tr><td>${p.code}</td><td>${p.description}</td><td>${p.unit}</td><td style="text-align:right">${p.quantity}</td><td style="text-align:right">$${Number(p.unitPrice).toFixed(2)}</td><td style="text-align:right">$${Number(p.amount).toFixed(2)}</td></tr>`
-    ).join('');
+    let html: string;
 
-    const html = `<!DOCTYPE html><html><head><title>Informe de ${type}</title>
-      <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }
-        h2 { text-align: center; margin-bottom: 4px; }
-        .subtitle { text-align: center; font-size: 11px; color: #666; margin-bottom: 20px; }
-        .info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-        .info span { font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 11px; }
-        th { background: #f0f0f0; text-align: left; }
-        .conformidad { border: 1px solid #ccc; padding: 12px; margin-bottom: 16px; }
-        .section { border: 1px solid #ccc; padding: 12px; margin-bottom: 16px; }
-        .section h4 { margin: 0 0 8px 0; }
-        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
-        .firma-line { border-bottom: 1px solid #333; width: 150px; margin-top: 40px; text-align: center; font-size: 10px; padding-top: 4px; }
-      </style>
-    </head><body>
-      <h2>Informe de ${type}</h2>
-      <p class="subtitle">Generado el ${new Date().toLocaleDateString('es-ES')}</p>
-      <div class="info">
-        <div><span>Documento:</span> ${report.document || '-'}</div>
-        <div><span>Entidad:</span> ${report.entity || '-'}</div>
-        <div><span>Almacén:</span> ${report.warehouse || '-'}</div>
-        ${this.isReception(report) ? `<div><span>Proveedor:</span> ${report.supplier || '-'}</div>` : ''}
-        <div><span>Fecha:</span> ${(report as any).created_at ? this.formatDate((report as any).created_at) : '-'}</div>
-        <div><span>Total:</span> $${((report as any).details?.totalAmount || 0).toFixed(2)}</div>
-      </div>
-      <table>
-        <thead><tr><th>Código</th><th>Descripción</th><th>Unidad</th><th style="text-align:right">Cantidad</th><th style="text-align:right">P. Unit.</th><th style="text-align:right">Importe</th></tr></thead>
-        <tbody>${productsHtml}</tbody>
-        <tfoot><tr><td colspan="5" style="text-align:right;font-weight:bold">TOTAL:</td><td style="text-align:right;font-weight:bold">$${((report as any).details?.totalAmount || 0).toFixed(2)}</td></tr></tfoot>
-      </table>
-      ${this.isReception(report) ? `
-        <div class="conformidad">
-          <strong>Estado de Conformidad</strong><br/>
-          Los materiales recibidos <strong>SÍ</strong> corresponden a la calidad, especificaciones, estado de conservación y cantidades que muestran los documentos del suministrador.
+    if (this.isReception(report)) {
+      // SC-2-04 Informe de Recepción
+      const productsHtml = products.map((p: any) =>
+        `<tr>
+          <td>${p.code}</td>
+          <td>${p.description}</td>
+          <td>${p.unit || '-'}</td>
+          <td style="text-align:center">-</td>
+          <td style="text-align:center">${p.quantity}</td>
+          <td style="text-align:right">$${Number(p.unitPrice).toFixed(2)}</td>
+          <td style="text-align:right">$${Number(p.amount).toFixed(2)}</td>
+          <td>-</td>
+        </tr>`
+      ).join('');
+
+      html = `<!DOCTYPE html><html><head><title>SC-2-04 Informe de Recepción</title>
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 11px; padding: 15px; margin: 0; }
+          h1 { text-align: center; font-size: 14px; margin: 0 0 5px 0; font-weight: bold; }
+          h2 { text-align: center; font-size: 12px; margin: 0 0 15px 0; font-weight: normal; }
+          .header-box { border: 1px solid #000; padding: 10px; margin-bottom: 15px; }
+          .header-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .header-field { flex: 1; margin-right: 15px; }
+          .header-field:last-child { margin-right: 0; }
+          .header-label { font-weight: bold; }
+          .header-value { margin-left: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          th, td { border: 1px solid #000; padding: 4px 6px; font-size: 10px; }
+          th { background: #f0f0f0; text-align: center; font-weight: bold; }
+          .section-box { border: 1px solid #000; padding: 10px; margin-bottom: 15px; }
+          .section-title { font-weight: bold; margin-bottom: 8px; }
+          .transport-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 30px; }
+          .signature-box { text-align: center; }
+          .signature-line { border-bottom: 1px solid #000; width: 100%; margin-top: 40px; padding-bottom: 5px; }
+          .signature-label { font-size: 9px; margin-top: 5px; }
+          .conformidad-box { border: 1px solid #000; padding: 10px; margin-bottom: 15px; background: #f9f9f9; }
+          .total-row td { font-weight: bold; }
+        </style>
+      </head><body>
+        <h1>SC-2-04 INFORME DE RECEPCIÓN</h1>
+        <h2>Modelo Oficial Cubano</h2>
+
+        <!-- Encabezado -->
+        <div class="header-box">
+          <div class="header-row">
+            <div class="header-field">
+              <span class="header-label">Número de Informe:</span>
+              <span class="header-value">${(report as any).reportNumber || '-'}</span>
+            </div>
+            <div class="header-field">
+              <span class="header-label">Fecha de Emisión:</span>
+              <span class="header-value">${(report as any).created_at ? this.formatDate((report as any).created_at) : '-'}</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-field">
+              <span class="header-label">Entidad:</span>
+              <span class="header-value">${report.entity || '-'}</span>
+            </div>
+            <div class="header-field">
+              <span class="header-label">Almacén Receptor:</span>
+              <span class="header-value">${report.warehouse || '-'}</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-field">
+              <span class="header-label">Proveedor:</span>
+              <span class="header-value">${report.supplier || '-'}</span>
+            </div>
+            <div class="header-field">
+              <span class="header-label">Documento de Respaldo:</span>
+              <span class="header-value">${report.document || '-'}</span>
+            </div>
+          </div>
         </div>
-        <div class="section">
-          <h4>Transportista</h4>
-          <div class="grid4">
+
+        <!-- Tabla de productos -->
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th>Unidad</th>
+              <th>Cant. Solicitada</th>
+              <th>Cant. Recibida</th>
+              <th>Precio Unitario</th>
+              <th>Importe Total</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>${productsHtml}</tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="6" style="text-align:right">TOTAL:</td>
+              <td style="text-align:right">$${((report as any).details?.totalAmount || 0).toFixed(2)}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Estado de Conformidad -->
+        <div class="conformidad-box">
+          <div class="section-title">ESTADO DE CONFORMIDAD</div>
+          <div>Los materiales recibidos <strong>SÍ</strong> corresponden a la calidad, especificaciones, estado de conservación y cantidades que muestran los documentos del suministrador.</div>
+        </div>
+
+        <!-- Datos del Transportista -->
+        <div class="section-box">
+          <div class="section-title">DATOS DEL TRANSPORTISTA</div>
+          <div class="transport-grid">
             <div><strong>Nombre:</strong> ${(report as any).transportista?.nombre || '-'}</div>
             <div><strong>CI:</strong> ${(report as any).transportista?.ci || '-'}</div>
             <div><strong>Chapa:</strong> ${(report as any).transportista?.chapa || '-'}</div>
-            <div><strong>Firma:</strong> _____________</div>
           </div>
         </div>
-        <div class="section">
-          <h4>Responsables</h4>
-          <div class="grid2">
-            <div><strong>Jefe de Almacén:</strong> ${(report as any).responsables?.jefeAlmacen || '-'}</div>
-            <div><strong>Recepcionado por:</strong> ${(report as any).responsables?.recepcionadoPor || (report as any).receivedBy || '-'}</div>
-            <div><strong>Anotado por:</strong> ${(report as any).responsables?.anotadoPor || '-'}</div>
-            <div><strong>Contabilizado por:</strong> ${(report as any).responsables?.contabilizadoPor || '-'}</div>
+
+        <!-- Observaciones Generales -->
+        <div class="section-box">
+          <div class="section-title">OBSERVACIONES GENERALES</div>
+          <div>${(report as any).notes || 'Sin observaciones'}</div>
+        </div>
+
+        <!-- Firmas y Responsables -->
+        <div class="signatures">
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Recibió<br/>${(report as any).responsables?.recepcionadoPor || '-'}</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Revisó<br/>${(report as any).responsables?.jefeAlmacen || '-'}</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Autorizó<br/>${(report as any).responsables?.contabilizadoPor || '-'}</div>
           </div>
         </div>
-      ` : ''}
-      <script>window.onload = function() { window.print(); }</script>
-    </body></html>`;
+
+        <script>window.onload = function() { window.print(); }</script>
+      </body></html>`;
+    } else {
+      // SC-2-08 Vale de Entrega o Devolución
+      const productsHtml = products.map((p: any) =>
+        `<tr>
+          <td>${p.code}</td>
+          <td>${p.description}</td>
+          <td>${p.unit || '-'}</td>
+          <td style="text-align:center">-</td>
+          <td style="text-align:center">${p.quantity}</td>
+          <td style="text-align:right">$${Number(p.unitPrice).toFixed(2)}</td>
+          <td style="text-align:right">$${Number(p.amount).toFixed(2)}</td>
+        </tr>`
+      ).join('');
+
+      html = `<!DOCTYPE html><html><head><title>SC-2-08 Vale de Entrega</title>
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 11px; padding: 15px; margin: 0; }
+          h1 { text-align: center; font-size: 14px; margin: 0 0 5px 0; font-weight: bold; }
+          h2 { text-align: center; font-size: 12px; margin: 0 0 15px 0; font-weight: normal; }
+          .header-box { border: 1px solid #000; padding: 10px; margin-bottom: 15px; }
+          .header-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .header-field { flex: 1; margin-right: 15px; }
+          .header-field:last-child { margin-right: 0; }
+          .header-label { font-weight: bold; }
+          .header-value { margin-left: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          th, td { border: 1px solid #000; padding: 4px 6px; font-size: 10px; }
+          th { background: #f0f0f0; text-align: center; font-weight: bold; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-top: 30px; }
+          .signature-box { text-align: center; }
+          .signature-line { border-bottom: 1px solid #000; width: 100%; margin-top: 40px; padding-bottom: 5px; }
+          .signature-label { font-size: 9px; margin-top: 5px; }
+          .total-row td { font-weight: bold; }
+          .copies { margin-top: 20px; font-size: 9px; color: #666; }
+        </style>
+      </head><body>
+        <h1>SC-2-08 VALE DE ENTREGA O DEVOLUCIÓN</h1>
+        <h2>Modelo Oficial Cubano</h2>
+
+        <!-- Encabezado -->
+        <div class="header-box">
+          <div class="header-row">
+            <div class="header-field">
+              <span class="header-label">Número de Vale:</span>
+              <span class="header-value">${(report as any).reportNumber || '-'}</span>
+            </div>
+            <div class="header-field">
+              <span class="header-label">Fecha de Emisión:</span>
+              <span class="header-value">${(report as any).created_at ? this.formatDate((report as any).created_at) : '-'}</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-field">
+              <span class="header-label">Entidad:</span>
+              <span class="header-value">${report.entity || '-'}</span>
+            </div>
+            <div class="header-field">
+              <span class="header-label">Almacén que Entrega:</span>
+              <span class="header-value">${report.warehouse || '-'}</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-field">
+              <span class="header-label">Área/Destino Solicitante:</span>
+              <span class="header-value">${(report as any).reason || '-'}</span>
+            </div>
+            <div class="header-field">
+              <span class="header-label">Motivo:</span>
+              <span class="header-value">Entrega de materiales</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-field">
+              <span class="header-label">Documento de Respaldo:</span>
+              <span class="header-value">${report.document || '-'}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de productos -->
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre del Producto</th>
+              <th>Unidad</th>
+              <th>Cant. Solicitada</th>
+              <th>Cant. Entregada</th>
+              <th>Precio Unitario</th>
+              <th>Importe Total</th>
+            </tr>
+          </thead>
+          <tbody>${productsHtml}</tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="5" style="text-align:right">TOTAL:</td>
+              <td style="text-align:right">$${((report as any).details?.totalAmount || 0).toFixed(2)}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Observaciones -->
+        <div class="header-box">
+          <div class="section-title">OBSERVACIONES</div>
+          <div>${(report as any).notes || 'Sin observaciones'}</div>
+        </div>
+
+        <!-- Firmas y Responsables -->
+        <div class="signatures">
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Solicita<br/>${(report as any).responsables?.recepcionadoPor || '-'}</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Autoriza<br/>${(report as any).responsables?.jefeAlmacen || '-'}</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Entrega<br/>${(report as any).responsables?.anotadoPor || '-'}</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Recibe<br/>${(report as any).responsables?.contabilizadoPor || '-'}</div>
+          </div>
+        </div>
+
+        <div class="copies">
+          Original: Contabilidad | Duplicado: Almacén | Triplicado: Área Destinataria
+        </div>
+
+        <script>window.onload = function() { window.print(); }</script>
+      </body></html>`;
+    }
 
     printWindow.document.write(html);
     printWindow.document.close();
