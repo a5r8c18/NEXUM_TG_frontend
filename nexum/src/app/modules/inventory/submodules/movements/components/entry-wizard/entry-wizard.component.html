@@ -272,10 +272,30 @@
           </div>
           <div class="space-y-1">
             <label class="text-xs font-semibold text-slate-700">Proveedor <span class="text-red-500">*</span></label>
-            <input formControlName="supplier" type="text" placeholder="Empresa S.A."
-                   class="w-full px-3 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                   [class.border-slate-200]="!fieldInvalid('supplier')"
-                   [class.border-red-400]="fieldInvalid('supplier')"/>
+            <div class="relative">
+              <input type="text"
+                     [value]="supplierSearchTerm"
+                     (input)="onSupplierSearch($any($event.target).value)"
+                     (blur)="hideSupplierDropdown()"
+                     placeholder="Buscar proveedor..."
+                     autocomplete="off"
+                     class="w-full px-3 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                     [class.border-slate-200]="!fieldInvalid('supplier')"
+                     [class.border-red-400]="fieldInvalid('supplier')"/>
+              @if (showSupplierDropdown) {
+                <div class="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                  @for (s of filteredSuppliers; track s.id) {
+                    <button type="button" (mousedown)="selectSupplier(s)"
+                            class="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm">
+                      <div class="font-medium text-slate-900">{{ s.tradeName || s.businessName }}</div>
+                      <div class="text-xs text-slate-500">{{ s.supplierCode }} &middot; {{ s.businessName }}</div>
+                    </button>
+                  } @empty {
+                    <div class="px-3 py-2 text-sm text-slate-500">No se encontraron proveedores</div>
+                  }
+                </div>
+              }
+            </div>
           </div>
           <div class="space-y-1">
             <label class="text-xs font-semibold text-slate-700">Factura/Contrato <span class="text-red-500">*</span></label>

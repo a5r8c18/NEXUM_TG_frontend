@@ -8,6 +8,7 @@ import { CreatePurchasePayload } from '../../../../../models/purchase.models';
 import { MovementsService } from '../../../../../core/services/movements.service';
 import { WarehouseService } from '../../../../../core/services/warehouse.service';
 import { ProductsService } from '../../../../../core/services/products.service';
+import { SuppliersService } from '../../../../../core/services/suppliers.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { OfflineFirstService } from '../../../../../core/offline/offline-first.service';
 import { Account } from '../../../../../core/services/accounting.service';
@@ -37,6 +38,7 @@ export class EntryPageComponent implements OnInit {
   private movementsService = inject(MovementsService);
   private warehouseService = inject(WarehouseService);
   private productsService = inject(ProductsService);
+  private suppliersService = inject(SuppliersService);
   private notificationService = inject(NotificationService);
   private offlineFirst = inject(OfflineFirstService);
   private cdr = inject(ChangeDetectorRef);
@@ -47,6 +49,10 @@ export class EntryPageComponent implements OnInit {
   entryTypes = signal<MovementTypeOption[]>([]);
   warehouses = signal<{ id: string; name: string }[]>([]);
   allProducts: any[] = [];
+  allSuppliers: any[] = [];
+  filteredSuppliers: any[] = [];
+  showSupplierDropdown = false;
+  supplierSearchTerm = '';
 
   // Tipo de movimiento — plegable
   typesPanelOpen = signal(true);
@@ -143,6 +149,11 @@ export class EntryPageComponent implements OnInit {
     this.productsService.getAll({ isActive: true }).subscribe({
       next: (data: any) => { this.allProducts = data.items ?? data ?? []; },
       error: () => { this.allProducts = []; },
+    });
+
+    this.suppliersService.getAll({ isActive: true }).subscribe({
+      next: (data: any) => { this.allSuppliers = Array.isArray(data) ? data : (data?.data ?? []); },
+      error: () => { this.allSuppliers = []; },
     });
   }
 
@@ -317,6 +328,27 @@ export class EntryPageComponent implements OnInit {
   }
 
   hideWarehouseDropdown(): void { setTimeout(() => { this.showWarehouseDropdown = false; }, 200); }
+
+  onSupplierSearch(term: string): void {
+    this.supplierSearchTerm = term;
+    this.entryForm.get('supplier')?.setValue(term);
+    const lower = term.toLowerCase();
+    this.filteredSuppliers = this.allSuppliers.filter(s =>
+      s.businessName?.toLowerCase().includes(lower) ||
+      s.tradeName?.toLowerCase().includes(lower) ||
+      s.supplierCode?.toLowerCase().includes(lower)
+    ).slice(0, 8);
+    this.showSupplierDropdown = this.filteredSuppliers.length > 0;
+  }
+
+  selectSupplier(supplier: any): void {
+    const name = supplier.tradeName || supplier.businessName;
+    this.supplierSearchTerm = name;
+    this.entryForm.get('supplier')?.setValue(name);
+    this.showSupplierDropdown = false;
+  }
+
+  hideSupplierDropdown(): void { setTimeout(() => { this.showSupplierDropdown = false; }, 200); }
 
   // ── Accounting accounts ────────────────────────────────────────────────────
 

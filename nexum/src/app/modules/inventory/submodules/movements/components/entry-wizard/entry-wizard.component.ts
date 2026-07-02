@@ -6,6 +6,7 @@ import { AccountSelectorComponent } from '../../../../../../shared/components/ac
 import { MovementTypeOption, InventoryCategory, DirectEntryDto } from '../../../../../../models/inventory.models';
 import { CreatePurchasePayload } from '../../../../../../models/purchase.models';
 import { ProductsService } from '../../../../../../core/services/products.service';
+import { SuppliersService } from '../../../../../../core/services/suppliers.service';
 import { Account } from '../../../../../../core/services/accounting.service';
 
 export type EntryStep = 'select-type' | 'simple-form' | 'purchase-form';
@@ -37,6 +38,7 @@ const EXPENSE_ELEMENTS = [
 export class EntryWizardComponent implements OnInit, OnChanges {
   private fb = inject(FormBuilder);
   private productsService = inject(ProductsService);
+  private suppliersService = inject(SuppliersService);
 
   @Input() isOpen = false;
   @Input() entryTypes: MovementTypeOption[] = [];
@@ -59,6 +61,12 @@ export class EntryWizardComponent implements OnInit, OnChanges {
   purchaseDropdownRow: number = -1;
   purchaseDropdownField: 'code' | 'description' | null = null;
 
+  // --- Supplier autocomplete ---
+  allSuppliers: any[] = [];
+  filteredSuppliers: any[] = [];
+  showSupplierDropdown = false;
+  supplierSearchTerm = '';
+
   // --- Warehouse autocomplete ---
   warehouseSearchTerm = '';
   filteredWarehouses: { id: string; name: string }[] = [];
@@ -70,6 +78,7 @@ export class EntryWizardComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.loadProducts();
+    this.loadSuppliers();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -78,21 +87,17 @@ export class EntryWizardComponent implements OnInit, OnChanges {
     }
   }
 
+  private loadSuppliers(): void {
+    this.suppliersService.getAll({ isActive: true }).subscribe({
+      next: (data: any) => { this.allSuppliers = Array.isArray(data) ? data : (data?.data ?? []); },
+      error: () => { this.allSuppliers = []; },
+    });
+  }
+
   private loadProducts(): void {
-    console.log('📦 ENTRY WIZARD - Cargando productos...');
     this.productsService.getAll({ isActive: true }).subscribe({
-      next: (data) => {
-        console.log('✅ ENTRY WIZARD - Productos cargados:', {
-          total: data?.items?.length || data?.length || 0,
-          data: data
-        });
-        this.allProducts = data.items || data;
-        console.log('📦 ENTRY WIZARD - allProducts actualizado:', this.allProducts.length);
-      },
-      error: (error) => {
-        console.log('❌ ENTRY WIZARD - Error cargando productos:', error);
-        this.allProducts = [];
-      }
+      next: (data) => { this.allProducts = data.items || data; },
+      error: () => { this.allProducts = []; },
     });
   }
 
@@ -284,12 +289,6 @@ export class EntryWizardComponent implements OnInit, OnChanges {
 
   // --- Purchase autocomplete methods ---
   onPurchaseCodeSearch(term: string, rowIndex: number): void {
-    console.log('🔍 ENTRY WIZARD - Buscando producto por código:', {
-      term,
-      rowIndex,
-      totalProducts: this.allProducts.length
-    });
-    
     if (!term || term.length < 1) {
       this.closePurchaseDropdown();
       return;
@@ -298,13 +297,6 @@ export class EntryWizardComponent implements OnInit, OnChanges {
     this.purchaseFilteredProducts = this.allProducts.filter(p =>
       p.productCode.toLowerCase().includes(lower)
     ).slice(0, 8);
-    
-    console.log('✅ ENTRY WIZARD - Productos filtrados por código:', {
-      term,
-      resultados: this.purchaseFilteredProducts.length,
-      productos: this.purchaseFilteredProducts
-    });
-    
     this.purchaseDropdownRow = rowIndex;
     this.purchaseDropdownField = 'code';
   }
@@ -367,6 +359,29 @@ export class EntryWizardComponent implements OnInit, OnChanges {
     setTimeout(() => { this.showWarehouseDropdown = false; }, 200);
   }
 
+  onSupplierSearch(term: string): void {
+    this.supplierSearchTerm = term;
+    this.purchaseForm.get('supplier')?.setValue(term);
+    const lower = term.toLowerCase();
+    this.filteredSuppliers = this.allSuppliers.filter(s =>
+      s.businessName?.toLowerCase().includes(lower) ||
+      s.tradeName?.toLowerCase().includes(lower) ||
+      s.supplierCode?.toLowerCase().includes(lower)
+    ).slice(0, 8);
+    this.showSupplierDropdown = this.filteredSuppliers.length > 0;
+  }
+
+  selectSupplier(supplier: any): void {
+    const name = supplier.tradeName || supplier.businessName;
+    this.supplierSearchTerm = name;
+    this.purchaseForm.get('supplier')?.setValue(name);
+    this.showSupplierDropdown = false;
+  }
+
+  hideSupplierDropdown(): void {
+    setTimeout(() => { this.showSupplierDropdown = false; }, 200);
+  }
+
   removeProduct(index: number): void {
     this.products.removeAt(index);
   }
@@ -407,13 +422,6 @@ export class EntryWizardComponent implements OnInit, OnChanges {
 
     const debitCode = this.selectedDebitAccount()?.code;
     const creditCode = this.selectedCreditAccount()?.code;
-
-    console.log('🧾 [Wizard] Confirmando compra - Cuentas seleccionadas:', {
-      debit: debitCode,
-      credit: creditCode,
-      debitAccount: this.selectedDebitAccount(),
-      creditAccount: this.selectedCreditAccount()
-    });
 
     const payload: CreatePurchasePayload & { movementCode: string; category: InventoryCategory } = {
       entity: raw.entity,
@@ -469,6 +477,9 @@ export class EntryWizardComponent implements OnInit, OnChanges {
     this.productSearchTerm = '';
     this.filteredProducts = [];
     this.showProductDropdown = false;
+    this.supplierSearchTerm = '';
+    this.filteredSuppliers = [];
+    this.showSupplierDropdown = false;
     this.warehouseSearchTerm = '';
     this.filteredWarehouses = [];
     this.showWarehouseDropdown = false;
@@ -489,15 +500,8 @@ export class EntryWizardComponent implements OnInit, OnChanges {
   }
 
   // --- Métodos para selección de cuentas contables ---
-  onDebitAccountSelected(account: Account | null): void {
-    console.log(`🔹 [Wizard] Débito seleccionado:`, account?.code);
-    this.selectedDebitAccount.set(account);
-  }
-
-  onCreditAccountSelected(account: Account | null): void {
-    console.log(`🔹 [Wizard] Crédito seleccionado:`, account?.code);
-    this.selectedCreditAccount.set(account);
-  }
+  onDebitAccountSelected(account: Account | null): void { this.selectedDebitAccount.set(account); }
+  onCreditAccountSelected(account: Account | null): void { this.selectedCreditAccount.set(account); }
 
   // === NUEVOS MÉTODOS: NATURALEZA PARA DÉBITO Y CRÉDITO ===
   getDebitNature(): 'deudora' | undefined {
