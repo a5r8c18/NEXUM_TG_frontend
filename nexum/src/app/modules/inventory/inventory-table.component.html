@@ -234,14 +234,12 @@
                   <span class="text-sm font-semibold text-slate-700">{{ item.exits }}</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <span class="text-sm font-bold {{ getStockClass(item.stock, item.productCode, item.warehouseId) }}"
-                               px-2 py-1 rounded-lg border text-xs">
+                  <span class="text-sm font-bold {{ getStockClass(item.stock, item.productCode, item.warehouseId) }} px-2 py-1 rounded-lg border text-xs">
                     {{ item.stock }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
-                               {{ getStockClass(item.stock, item.productCode, item.warehouseId) }}">
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full border {{ getStockClass(item.stock, item.productCode, item.warehouseId) }}">
                     {{ getStockLabel(item.stock, item.productCode, item.warehouseId) }}
                   </span>
                 </td>
