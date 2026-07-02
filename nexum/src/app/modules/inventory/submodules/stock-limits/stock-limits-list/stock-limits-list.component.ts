@@ -203,7 +203,7 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
 
   selectProduct(product: any): void {
     this.productSearchTerm = product.productName;
-    this.formData.update(f => ({ ...f, productId: product.id }));
+    this.formData.update(f => ({ ...f, productId: product.productCode }));
     this.showProductDropdown = false;
   }
 
