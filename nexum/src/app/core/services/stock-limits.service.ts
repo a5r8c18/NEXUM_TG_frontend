@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { StockLimit, CreateStockLimitRequest, UpdateStockLimitRequest, StockLimitWarning } from '../models/stock-limits.model';
 
@@ -56,10 +57,15 @@ export class StockLimitsService {
     return this.http.post<StockLimit[]>(`${this.apiUrl}/stock-limits/bulk`, limits);
   }
 
-  getProductsForStockLimits(companyId?: string): Observable<any[]> {
-    const url = companyId 
-      ? `${this.apiUrl}/products/stock-limits?companyId=${companyId}`
-      : `${this.apiUrl}/products/stock-limits`;
+  getProductsForStockLimits(companyId?: string, warehouseId?: string): Observable<any[]> {
+    if (!warehouseId || !companyId) {
+      return new Observable(observer => {
+        observer.next([]);
+        observer.complete();
+      });
+    }
+    
+    const url = `${this.apiUrl}/inventory-warehouse/warehouse/${warehouseId}?companyId=${companyId}`;
     
     return this.http.get<any[]>(url);
   }

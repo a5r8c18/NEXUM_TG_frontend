@@ -88,20 +88,27 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
   }
 
   loadAvailableData(): void {
-    // Load available products
-    this.stockLimitsService.getProductsForStockLimits(this.currentCompanyId).subscribe({
-      next: (products) => {
-        this.availableProducts.set(products);
-      },
-      error: () => {
-        console.warn('Error al cargar productos disponibles');
-      }
-    });
-
     // Load available warehouses
     this.warehouseService.getWarehouses().subscribe({
       next: (data: any) => this.availableWarehouses.set(Array.isArray(data) ? data : (data?.data ?? [])),
       error: () => this.availableWarehouses.set([]),
+    });
+  }
+
+  loadProductsForWarehouse(warehouseId: string): void {
+    if (!warehouseId) {
+      this.availableProducts.set([]);
+      return;
+    }
+    this.stockLimitsService.getProductsForStockLimits(this.currentCompanyId, warehouseId).subscribe({
+      next: (products) => {
+        this.availableProducts.set(products);
+        this.filteredProducts.set(products.slice(0, 8));
+      },
+      error: () => {
+        this.availableProducts.set([]);
+        this.filteredProducts.set([]);
+      }
     });
   }
 
@@ -188,14 +195,14 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
     }
     const lower = term.toLowerCase();
     this.filteredProducts.set(this.availableProducts().filter(p =>
-      p.name?.toLowerCase().includes(lower) ||
-      p.code?.toLowerCase().includes(lower)
+      p.productName?.toLowerCase().includes(lower) ||
+      p.productCode?.toLowerCase().includes(lower)
     ).slice(0, 8));
     this.showProductDropdown = this.filteredProducts().length > 0;
   }
 
   selectProduct(product: any): void {
-    this.productSearchTerm = product.name;
+    this.productSearchTerm = product.productName;
     this.formData.update(f => ({ ...f, productId: product.id }));
     this.showProductDropdown = false;
   }
@@ -221,8 +228,12 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
 
   selectWarehouse(warehouse: any): void {
     this.warehouseSearchTerm = warehouse.name;
-    this.formData.update(f => ({ ...f, warehouseId: warehouse.id }));
+    this.formData.update(f => ({ ...f, warehouseId: warehouse.id, productId: '' }));
+    this.productSearchTerm = '';
+    this.availableProducts.set([]);
+    this.filteredProducts.set([]);
     this.showWarehouseDropdown = false;
+    this.loadProductsForWarehouse(warehouse.id);
   }
 
   hideWarehouseDropdown(): void {
