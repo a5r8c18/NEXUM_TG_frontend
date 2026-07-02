@@ -55,9 +55,9 @@
                 (change)="warehouseFilter.set($any($event.target).value); onWarehouseFilterChange()"
                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           <option value="">Todos los almacenes</option>
-          <option value="wh1">Almacén Principal</option>
-          <option value="wh2">Almacén Secundario</option>
-          <option value="wh3">Almacén Temporal</option>
+          @for (warehouse of availableWarehouses(); track warehouse.id) {
+            <option [value]="warehouse.id">{{ warehouse.name }}</option>
+          }
         </select>
       </div>
       <div>
