@@ -43,4 +43,21 @@ export class ReportsService {
     const query = params.toString();
     return this.http.get<any[]>(`${this.apiUrl}/delivery${query ? '?' + query : ''}`);
   }
+
+  getTransferReports(filters?: {
+    fromDate?: string;
+    toDate?: string;
+    product?: string;
+    sourceWarehouse?: string;
+    destinationWarehouse?: string;
+  }): Observable<any[]> {
+    const params = new URLSearchParams();
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    if (filters?.product) params.append('product', filters.product);
+    if (filters?.sourceWarehouse) params.append('sourceWarehouse', filters.sourceWarehouse);
+    if (filters?.destinationWarehouse) params.append('destinationWarehouse', filters.destinationWarehouse);
+    const query = params.toString();
+    return this.http.get<any[]>(`${this.apiUrl}/transfers${query ? '?' + query : ''}`);
+  }
 }

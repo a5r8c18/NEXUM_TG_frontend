@@ -5,7 +5,7 @@ import { Subscription } from 'rxjs';
 import { DateFilterComponent, FilterValues } from '../../shared/components/filter/date-filter.component';
 import { PaginationComponent, PaginationConfig } from '../../shared/components/pagination/pagination.component';
 import { ExportComponentComponent, ExportData } from '../../shared/components/export/export-component.component';
-import { InventoryService } from '../../core/services/inventory.service';
+import { WarehouseService } from '../../core/services/warehouse.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { InventoryItem, InventoryFilters } from '../../models/inventory.models';
 import { OfflineFirstService } from '../../core/offline/offline-first.service';
@@ -17,17 +17,19 @@ import { OfflineFirstService } from '../../core/offline/offline-first.service';
   templateUrl: './inventory-table.component.html'
 })
 export class InventoryTableComponent implements OnInit, OnDestroy {
-  private inventoryService = inject(InventoryService);
+  private warehouseService = inject(WarehouseService);
   private notificationService = inject(NotificationService);
   private offlineFirst = inject(OfflineFirstService);
   private router = inject(Router);
 
-  allItems = signal<InventoryItem[]>([]);
-  filteredItems = signal<InventoryItem[]>([]);
+  items = signal<InventoryItem[]>([]);
   activeFilters = signal<FilterValues>({});
+  selectedWarehouseId = signal<string>('');
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  warehouses = signal<{ id: string; name: string }[]>([]);
 
   currentPage = signal(1);
   itemsPerPage = signal(5);
@@ -36,12 +38,46 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
   private toastSub!: Subscription;
 
   ngOnInit(): void {
+    this.loadWarehouses();
     this.loadInventory();
-    this.refreshSub = this.notificationService.refresh$.subscribe(() => this.loadInventory());
+    this.refreshSub = this.notificationService.refresh$.subscribe(() => this.reloadWithCurrentFilters());
     this.toastSub = this.notificationService.toasts$.subscribe(t => {
       this.toast.set(t);
       setTimeout(() => this.toast.set(null), 4000);
     });
+  }
+
+  private loadWarehouses(): void {
+    this.warehouseService.getWarehouses().subscribe({
+      next: (data) => {
+        this.warehouses.set(data.map((wh: any) => ({ id: wh.id, name: wh.name })));
+      },
+      error: (err) => {
+        console.error('❌ Error cargando almacenes:', err);
+        this.warehouses.set([]);
+      }
+    });
+  }
+
+  onWarehouseFilterChange(warehouseId: string): void {
+    this.selectedWarehouseId.set(warehouseId);
+    this.currentPage.set(1);
+    this.reloadWithCurrentFilters();
+  }
+
+  private buildNestFilters(): InventoryFilters {
+    const f = this.activeFilters();
+    return {
+      fromDate: f.startDate,
+      toDate: f.endDate,
+      product: f.name || f.code,
+      expirationDate: f.expirationDate,
+      warehouse: this.selectedWarehouseId() || undefined,
+    };
+  }
+
+  private reloadWithCurrentFilters(): void {
+    this.loadInventory(this.buildNestFilters());
   }
 
   ngOnDestroy(): void {
@@ -54,8 +90,7 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
     this.hasError.set(false);
     this.offlineFirst.getInventory(filters).subscribe({
       next: (data) => {
-        this.allItems.set(data);
-        this.filteredItems.set(data);
+        this.items.set(data);
         this.currentPage.set(1);
         this.notificationService.checkNotifications(data);
         this.isLoading.set(false);
@@ -71,13 +106,7 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
   onFiltersChange(filters: FilterValues): void {
     this.activeFilters.set(filters);
     this.currentPage.set(1);
-    const nestFilters: InventoryFilters = {
-      fromDate: filters.startDate,
-      toDate: filters.endDate,
-      product: filters.name || filters.code,
-      expirationDate: filters.expirationDate
-    };
-    this.loadInventory(nestFilters);
+    this.reloadWithCurrentFilters();
   }
 
   onPageChange(page: number): void {
@@ -85,13 +114,12 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
   }
 
   get paginatedItems(): InventoryItem[] {
-    const items = this.filteredItems();
     const start = (this.currentPage() - 1) * this.itemsPerPage();
-    return items.slice(start, start + this.itemsPerPage());
+    return this.items().slice(start, start + this.itemsPerPage());
   }
 
   get paginationConfig(): PaginationConfig {
-    const totalItems = this.filteredItems().length;
+    const totalItems = this.items().length;
     return {
       currentPage: this.currentPage(),
       totalPages: Math.ceil(totalItems / this.itemsPerPage()),
@@ -102,10 +130,11 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
 
   get exportData(): ExportData {
     return {
-      headers: ['Código', 'Nombre', 'Entradas', 'Salidas', 'Existencias'],
-      data: this.filteredItems().map(item => [
+      headers: ['Código', 'Nombre', 'Almacén', 'Entradas', 'Salidas', 'Existencias'],
+      data: this.items().map(item => [
         item.productCode,
         item.productName,
+        item.warehouse || 'Sin almacén',
         item.entries.toString(),
         item.exits.toString(),
         item.stock.toString()
@@ -133,33 +162,33 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
   }
 
   get totalEntradas(): number {
-    return this.filteredItems().reduce((s, i) => s + i.entries, 0);
+    return this.items().reduce((s, i) => s + i.entries, 0);
   }
 
   get totalSalidas(): number {
-    return this.filteredItems().reduce((s, i) => s + i.exits, 0);
+    return this.items().reduce((s, i) => s + i.exits, 0);
   }
 
   get totalExistencias(): number {
-    return this.filteredItems().reduce((s, i) => s + i.stock, 0);
+    return this.items().reduce((s, i) => s + i.stock, 0);
   }
 
   // ─── KPIs ─────────────────────────────────────────────────────────────────
 
   get totalProducts(): number {
-    return this.filteredItems().length;
+    return this.items().length;
   }
 
   get totalInventoryValue(): number {
-    return this.filteredItems().reduce((sum, i) => sum + (i.stock * (i.unitPrice || 0)), 0);
+    return this.items().reduce((sum, i) => sum + (i.stock * (i.unitPrice || 0)), 0);
   }
 
   get outOfStockCount(): number {
-    return this.filteredItems().filter(i => i.stock === 0).length;
+    return this.items().filter(i => i.stock === 0).length;
   }
 
   get lowStockCount(): number {
-    return this.filteredItems().filter(i => i.stock > 0 && i.stock < 10).length;
+    return this.items().filter(i => i.stock > 0 && i.stock < 10).length;
   }
 
   formatCurrency(amount: number): string {

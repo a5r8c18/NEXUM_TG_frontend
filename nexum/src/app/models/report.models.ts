@@ -61,3 +61,36 @@ export interface DeliveryReport {
   created_at: string;
   updated_at?: string;
 }
+
+export interface TransferReport {
+  id: string;
+  relatedMovementId: string | null;
+  movementCode: string | null;
+  movementDescription: string | null;
+  category: string | null;
+  sourceWarehouse: string | null;
+  destinationWarehouse: string | null;
+  reason: string | null;
+  userName: string | null;
+  details: {
+    products: Array<{
+      code: string;
+      description: string;
+      unit: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+    }>;
+    totalAmount: number;
+  };
+  date: string;
+  created_at: string;
+}
+
+export interface TransferReportFilters {
+  fromDate?: string;
+  toDate?: string;
+  product?: string;
+  sourceWarehouse?: string;
+  destinationWarehouse?: string;
+}

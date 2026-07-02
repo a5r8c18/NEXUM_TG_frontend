@@ -27,6 +27,7 @@
       <div class="space-y-1">
         <label class="text-xs font-medium text-slate-600">Almacén de origen *</label>
         <select [(ngModel)]="warehouseId"
+                (ngModelChange)="onWarehouseChange()"
                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
           <option value="">Seleccionar almacén...</option>
           @for (wh of warehouses; track wh.id) {

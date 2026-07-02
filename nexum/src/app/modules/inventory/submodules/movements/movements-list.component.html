@@ -265,15 +265,6 @@
   (submitPurchase)="onPurchaseSubmit($event)">
 </app-entry-wizard>
 
-<!-- Exit Wizard (multi-product) -->
-<app-exit-wizard
-  [isOpen]="isExitWizardOpen()"
-  [exitTypes]="exitTypes()"
-  [warehouses]="warehouses"
-  (closeEvent)="closeExitWizard()"
-  (submitExit)="onExitWizardSubmit($event)">
-</app-exit-wizard>
-
 <!-- Exit Form (single product) -->
 <app-exit-form
   [isOpen]="isExitFormOpen()"

@@ -13,7 +13,6 @@ import { CreatePurchasePayload } from '../../../../models/purchase.models';
 import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 import { EntryWizardComponent } from './components/entry-wizard/entry-wizard.component';
 import { ExitFormComponent } from './components/exit-form/exit-form.component';
-import { ExitWizardComponent } from './components/exit-wizard/exit-wizard.component';
 import { TransferFormComponent } from './components/transfer-form/transfer-form.component';
 import { TransferWizardComponent } from './components/transfer-wizard/transfer-wizard.component';
 import { ReturnWizardComponent } from './components/return-wizard/return-wizard.component';
@@ -24,7 +23,7 @@ import { ExportComponentComponent, ExportData } from '../../../../shared/compone
   standalone: true,
   imports: [
     CommonModule, FormsModule, PaginationComponent,
-    EntryWizardComponent, ExitFormComponent, ExitWizardComponent, TransferFormComponent, TransferWizardComponent, ReturnWizardComponent, ExportComponentComponent
+    EntryWizardComponent, ExitFormComponent, TransferFormComponent, TransferWizardComponent, ReturnWizardComponent, ExportComponentComponent
   ],
   templateUrl: './movements-list.component.html',
 })
@@ -57,7 +56,6 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   // --- Sub-component state ---
   isEntryWizardOpen = signal(false);
-  isExitWizardOpen = signal(false);
   isExitFormOpen = signal(false);
   isTransferWizardOpen = signal(false);
   isTransferFormOpen = signal(false);
@@ -318,25 +316,10 @@ onPurchaseSubmit(payload: CreatePurchasePayload & { movementCode: string; catego
     error: () => this.notificationService.showError('Error al registrar compra')
   });
 }
-  // ─── Exit Wizard (multi-product) ─────────────────────────────────────────
+  // ─── Exit Page (multi-product) ─────────────────────────────────────────
 
   openExitWizard(): void {
-    this.isExitWizardOpen.set(true);
-  }
-
-  closeExitWizard(): void {
-    this.isExitWizardOpen.set(false);
-  }
-
-  onExitWizardSubmit(exitData: ExitDto): void {
-    this.offlineFirst.registerExit(exitData).subscribe({
-      next: () => {
-        this.notificationService.showSuccess('Salida registrada correctamente');
-        this.loadMovements();
-        this.refreshStock();
-      },
-      error: () => this.notificationService.showError('Error al registrar salida')
-    });
+    this.router.navigate(['/inventory/exit/new']);
   }
 
   // ─── Exit Form (single product) ─────────────────────────────────────────────

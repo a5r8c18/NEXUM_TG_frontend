@@ -111,6 +111,10 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/inventory/submodules/movements/entry-page/entry-page.component').then(m => m.EntryPageComponent)
       },
       {
+        path: 'inventory/exit/new',
+        loadComponent: () => import('./modules/inventory/submodules/movements/exit-page/exit-page.component').then(m => m.ExitPageComponent)
+      },
+      {
         path: 'inventory/purchase-orders',
         loadComponent: () => import('./modules/inventory/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
       },

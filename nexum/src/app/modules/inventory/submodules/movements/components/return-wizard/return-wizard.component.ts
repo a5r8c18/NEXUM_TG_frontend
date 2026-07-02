@@ -2,8 +2,9 @@ import { Component, signal, inject, Input, Output, EventEmitter, OnChanges, Simp
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
-import { ReturnDto, InventoryCategory } from '../../../../../../models/inventory.models';
+import { ReturnDto, InventoryCategory, InventoryItem } from '../../../../../../models/inventory.models';
 import { PurchasesService } from '../../../../../../core/services/purchases.service';
+import { InventoryService } from '../../../../../../core/services/inventory.service';
 import { Purchase } from '../../../../../../models/purchase.models';
 
 interface ReturnLine {
@@ -31,6 +32,7 @@ export class ReturnWizardComponent implements OnChanges {
   @Output() submitReturn = new EventEmitter<ReturnDto>();
 
   private purchasesService = inject(PurchasesService);
+  private inventoryService = inject(InventoryService);
 
   isLoadingPurchases = signal(false);
   isLoading = signal(false);
@@ -63,7 +65,8 @@ export class ReturnWizardComponent implements OnChanges {
         this.purchases.set(data || []);
         this.isLoadingPurchases.set(false);
       },
-      error: () => {
+      error: (err) => {
+        console.error('❌ Error cargando compras:', err);
         this.purchases.set([]);
         this.isLoadingPurchases.set(false);
       },
@@ -84,7 +87,7 @@ export class ReturnWizardComponent implements OnChanges {
             productCode: p.productCode,
             productName: p.productName,
             productUnit: p.productUnit || 'und',
-            unitPrice: Number(p.unitPrice) || 0,
+            unitPrice: 0, // Se actualiza con el costo actual del inventario
             category: (p.category as InventoryCategory) || null,
             maxQuantity: p.quantity,
             quantity: p.quantity,
@@ -95,12 +98,39 @@ export class ReturnWizardComponent implements OnChanges {
         const whName = res?.purchase?.warehouse;
         const match = this.warehouses.find((w) => w.name === whName);
         this.warehouseId = match?.id || '';
+        this.updateUnitPricesFromInventory();
         this.isLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
+        console.error('❌ Error cargando productos de la compra:', err);
         this.loadError.set(true);
         this.isLoading.set(false);
       },
+    });
+  }
+
+  onWarehouseChange(): void {
+    this.updateUnitPricesFromInventory();
+  }
+
+  private updateUnitPricesFromInventory(): void {
+    if (!this.warehouseId || this.lines().length === 0) return;
+
+    this.inventoryService.getInventory({ warehouse: this.warehouseId, isActive: true }).subscribe({
+      next: (data: InventoryItem[]) => {
+        const inventory = data || [];
+        const updatedLines = this.lines().map((line) => {
+          const invItem = inventory.find((i) => i.productCode === line.productCode);
+          return {
+            ...line,
+            unitPrice: invItem?.unitPrice || 0,
+          };
+        });
+        this.lines.set(updatedLines);
+      },
+      error: (err) => {
+        console.error('❌ Error cargando precios de inventario:', err);
+      }
     });
   }
 

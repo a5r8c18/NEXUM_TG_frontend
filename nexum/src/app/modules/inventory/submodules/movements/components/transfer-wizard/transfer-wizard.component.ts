@@ -87,9 +87,11 @@ export class TransferWizardComponent implements OnChanges {
 
   updateQuantity(index: number, quantity: number): void {
     const currentItems = this.items();
-    currentItems[index].quantity = quantity;
-    currentItems[index].totalAmount = quantity * currentItems[index].unitPrice;
+    const item = currentItems[index];
+    item.quantity = quantity < 1 ? 1 : quantity;
+    item.totalAmount = item.quantity * item.unitPrice;
     this.items.set([...currentItems]);
+    this.updateTotals();
   }
 
   removeProduct(index: number): void {
@@ -181,7 +183,8 @@ export class TransferWizardComponent implements OnChanges {
       next: (data: any) => {
         this.warehouses = data.map((wh: any) => ({ id: wh.id, name: wh.name }));
       },
-      error: () => {
+      error: (err) => {
+        console.error('❌ Error cargando almacenes:', err);
         this.warehouses = [];
       }
     });
@@ -189,8 +192,14 @@ export class TransferWizardComponent implements OnChanges {
 
   private loadTransferTypes(): void {
     this.movementsService.getMovementTypes('transfer').subscribe({
-      next: (types: any) => this.transferTypes.set(types),
-      error: () => {}
+      next: (types: any) => {
+        console.log('✅ Tipos de transferencia cargados:', types);
+        this.transferTypes.set(types || []);
+      },
+      error: (err) => {
+        console.error('❌ Error cargando tipos de transferencia:', err);
+        this.transferTypes.set([]);
+      }
     });
   }
 

@@ -59,6 +59,14 @@ export class AuthService {
   async login(email: string, password: string): Promise<any> {
     if (!email || !password) return null;
 
+    // Limpiar cualquier sesión anterior antes de iniciar login para evitar
+    // que peticiones concurrentes usen un token expirado de sesiones previas.
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('refreshToken');
+    this.currentUserSignal.set(null);
+    this.isAuthenticatedSignal.set(false);
+
     try {
       console.log('FRONTEND AUTH SERVICE - Login attempt for:', email);
       const response = await firstValueFrom(
