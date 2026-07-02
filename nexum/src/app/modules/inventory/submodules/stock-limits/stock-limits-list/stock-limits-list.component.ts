@@ -53,6 +53,14 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
   availableProducts = signal<any[]>([]);
   availableWarehouses = signal<any[]>([]);
 
+  // Autocomplete state
+  productSearchTerm = '';
+  filteredProducts = signal<any[]>([]);
+  showProductDropdown = false;
+  warehouseSearchTerm = '';
+  filteredWarehouses = signal<any[]>([]);
+  showWarehouseDropdown = false;
+
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
 
@@ -170,6 +178,57 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
     this.loadWarnings();
   }
 
+  // Product autocomplete
+  onProductSearch(term: string): void {
+    this.productSearchTerm = term;
+    if (!term || term.length < 1) {
+      this.filteredProducts.set(this.availableProducts().slice(0, 8));
+      this.showProductDropdown = this.filteredProducts().length > 0;
+      return;
+    }
+    const lower = term.toLowerCase();
+    this.filteredProducts.set(this.availableProducts().filter(p =>
+      p.name?.toLowerCase().includes(lower) ||
+      p.code?.toLowerCase().includes(lower)
+    ).slice(0, 8));
+    this.showProductDropdown = this.filteredProducts().length > 0;
+  }
+
+  selectProduct(product: any): void {
+    this.productSearchTerm = product.name;
+    this.formData.update(f => ({ ...f, productId: product.id }));
+    this.showProductDropdown = false;
+  }
+
+  hideProductDropdown(): void {
+    setTimeout(() => { this.showProductDropdown = false; }, 200);
+  }
+
+  // Warehouse autocomplete
+  onWarehouseSearch(term: string): void {
+    this.warehouseSearchTerm = term;
+    if (!term || term.length < 1) {
+      this.filteredWarehouses.set(this.availableWarehouses().slice(0, 8));
+      this.showWarehouseDropdown = this.filteredWarehouses().length > 0;
+      return;
+    }
+    const lower = term.toLowerCase();
+    this.filteredWarehouses.set(this.availableWarehouses().filter(w =>
+      w.name?.toLowerCase().includes(lower)
+    ).slice(0, 8));
+    this.showWarehouseDropdown = this.filteredWarehouses().length > 0;
+  }
+
+  selectWarehouse(warehouse: any): void {
+    this.warehouseSearchTerm = warehouse.name;
+    this.formData.update(f => ({ ...f, warehouseId: warehouse.id }));
+    this.showWarehouseDropdown = false;
+  }
+
+  hideWarehouseDropdown(): void {
+    setTimeout(() => { this.showWarehouseDropdown = false; }, 200);
+  }
+
   openCreate(): void {
     this.formData.set({
       productId: '',
@@ -178,6 +237,8 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
       maxStock: 0,
       reorderPoint: 0,
     });
+    this.productSearchTerm = '';
+    this.warehouseSearchTerm = '';
     this.isCreateOpen.set(true);
   }
 
@@ -194,6 +255,10 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
       maxStock: stockLimit.maxStock,
       reorderPoint: stockLimit.reorderPoint,
     });
+    const product = this.availableProducts().find(p => p.id === stockLimit.productId);
+    this.productSearchTerm = product?.name || '';
+    const warehouse = this.availableWarehouses().find(w => w.id === stockLimit.warehouseId);
+    this.warehouseSearchTerm = warehouse?.name || '';
     this.isEditOpen.set(true);
   }
 

@@ -7,7 +7,9 @@ import { PaginationComponent, PaginationConfig } from '../../shared/components/p
 import { ExportComponentComponent, ExportData } from '../../shared/components/export/export-component.component';
 import { WarehouseService } from '../../core/services/warehouse.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { StockLimitsService } from '../../core/services/stock-limits.service';
 import { InventoryItem, InventoryFilters } from '../../models/inventory.models';
+import { StockLimit } from '../../core/models/stock-limits.model';
 import { OfflineFirstService } from '../../core/offline/offline-first.service';
 
 @Component({
@@ -19,10 +21,12 @@ import { OfflineFirstService } from '../../core/offline/offline-first.service';
 export class InventoryTableComponent implements OnInit, OnDestroy {
   private warehouseService = inject(WarehouseService);
   private notificationService = inject(NotificationService);
+  private stockLimitsService = inject(StockLimitsService);
   private offlineFirst = inject(OfflineFirstService);
   private router = inject(Router);
 
   items = signal<InventoryItem[]>([]);
+  stockLimits = signal<StockLimit[]>([]);
   activeFilters = signal<FilterValues>({});
   selectedWarehouseId = signal<string>('');
   isLoading = signal(false);
@@ -40,10 +44,22 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadWarehouses();
     this.loadInventory();
-    this.refreshSub = this.notificationService.refresh$.subscribe(() => this.reloadWithCurrentFilters());
+    this.loadStockLimits();
+    this.refreshSub = this.notificationService.refresh$.subscribe(() => {
+      this.reloadWithCurrentFilters();
+      this.loadStockLimits();
+    });
     this.toastSub = this.notificationService.toasts$.subscribe(t => {
       this.toast.set(t);
       setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  private loadStockLimits(): void {
+    const warehouseId = this.selectedWarehouseId() || undefined;
+    this.stockLimitsService.getStockLimits(undefined, warehouseId).subscribe({
+      next: (data) => this.stockLimits.set(data),
+      error: () => this.stockLimits.set([]),
     });
   }
 
@@ -63,6 +79,7 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
     this.selectedWarehouseId.set(warehouseId);
     this.currentPage.set(1);
     this.reloadWithCurrentFilters();
+    this.loadStockLimits();
   }
 
   private buildNestFilters(): InventoryFilters {
@@ -147,18 +164,29 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
     this.notificationService.showSuccess(`Exportación ${event.type.toUpperCase()} completada`);
   }
 
-  getStockClass(stock: number, limit?: number): string {
+  getStockClass(stock: number, productCode: string, warehouseId?: string): string {
+    const limit = this.getStockLimit(productCode, warehouseId);
     if (stock === 0) return 'text-red-600 bg-red-50 border-red-200';
-    if (limit != null && stock <= limit) return 'text-orange-600 bg-orange-50 border-orange-200';
-    if (stock < 10) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    if (limit && stock < limit.minStock) return 'text-orange-600 bg-orange-50 border-orange-200';
+    if (limit && stock > limit.maxStock && limit.maxStock > 0) return 'text-blue-600 bg-blue-50 border-blue-200';
+    if (stock < 10 && (!limit || limit.minStock === 0)) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     return 'text-green-600 bg-green-50 border-green-200';
   }
 
-  getStockLabel(stock: number, limit?: number): string {
+  getStockLabel(stock: number, productCode: string, warehouseId?: string): string {
+    const limit = this.getStockLimit(productCode, warehouseId);
     if (stock === 0) return 'Sin Stock';
-    if (limit != null && stock <= limit) return 'Bajo';
-    if (stock < 10) return 'Bajo';
+    if (limit && stock < limit.minStock) return 'Bajo';
+    if (limit && stock > limit.maxStock && limit.maxStock > 0) return 'Sobrestock';
+    if (stock < 10 && (!limit || limit.minStock === 0)) return 'Bajo';
     return 'OK';
+  }
+
+  private getStockLimit(productCode: string, warehouseId?: string): StockLimit | undefined {
+    const whId = warehouseId || this.selectedWarehouseId();
+    return this.stockLimits().find(
+      sl => sl.productCode === productCode && (!whId || sl.warehouseId === whId)
+    );
   }
 
   get totalEntradas(): number {
