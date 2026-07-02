@@ -101,13 +101,22 @@ export class AuthService {
         this.setRefreshToken(response.refreshToken);
 
         // Establecer la empresa en el ContextService
-        if (response.user.companyId) {
+        // Extraer companyId del user o, como fallback, del payload del JWT
+        const rawCompanyId = response.user.companyId
+          ?? this.extractCompanyIdFromJwt(response.accessToken);
+        if (rawCompanyId) {
+          const companyId = typeof rawCompanyId === 'number'
+            ? rawCompanyId
+            : parseInt(String(rawCompanyId), 10);
           // Establecer el id de empresa SINCRÓNICAMENTE para que el header
           // X-Company-ID esté disponible en la primera petición de datos.
           // Evita la race del primer login (datos vacíos hasta re-loguear).
-          this.setCompanyContextSync(response.user.companyId, response.user.companyName);
+          this.setCompanyContextSync(companyId, response.user.companyName);
           // Enriquecer con los datos completos de la empresa (no crítico).
-          await this.setCompanyContext(response.user.companyId);
+          await this.setCompanyContext(companyId);
+          console.log('✅ AUTH: Company context set to companyId:', companyId);
+        } else {
+          console.warn('⚠️ AUTH: companyId not found in login response or JWT payload');
         }
 
         // Establecer el tenant en el ContextService
@@ -365,6 +374,18 @@ export class AuthService {
     });
     
     console.log('Token saved to localStorage');
+  }
+
+  /** Decodifica el payload del JWT (sin verificar firma) y extrae companyId. */
+  private extractCompanyIdFromJwt(token: string): number | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return payload.companyId ?? null;
+    } catch {
+      return null;
+    }
   }
 
   // Establece el contexto de empresa de forma SÍNCRONA usando solo el id

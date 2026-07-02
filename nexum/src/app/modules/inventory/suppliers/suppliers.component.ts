@@ -1,90 +1,196 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { SuppliersService } from '../../../core/services/suppliers.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold dark:text-white">Proveedores</h1>
-        <button (click)="showCreate.set(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">+ Nuevo Proveedor</button>
-      </div>
-
-      <div class="flex gap-3 mb-4">
-        <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="loadData()" placeholder="Buscar por nombre, código o NIT..." class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm flex-1" />
-        <select [(ngModel)]="activeFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos</option>
-          <option value="true">Activos</option>
-          <option value="false">Inactivos</option>
-        </select>
-      </div>
-
-      @if (isLoading()) {
-        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-      } @else {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Código</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Razón Social</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Nombre Comercial</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">NIT</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Contacto</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Teléfono</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (supplier of items(); track supplier.id) {
-                <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ supplier.supplierCode }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">
-                    <div class="font-medium">{{ supplier.businessName }}</div>
-                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ supplier.city }}, {{ supplier.province }}</div>
-                  </td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ supplier.tradeName || '-' }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ supplier.nit }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ supplier.contactPerson || '-' }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ supplier.contactPhone || '-' }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <span [class]="supplier.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400'" class="px-2 py-1 rounded-full text-xs font-medium">
-                      {{ supplier.isActive ? 'Activo' : 'Inactivo' }}
-                    </span>
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay proveedores</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </div>
-  `
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  templateUrl: './suppliers.component.html',
 })
-export class SuppliersComponent implements OnInit {
+export class SuppliersComponent implements OnInit, OnDestroy {
   private suppliersService = inject(SuppliersService);
+  private notificationService = inject(NotificationService);
+  private confirmDialog = inject(ConfirmDialogService);
+
   items = signal<any[]>([]);
+  stats = signal<any>(null);
   isLoading = signal(false);
-  showCreate = signal(false);
-  searchTerm = '';
-  activeFilter = '';
+  hasError = signal(false);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  ngOnInit() { this.loadData(); }
+  searchTerm = signal('');
+  activeFilter = signal('');
+  currentPage = signal(1);
+  pageSize = 20;
 
-  loadData() {
-    this.isLoading.set(true);
-    this.suppliersService.getAll({
-      search: this.searchTerm || undefined,
-      isActive: this.activeFilter ? this.activeFilter === 'true' : undefined,
-    }).subscribe({
-      next: (data) => { this.items.set(data); this.isLoading.set(false); },
-      error: () => this.isLoading.set(false),
+  isCreateOpen = signal(false);
+  isEditOpen = signal(false);
+  selectedSupplier = signal<any>(null);
+  formError = signal('');
+
+  newSupplier: any = { supplierCode: '', businessName: '', tradeName: '', nit: '', contactPerson: '', contactPhone: '', contactEmail: '', address: '', city: '' };
+  editSupplier: any = {};
+
+  private refreshSub!: Subscription;
+  private toastSub!: Subscription;
+
+  filteredItems = computed(() => {
+    let list = this.items();
+    const term = this.searchTerm().toLowerCase();
+    if (term) {
+      list = list.filter(s =>
+        s.supplierCode?.toLowerCase().includes(term) ||
+        s.businessName?.toLowerCase().includes(term) ||
+        s.nit?.toLowerCase().includes(term) ||
+        s.tradeName?.toLowerCase().includes(term)
+      );
+    }
+    const active = this.activeFilter();
+    if (active !== '') list = list.filter(s => s.isActive === (active === 'true'));
+    return list;
+  });
+
+  pagedItems = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredItems().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.filteredItems().length,
+    pageSize: this.pageSize,
+    totalPages: Math.ceil(this.filteredItems().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  ngOnInit(): void {
+    this.loadData();
+    this.loadStats();
+    this.refreshSub = this.notificationService.refresh$.subscribe(() => {
+      this.loadData();
+      this.loadStats();
     });
+    this.toastSub = this.notificationService.toasts$.subscribe(t => {
+      this.toast.set(t);
+      setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
+    this.toastSub?.unsubscribe();
+  }
+
+  loadData(): void {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.suppliersService.getAll().subscribe({
+      next: (data: any) => {
+        this.items.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? []));
+        this.currentPage.set(1);
+        this.isLoading.set(false);
+      },
+      error: () => { this.hasError.set(true); this.isLoading.set(false); },
+    });
+  }
+
+  loadStats(): void {
+    this.suppliersService.getStatistics().subscribe({
+      next: (s: any) => this.stats.set(s),
+      error: () => {},
+    });
+  }
+
+  onSearch(event: Event): void {
+    this.searchTerm.set((event.target as HTMLInputElement).value);
+    this.currentPage.set(1);
+  }
+
+  onActiveChange(event: Event): void {
+    this.activeFilter.set((event.target as HTMLSelectElement).value);
+    this.currentPage.set(1);
+  }
+
+  openCreate(): void {
+    this.newSupplier = { supplierCode: '', businessName: '', tradeName: '', nit: '', contactPerson: '', contactPhone: '', contactEmail: '', address: '', city: '' };
+    this.formError.set('');
+    this.isCreateOpen.set(true);
+  }
+
+  closeCreate(): void {
+    this.isCreateOpen.set(false);
+    this.formError.set('');
+  }
+
+  saveSupplier(): void {
+    if (!this.newSupplier.supplierCode?.trim() || !this.newSupplier.businessName?.trim()) {
+      this.formError.set('Codigo y razon social son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.suppliersService.create(this.newSupplier).subscribe({
+      next: () => {
+        this.closeCreate();
+        this.loadData();
+        this.loadStats();
+        this.showToast('Proveedor creado exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear proveedor'),
+    });
+  }
+
+  openEdit(supplier: any): void {
+    this.selectedSupplier.set(supplier);
+    this.editSupplier = { ...supplier };
+    this.formError.set('');
+    this.isEditOpen.set(true);
+  }
+
+  closeEdit(): void {
+    this.isEditOpen.set(false);
+    this.selectedSupplier.set(null);
+    this.formError.set('');
+  }
+
+  updateSupplier(): void {
+    if (!this.editSupplier.supplierCode?.trim() || !this.editSupplier.businessName?.trim()) {
+      this.formError.set('Codigo y razon social son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.suppliersService.update(this.selectedSupplier()!.id, this.editSupplier).subscribe({
+      next: () => {
+        this.closeEdit();
+        this.loadData();
+        this.showToast('Proveedor actualizado exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al actualizar proveedor'),
+    });
+  }
+
+  async deactivate(supplier: any): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Desactivar proveedor',
+      message: `Desactivar "${supplier.businessName}"?`,
+      confirmText: 'Desactivar',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+    this.suppliersService.deactivate(supplier.id).subscribe({
+      next: () => { this.loadData(); this.showToast('Proveedor desactivado', 'success'); },
+      error: () => this.showToast('Error al desactivar proveedor', 'error'),
+    });
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info'): void {
+    this.toast.set({ message, type });
+    setTimeout(() => this.toast.set(null), 4000);
   }
 }

@@ -1,0 +1,245 @@
+<div class="p-6 space-y-5">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Catálogo de Productos</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Gestione los productos del inventario de su empresa</p>
+    </div>
+    <button (click)="openCreate()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Nuevo Producto
+    </button>
+  </div>
+
+  <!-- KPIs -->
+  @if (stats()) {
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total</p>
+        <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ stats()!.total }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Activos</p>
+        <p class="text-2xl font-bold text-green-600 mt-1">{{ stats()!.active }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Inactivos</p>
+        <p class="text-2xl font-bold text-slate-400 mt-1">{{ stats()!.inactive }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Categorías</p>
+        <p class="text-2xl font-bold text-blue-600 mt-1">{{ stats()!.byCategory?.length || 0 }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+    <div class="flex flex-col sm:flex-row gap-3">
+      <div class="relative flex-1">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+        <input type="text" [value]="searchTerm()" (input)="onSearch($event)" placeholder="Buscar por código, nombre o CPCU..."
+               class="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <select [value]="categoryFilter()" (change)="onCategoryChange($event)"
+              class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todas las categorías</option>
+        <option value="insumo">Insumo</option>
+        <option value="mercancia">Mercancía</option>
+        <option value="produccion">Producción</option>
+      </select>
+      <select [value]="activeFilter()" (change)="onActiveChange($event)"
+              class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todos los estados</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div [class]="toast()!.type === 'success' ? 'bg-green-50 border-green-300 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300' : 'bg-red-50 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300'"
+         class="border rounded-lg px-4 py-3 text-sm flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      {{ toast()!.message }}
+    </div>
+  }
+
+  <!-- Tabla -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+  } @else if (hasError()) {
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+      <p class="text-red-600 dark:text-red-400 font-medium">Error al cargar productos</p>
+      <button (click)="loadData()" class="mt-3 text-sm text-blue-600 hover:underline">Reintentar</button>
+    </div>
+  } @else {
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Código</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Nombre</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Categoría</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">CPCU</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (product of pagedProducts(); track product.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">{{ product.productCode }}</td>
+                <td class="px-4 py-3">
+                  <div class="font-medium text-slate-900 dark:text-white">{{ product.productName }}</div>
+                  @if (product.productDescription) {
+                    <div class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]">{{ product.productDescription }}</div>
+                  }
+                </td>
+                <td class="px-4 py-3">
+                  <span [class]="getCategoryClass(product.category)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getCategoryLabel(product.category) }}</span>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">{{ product.cpcuCode || '—' }}</td>
+                <td class="px-4 py-3 text-center">
+                  <span [class]="product.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'"
+                        class="px-2 py-1 rounded-full text-xs font-medium">
+                    {{ product.isActive ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <div class="flex items-center justify-center gap-1">
+                    <button (click)="openEdit(product)" title="Editar"
+                            class="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    @if (product.isActive) {
+                      <button (click)="deactivate(product)" title="Desactivar"
+                              class="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="px-4 py-12 text-center">
+                  <div class="text-slate-400 dark:text-slate-500">
+                    <svg class="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <p class="font-medium">No hay productos</p>
+                    <p class="text-sm mt-1">Cree el primer producto del catálogo</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <app-pagination [config]="paginationConfig()" (pageChange)="currentPage.set($event)"></app-pagination>
+  }
+</div>
+
+<!-- Modal: Crear Producto -->
+<app-modal
+  [isOpen]="isCreateOpen()"
+  title="Nuevo Producto"
+  confirmText="Guardar"
+  iconEmoji="📦"
+  iconBgClass="bg-blue-50 dark:bg-blue-900/20"
+  confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+  maxWidthClass="max-w-2xl"
+  (closeEvent)="closeCreate()"
+  (confirmEvent)="saveProduct()">
+  <div class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Código <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="newProduct.productCode" placeholder="PROD-001"
+               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Nombre <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="newProduct.productName" placeholder="Nombre del producto"
+               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Categoría</label>
+        <select [(ngModel)]="newProduct.category"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Sin categoría</option>
+          <option value="insumo">Insumo</option>
+          <option value="mercancia">Mercancía</option>
+          <option value="produccion">Producción</option>
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Código CPCU</label>
+        <input type="text" [(ngModel)]="newProduct.cpcuCode" placeholder="Código Clasificador"
+               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Descripción</label>
+      <textarea [(ngModel)]="newProduct.productDescription" rows="2" placeholder="Descripción del producto..."
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+    </div>
+    @if (formError()) {
+      <p class="text-xs text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{{ formError() }}</p>
+    }
+  </div>
+</app-modal>
+
+<!-- Modal: Editar Producto -->
+<app-modal
+  [isOpen]="isEditOpen()"
+  title="Editar Producto"
+  confirmText="Guardar cambios"
+  iconEmoji="✏️"
+  iconBgClass="bg-amber-50 dark:bg-amber-900/20"
+  confirmButtonClass="bg-amber-600 hover:bg-amber-700"
+  maxWidthClass="max-w-2xl"
+  (closeEvent)="closeEdit()"
+  (confirmEvent)="updateProduct()">
+  <div class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Código <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="editProduct.productCode"
+               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Nombre <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="editProduct.productName"
+               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Categoría</label>
+        <select [(ngModel)]="editProduct.category"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Sin categoría</option>
+          <option value="insumo">Insumo</option>
+          <option value="mercancia">Mercancía</option>
+          <option value="produccion">Producción</option>
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Código CPCU</label>
+        <input type="text" [(ngModel)]="editProduct.cpcuCode"
+               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Descripción</label>
+      <textarea [(ngModel)]="editProduct.productDescription" rows="2"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+    </div>
+    @if (formError()) {
+      <p class="text-xs text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{{ formError() }}</p>
+    }
+  </div>
+</app-modal>

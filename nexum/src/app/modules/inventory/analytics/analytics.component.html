@@ -1,0 +1,178 @@
+<div class="p-6 space-y-5">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Analitica de Inventario</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Rotacion, clasificacion ABC y productos de movimiento lento</p>
+    </div>
+    <button (click)="loadAll()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Actualizar
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <select [value]="warehouseFilter()" (change)="onWarehouseChange($event)"
+              class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todos los almacenes</option>
+        @for (wh of warehouses(); track wh.id) {
+          <option [value]="wh.id">{{ wh.name }}</option>
+        }
+      </select>
+      <select [value]="categoryFilter()" (change)="onCategoryChange($event)"
+              class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todas las categorias</option>
+        <option value="insumo">Insumo</option>
+        <option value="mercancia">Mercancia</option>
+        <option value="produccion">Produccion</option>
+      </select>
+      <select [value]="periodFilter()" (change)="onPeriodChange($event)"
+              class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="30">Ultimos 30 dias</option>
+        <option value="90">Ultimos 90 dias</option>
+        <option value="180">Ultimos 6 meses</option>
+        <option value="365">Ultimo ano</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Error -->
+  @if (hasError()) {
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      Error al cargar datos de analitica
+    </div>
+  }
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Rotacion Promedio</p>
+      @if (isLoadingRotation()) {
+        <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mt-1"></div>
+      } @else {
+        <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ rotationData()?.averageRotation | number:'1.1-1' }}</p>
+      }
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">veces/ano</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Dias de Inventario</p>
+      @if (isLoadingRotation()) {
+        <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mt-1"></div>
+      } @else {
+        <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ rotationData()?.averageDaysInventory | number:'1.0-0' }}</p>
+      }
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">dias promedio</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Productos Clase A</p>
+      @if (isLoadingRotation()) {
+        <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mt-1"></div>
+      } @else {
+        <p class="text-2xl font-bold text-red-600 mt-1">{{ rotationData()?.abcAnalysis?.A || 0 }}</p>
+      }
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">alta rotacion</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Movimiento Lento</p>
+      @if (isLoadingSlow()) {
+        <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mt-1"></div>
+      } @else {
+        <p class="text-2xl font-bold text-orange-500 mt-1">{{ slowMovingData().length }}</p>
+      }
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">productos</p>
+    </div>
+  </div>
+
+  <!-- Tablas -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Rotacion por Producto -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Rotacion por Producto</h2>
+        @if (isLoadingRotation()) {
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        }
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Producto</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Rotacion</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Dias</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">ABC</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (item of rotationData()?.byProduct || []; track item.productCode) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-4 py-3">
+                  <div class="font-medium text-slate-900 dark:text-white">{{ item.productName }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ item.productCode }}</div>
+                </td>
+                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{{ item.rotation | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{{ item.daysInventory | number:'1.0-0' }}</td>
+                <td class="px-4 py-3 text-center">
+                  <span [class]="getAbcClass(item.abcClass)" class="px-2 py-1 rounded-full text-xs font-bold">{{ item.abcClass }}</span>
+                </td>
+              </tr>
+            } @empty {
+              @if (!isLoadingRotation()) {
+                <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">Sin datos de rotacion para el periodo seleccionado</td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Movimiento Lento -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Productos con Movimiento Lento</h2>
+        @if (isLoadingSlow()) {
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        }
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Producto</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Stock</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Valor</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Dias sin mov.</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (item of slowMovingData(); track item.productCode) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-4 py-3">
+                  <div class="font-medium text-slate-900 dark:text-white">{{ item.productName }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ item.productCode }}</div>
+                </td>
+                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{{ item.stock | number:'1.0-0' }}</td>
+                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{{ item.totalValue | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-right">
+                  <span class="px-2 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 rounded-full text-xs font-medium">
+                    {{ item.daysSinceLastMove | number:'1.0-0' }}
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              @if (!isLoadingSlow()) {
+                <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay productos con movimiento lento</td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>

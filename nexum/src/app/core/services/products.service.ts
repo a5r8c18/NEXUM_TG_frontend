@@ -10,18 +10,12 @@ export class ProductsService {
   constructor(private http: HttpClient) {}
 
   getAll(filters?: any): Observable<any> {
-    console.log('📦 PRODUCTS SERVICE - Obteniendo productos con filtros:', filters);
-    
     let params = new HttpParams();
     if (filters?.search) params = params.set('search', filters.search);
     if (filters?.category) params = params.set('category', filters.category);
     if (filters?.isActive !== undefined) params = params.set('isActive', String(filters.isActive));
     if (filters?.page) params = params.set('page', String(filters.page));
     if (filters?.limit) params = params.set('limit', String(filters.limit));
-    
-    console.log('📦 PRODUCTS SERVICE - URL:', this.apiUrl);
-    console.log('📦 PRODUCTS SERVICE - Parámetros:', params.toString());
-    
     return this.http.get(this.apiUrl, { params });
   }
 

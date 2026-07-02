@@ -249,6 +249,9 @@ export class LoginComponent {
           is_active: this.selectedCompany()!.is_active,
           created_at: this.selectedCompany()!.created_at
         } as any);
+        // Sincronizar el signal de companyId en AuthService para que el
+        // interceptor incluya X-Company-ID correcto en la primera petición.
+        this.authService.setCurrentCompanyId(Number(this.selectedCompany()!.id));
       }
       
       // Superadmin va a solicitudes

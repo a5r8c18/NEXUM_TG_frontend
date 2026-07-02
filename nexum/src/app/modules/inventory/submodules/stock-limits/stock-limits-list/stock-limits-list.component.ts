@@ -6,6 +6,7 @@ import { StockLimitsService } from '../../../../../core/services/stock-limits.se
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { ContextService } from '../../../../../core/services/context.service';
 import { ConfirmDialogService } from '../../../../../core/services/confirm-dialog.service';
+import { WarehouseService } from '../../../../../core/services/warehouse.service';
 import { StockLimit, CreateStockLimitRequest, StockLimitWarning } from '../../../../../core/models/stock-limits.model';
 import { PaginationComponent, PaginationConfig } from '../../../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
@@ -21,6 +22,7 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
   private contextService = inject(ContextService);
   private confirmDialog = inject(ConfirmDialogService);
+  private warehouseService = inject(WarehouseService);
 
   stockLimits = signal<StockLimit[]>([]);
   warnings = signal<StockLimitWarning[]>([]);
@@ -89,11 +91,10 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
     });
 
     // Load available warehouses
-    this.availableWarehouses.set([
-      { id: 'wh1', name: 'Almacén Principal' },
-      { id: 'wh2', name: 'Almacén Secundario' },
-      { id: 'wh3', name: 'Almacén Temporal' }
-    ]);
+    this.warehouseService.getWarehouses().subscribe({
+      next: (data: any) => this.availableWarehouses.set(Array.isArray(data) ? data : (data?.data ?? [])),
+      error: () => this.availableWarehouses.set([]),
+    });
   }
 
   loadStockLimits(): void {
