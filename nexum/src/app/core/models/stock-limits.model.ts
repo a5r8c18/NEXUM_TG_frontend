@@ -15,6 +15,7 @@ export interface StockLimit {
 }
 
 export interface CreateStockLimitRequest {
+  companyId: number;
   productId: string;
   warehouseId: string;
   minStock: number;

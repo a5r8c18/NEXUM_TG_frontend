@@ -42,6 +42,7 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
 
   // Form data
   formData = signal<CreateStockLimitRequest>({
+    companyId: 0,
     productId: '',
     warehouseId: '',
     minStock: 0,
@@ -117,6 +118,7 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
     this.hasError.set(false);
     
     const warehouseId = this.warehouseFilter();
+    
     this.stockLimitsService.getStockLimits(this.currentCompanyId, warehouseId).subscribe({
       next: (data) => {
         this.stockLimits.set(data);
@@ -242,6 +244,7 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
 
   openCreate(): void {
     this.formData.set({
+      companyId: Number(this.currentCompanyId) || 0,
       productId: '',
       warehouseId: '',
       minStock: 0,
@@ -260,6 +263,7 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
   openEdit(stockLimit: StockLimit): void {
     this.selectedStockLimit.set(stockLimit);
     this.formData.set({
+      companyId: Number(this.currentCompanyId) || 0,
       productId: stockLimit.productId,
       warehouseId: stockLimit.warehouseId,
       minStock: stockLimit.minStock,
@@ -293,7 +297,12 @@ export class StockLimitsListComponent implements OnInit, OnDestroy {
       return;
     }
     
-    this.stockLimitsService.createStockLimit(data).subscribe({
+    const requestData = {
+      ...data,
+      companyId: Number(this.currentCompanyId)
+    };
+    
+    this.stockLimitsService.createStockLimit(requestData).subscribe({
       next: () => {
         this.showToast('Límite de stock creado exitosamente', 'success');
         this.closeCreate();
