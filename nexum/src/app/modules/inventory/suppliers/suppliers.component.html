@@ -58,7 +58,15 @@
 
   <!-- Tabla -->
   @if (isLoading()) {
-    <div class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+    <div class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3 text-slate-500">
+        <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">Cargando proveedores...</span>
+      </div>
+    </div>
   } @else if (hasError()) {
     <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
       <p class="text-red-600 dark:text-red-400 font-medium">Error al cargar proveedores</p>
