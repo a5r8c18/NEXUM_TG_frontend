@@ -1,91 +1,71 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-cash',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold dark:text-white">Caja (Efectivo - Cuenta 101)</h1>
-        <button (click)="showCreate.set(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">+ Nueva Caja</button>
-      </div>
-
-      @if (isLoading()) {
-        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-      } @else {
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Cajas</div>
-            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ stats()?.total || 0 }}</p>
-          </div>
-          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div class="text-sm font-medium text-slate-500 dark:text-slate-400">Cajas Abiertas</div>
-            <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ stats()?.openRegisters || 0 }}</p>
-          </div>
-          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div class="text-sm font-medium text-slate-500 dark:text-slate-400">Saldo Total</div>
-            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatCurrency(stats()?.totalBalance) }}</p>
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Código</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Nombre</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Responsable</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Saldo</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (cr of items(); track cr.id) {
-                <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td class="px-4 py-3 dark:text-slate-300 font-medium">{{ cr.registerCode }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ cr.registerName }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ cr.responsibleName }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ formatCurrency(cr.currentBalance) }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <span [class]="getStatusClass(cr.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(cr.status) }}</span>
-                  </td>
-                  <td class="px-4 py-3 text-center">
-                    @if (cr.status === 'closed') {
-                      <button (click)="openRegister(cr.id)" class="text-green-600 hover:text-green-700 mr-2">Abrir</button>
-                    } @else {
-                      <button (click)="closeRegister(cr.id)" class="text-red-600 hover:text-red-700 mr-2">Cerrar</button>
-                      <button (click)="auditRegister(cr.id)" class="text-blue-600 hover:text-blue-700 mr-2">Arqueo</button>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay cajas registradas</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </div>
-  `
+  imports: [CommonModule, FormsModule, ModalComponent],
+  templateUrl: './cash.component.html',
 })
-export class CashComponent implements OnInit {
+export class CashComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
+  private notificationService = inject(NotificationService);
+
   items = signal<any[]>([]);
   stats = signal<any>(null);
+  banks = signal<any[]>([]);
   isLoading = signal(false);
-  showCreate = signal(false);
+  hasError = signal(false);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  ngOnInit() {
+  isCreateOpen = signal(false);
+  isOpenModal = signal(false);
+  isCloseModal = signal(false);
+  isAuditModal = signal(false);
+  isDepositModal = signal(false);
+
+  selectedRegister = signal<any>(null);
+  formError = signal('');
+  auditResult = signal<any>(null);
+
+  newCashRegister: any = { registerCode: '', registerName: '', responsibleName: '', currentBalance: 0 };
+  openingBalance = 0;
+  physicalBalance = 0;
+  depositBankAccountId = '';
+  depositAmount = 0;
+  depositDescription = '';
+
+  private refreshSub!: Subscription;
+  private toastSub!: Subscription;
+
+  availableBanks = computed(() => this.banks().filter(b => b.status === 'active'));
+
+  ngOnInit(): void {
     this.loadData();
+    this.loadBanks();
+    this.refreshSub = this.notificationService.refresh$.subscribe(() => {
+      this.loadData();
+      this.loadBanks();
+    });
+    this.toastSub = this.notificationService.toasts$.subscribe(t => {
+      this.toast.set(t);
+      setTimeout(() => this.toast.set(null), 4000);
+    });
   }
 
-  loadData() {
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
+    this.toastSub?.unsubscribe();
+  }
+
+  loadData(): void {
     this.isLoading.set(true);
+    this.hasError.set(false);
     Promise.all([
       this.financeService.getCashRegisters().toPromise(),
       this.financeService.getCashStats().toPromise(),
@@ -93,44 +73,159 @@ export class CashComponent implements OnInit {
       this.items.set(registers || []);
       this.stats.set(stats || {});
       this.isLoading.set(false);
-    }).catch(() => this.isLoading.set(false));
+    }).catch(() => { this.hasError.set(true); this.isLoading.set(false); });
   }
 
-  openRegister(id: string) {
-    const openingBalance = prompt('Saldo de apertura (opcional):');
-    if (openingBalance !== null) {
-      this.financeService.openCashRegister(id, openingBalance ? Number(openingBalance) : undefined).subscribe({
-        next: () => this.loadData(),
-        error: (err) => alert('Error al abrir caja: ' + err.message),
-      });
-    }
+  loadBanks(): void {
+    this.financeService.getBanks().subscribe({
+      next: (data: any) => this.banks.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),
+      error: () => {},
+    });
   }
 
-  closeRegister(id: string) {
-    if (confirm('¿Cerrar esta caja?')) {
-      this.financeService.closeCashRegister(id).subscribe({
-        next: () => this.loadData(),
-        error: (err) => alert('Error al cerrar caja: ' + err.message),
-      });
-    }
+  openCreate(): void {
+    this.newCashRegister = { registerCode: '', registerName: '', responsibleName: '', currentBalance: 0 };
+    this.formError.set('');
+    this.isCreateOpen.set(true);
   }
 
-  auditRegister(id: string) {
-    const physicalBalance = prompt('Saldo físico en caja:');
-    if (physicalBalance !== null) {
-      this.financeService.performCashAudit(id, Number(physicalBalance)).subscribe({
-        next: (result) => {
-          const diff = result.difference;
-          if (diff === 0) {
-            alert('Arqueo correcto. No hay diferencias.');
-          } else {
-            alert(`Diferencia detectada: ${diff > 0 ? '+' : ''}$${diff}`);
-          }
-          this.loadData();
-        },
-        error: (err) => alert('Error al realizar arqueo: ' + err.message),
-      });
+  closeCreate(): void {
+    this.isCreateOpen.set(false);
+    this.formError.set('');
+  }
+
+  saveCashRegister(): void {
+    if (!this.newCashRegister.registerCode?.trim() || !this.newCashRegister.registerName?.trim() || !this.newCashRegister.responsibleName?.trim()) {
+      this.formError.set('Código, nombre y responsable son obligatorios');
+      return;
     }
+    this.formError.set('');
+    this.financeService.createCashRegister(this.newCashRegister).subscribe({
+      next: () => {
+        this.closeCreate();
+        this.loadData();
+        this.showToast('Caja creada exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear caja'),
+    });
+  }
+
+  openOpenModal(register: any): void {
+    this.selectedRegister.set(register);
+    this.openingBalance = 0;
+    this.formError.set('');
+    this.isOpenModal.set(true);
+  }
+
+  closeOpenModal(): void {
+    this.isOpenModal.set(false);
+    this.selectedRegister.set(null);
+    this.formError.set('');
+  }
+
+  confirmOpen(): void {
+    this.financeService.openCashRegister(this.selectedRegister()!.id, this.openingBalance || undefined).subscribe({
+      next: () => {
+        this.closeOpenModal();
+        this.loadData();
+        this.showToast('Caja abierta exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al abrir caja'),
+    });
+  }
+
+  openCloseModal(register: any): void {
+    this.selectedRegister.set(register);
+    this.formError.set('');
+    this.isCloseModal.set(true);
+  }
+
+  closeCloseModal(): void {
+    this.isCloseModal.set(false);
+    this.selectedRegister.set(null);
+    this.formError.set('');
+  }
+
+  confirmClose(): void {
+    this.financeService.closeCashRegister(this.selectedRegister()!.id).subscribe({
+      next: () => {
+        this.closeCloseModal();
+        this.loadData();
+        this.showToast('Caja cerrada exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al cerrar caja'),
+    });
+  }
+
+  openAuditModal(register: any): void {
+    this.selectedRegister.set(register);
+    this.physicalBalance = 0;
+    this.auditResult.set(null);
+    this.formError.set('');
+    this.isAuditModal.set(true);
+  }
+
+  closeAuditModal(): void {
+    this.isAuditModal.set(false);
+    this.selectedRegister.set(null);
+    this.auditResult.set(null);
+    this.formError.set('');
+  }
+
+  confirmAudit(): void {
+    this.financeService.performCashAudit(this.selectedRegister()!.id, this.physicalBalance).subscribe({
+      next: (result) => {
+        this.auditResult.set(result);
+        this.loadData();
+        if (result.difference === 0) {
+          this.showToast('Arqueo correcto. No hay diferencias.', 'success');
+        } else {
+          this.showToast(`Diferencia detectada: ${result.difference > 0 ? '+' : ''}${this.formatCurrency(result.difference)}`, 'error');
+        }
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al realizar arqueo'),
+    });
+  }
+
+  openDepositModal(register: any): void {
+    this.selectedRegister.set(register);
+    this.depositBankAccountId = '';
+    this.depositAmount = 0;
+    this.depositDescription = '';
+    this.formError.set('');
+    this.isDepositModal.set(true);
+  }
+
+  closeDepositModal(): void {
+    this.isDepositModal.set(false);
+    this.selectedRegister.set(null);
+    this.formError.set('');
+  }
+
+  confirmDeposit(): void {
+    if (!this.depositBankAccountId || !this.depositAmount) {
+      this.formError.set('Cuenta bancaria y monto son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.depositToBank(
+      this.selectedRegister()!.id,
+      this.depositBankAccountId,
+      this.depositAmount,
+      this.depositDescription
+    ).subscribe({
+      next: () => {
+        this.closeDepositModal();
+        this.loadData();
+        this.showToast('Depósito realizado exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al realizar depósito'),
+    });
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info'): void {
+    this.toast.set({ message, type });
+    setTimeout(() => this.toast.set(null), 4000);
   }
 
   getStatusClass(status: string): string {

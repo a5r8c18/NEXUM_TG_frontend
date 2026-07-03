@@ -1,100 +1,158 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-payments',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold dark:text-white">Cobros y Pagos</h1>
-        <button (click)="showCreate.set(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">+ Nuevo Pago</button>
-      </div>
-      <div class="flex gap-3 mb-4">
-        <select [(ngModel)]="typeFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos</option>
-          <option value="receivable">Cobros</option>
-          <option value="payable">Pagos</option>
-        </select>
-        <select [(ngModel)]="statusFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos los estados</option>
-          <option value="completed">Completado</option>
-          <option value="pending">Pendiente</option>
-          <option value="failed">Fallido</option>
-          <option value="cancelled">Cancelado</option>
-        </select>
-        <input type="date" [(ngModel)]="fromDate" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm" />
-        <input type="date" [(ngModel)]="toDate" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm" />
-      </div>
-      @if (isLoading()) {
-        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-      } @else {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">No.</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Fecha</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Tipo</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Método</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Monto</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Referencia</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (payment of items(); track payment.id) {
-                <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td class="px-4 py-3 dark:text-slate-300">{{ payment.paymentNumber }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ payment.paymentDate }}</td>
-                  <td class="px-4 py-3">
-                    <span [class]="payment.paymentType === 'receivable' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'" class="px-2 py-1 rounded-full text-xs font-medium">
-                      {{ payment.paymentType === 'receivable' ? 'Cobro' : 'Pago' }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ getMethodLabel(payment.paymentMethod) }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ payment.amount | number:'1.2-2' }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ payment.referenceNumber || '-' }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <span [class]="getStatusClass(payment.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(payment.status) }}</span>
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay pagos</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </div>
-  `
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  templateUrl: './payments.component.html',
 })
-export class PaymentsComponent implements OnInit {
+export class PaymentsComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
+  private notificationService = inject(NotificationService);
+
   items = signal<any[]>([]);
+  stats = signal<any>(null);
   isLoading = signal(false);
-  showCreate = signal(false);
-  typeFilter = '';
-  statusFilter = '';
-  fromDate = '';
-  toDate = '';
+  hasError = signal(false);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  ngOnInit() { this.loadData(); }
+  typeFilter = signal('');
+  statusFilter = signal('');
+  fromDate = signal('');
+  toDate = signal('');
+  currentPage = signal(1);
+  pageSize = 20;
 
-  loadData() {
-    this.isLoading.set(true);
-    this.financeService.getPayments({
-      paymentType: this.typeFilter || undefined,
-      status: this.statusFilter || undefined,
-      fromDate: this.fromDate || undefined,
-      toDate: this.toDate || undefined,
-    }).subscribe({
-      next: (data) => { this.items.set(data); this.isLoading.set(false); },
-      error: () => this.isLoading.set(false),
+  isCreateOpen = signal(false);
+  isDetailsOpen = signal(false);
+  selectedPayment = signal<any>(null);
+  formError = signal('');
+
+  newPayment: any = { paymentType: 'receivable', amount: 0, paymentMethod: 'cash', paymentDate: '', referenceNumber: '', relatedAccountId: '', description: '' };
+
+  private refreshSub!: Subscription;
+  private toastSub!: Subscription;
+
+  filteredItems = computed(() => {
+    let list = this.items();
+    const type = this.typeFilter();
+    if (type) list = list.filter(p => p.paymentType === type);
+    const status = this.statusFilter();
+    if (status) list = list.filter(p => p.status === status);
+    const from = this.fromDate();
+    if (from) list = list.filter(p => p.paymentDate >= from);
+    const to = this.toDate();
+    if (to) list = list.filter(p => p.paymentDate <= to);
+    return list;
+  });
+
+  pagedItems = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredItems().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.filteredItems().length,
+    pageSize: this.pageSize,
+    totalPages: Math.ceil(this.filteredItems().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  ngOnInit(): void {
+    this.loadData();
+    this.loadStats();
+    this.refreshSub = this.notificationService.refresh$.subscribe(() => {
+      this.loadData();
+      this.loadStats();
     });
+    this.toastSub = this.notificationService.toasts$.subscribe(t => {
+      this.toast.set(t);
+      setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
+    this.toastSub?.unsubscribe();
+  }
+
+  loadData(): void {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.financeService.getPayments().subscribe({
+      next: (data: any) => {
+        this.items.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? []));
+        this.currentPage.set(1);
+        this.isLoading.set(false);
+      },
+      error: () => { this.hasError.set(true); this.isLoading.set(false); },
+    });
+  }
+
+  loadStats(): void {
+    this.financeService.getPaymentStats().subscribe({
+      next: (s: any) => this.stats.set(s),
+      error: () => {},
+    });
+  }
+
+  onFilterChange(): void {
+    this.currentPage.set(1);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  openCreate(): void {
+    this.newPayment = { paymentType: 'receivable', amount: 0, paymentMethod: 'cash', paymentDate: new Date().toISOString().split('T')[0], referenceNumber: '', relatedAccountId: '', description: '' };
+    this.formError.set('');
+    this.isCreateOpen.set(true);
+  }
+
+  closeCreate(): void {
+    this.isCreateOpen.set(false);
+    this.formError.set('');
+  }
+
+  savePayment(): void {
+    if (!this.newPayment.amount || !this.newPayment.paymentDate) {
+      this.formError.set('Monto y fecha son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.createPayment(this.newPayment).subscribe({
+      next: () => {
+        this.closeCreate();
+        this.loadData();
+        this.loadStats();
+        this.showToast('Pago creado exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear pago'),
+    });
+  }
+
+  viewDetails(payment: any): void {
+    this.selectedPayment.set(payment);
+    this.isDetailsOpen.set(true);
+  }
+
+  closeDetails(): void {
+    this.isDetailsOpen.set(false);
+    this.selectedPayment.set(null);
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info'): void {
+    this.toast.set({ message, type });
+    setTimeout(() => this.toast.set(null), 4000);
   }
 
   getMethodLabel(method: string): string {
@@ -131,5 +189,15 @@ export class PaymentsComponent implements OnInit {
       refunded: 'Reembolsado',
     };
     return map[status] || status;
+  }
+
+  formatCurrency(value: number | undefined): string {
+    if (!value) return '$0.00';
+    return new Intl.NumberFormat('es-CU', { style: 'currency', currency: 'CUP' }).format(value);
+  }
+
+  formatDate(date: string | undefined): string {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('es-CU');
   }
 }

@@ -35,6 +35,10 @@ export class FinanceService {
     return this.http.post(`${this.apiUrl}/finance/receivables`, data);
   }
 
+  updateReceivable(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/finance/receivables/${id}`, data);
+  }
+
   // ── CxP ──
   getPayables(filters?: any): Observable<any> {
     let params = new HttpParams();
@@ -49,6 +53,10 @@ export class FinanceService {
 
   createPayable(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/finance/payables`, data);
+  }
+
+  updatePayable(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/finance/payables/${id}`, data);
   }
 
   // ── Bancos ──

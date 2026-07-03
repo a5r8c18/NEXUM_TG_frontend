@@ -1,0 +1,213 @@
+<div class="p-6 space-y-5">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Cuentas por Cobrar</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Gestión de cuentas por cobrar a clientes</p>
+    </div>
+    <button (click)="openCreate()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Nueva CxC
+    </button>
+  </div>
+
+  <!-- Stats -->
+  @if (stats()) {
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total Cuentas</p>
+        <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ stats().total || 0 }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pendiente</p>
+        <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{{ formatCurrency(stats().totalPending) }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Vencido</p>
+        <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ formatCurrency(stats().totalOverdue) }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Cobrado</p>
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ formatCurrency((stats().totalPending || 0) + (stats().totalOverdue || 0)) }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todos los estados</option>
+        <option value="pending">Pendiente</option>
+        <option value="partial">Parcial</option>
+        <option value="overdue">Vencida</option>
+        <option value="paid">Pagada</option>
+      </select>
+      <select [(ngModel)]="agingFilter" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todas las categorías</option>
+        <option value="current">Corriente</option>
+        <option value="1-30">1-30 días</option>
+        <option value="31-60">31-60 días</option>
+        <option value="61-90">61-90 días</option>
+        <option value="91-120">91-120 días</option>
+        <option value="over-120">+120 días</option>
+      </select>
+      <input type="text" [(ngModel)]="searchTerm" (input)="onSearch($event)" placeholder="Buscar cliente..." class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    </div>
+  </div>
+
+  <!-- Error -->
+  @if (hasError()) {
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      Error al cargar cuentas por cobrar
+    </div>
+  }
+
+  <!-- Tabla -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+    @if (isLoading()) {
+      <div class="flex justify-center py-12">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">No.</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Cliente</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Monto Original</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Pagado</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Vencimiento</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (ar of pagedItems(); track ar.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ ar.arNumber }}</td>
+                <td class="px-4 py-3">
+                  <div class="font-medium text-slate-900 dark:text-white">{{ ar.customerName }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400">{{ ar.customerId || '-' }}</div>
+                </td>
+                <td class="px-4 py-3 text-right dark:text-slate-300">{{ formatCurrency(ar.originalAmount) }}</td>
+                <td class="px-4 py-3 text-right text-green-600 dark:text-green-400">{{ formatCurrency(ar.paidAmount) }}</td>
+                <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ formatCurrency(ar.balanceAmount) }}</td>
+                <td class="px-4 py-3 text-center dark:text-slate-300">{{ formatDate(ar.dueDate) }}</td>
+                <td class="px-4 py-3 text-center">
+                  <span [class]="getStatusClass(ar.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(ar.status) }}</span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <button (click)="openEdit(ar)" class="text-blue-600 hover:text-blue-700 mr-2 text-sm">Editar</button>
+                  @if (ar.status !== 'paid') {
+                    <button (click)="markAsPaid(ar)" class="text-green-600 hover:text-green-700 mr-2 text-sm">Pagar</button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay cuentas por cobrar</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Paginación -->
+  @if (paginationConfig().totalPages > 1) {
+    <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)"></app-pagination>
+  }
+
+  <!-- Modal Crear -->
+  @if (isCreateOpen()) {
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Cuenta por Cobrar'" (close)="closeCreate()">
+      <div class="space-y-4">
+        @if (formError()) {
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+            {{ formError() }}
+          </div>
+        }
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cliente *</label>
+            <input [(ngModel)]="newReceivable.customerName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID Cliente</label>
+            <input [(ngModel)]="newReceivable.customerId" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto Original *</label>
+            <input type="number" [(ngModel)]="newReceivable.originalAmount" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha Vencimiento *</label>
+            <input type="date" [(ngModel)]="newReceivable.dueDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
+            <textarea [(ngModel)]="newReceivable.description" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button (click)="closeCreate()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
+          <button (click)="saveReceivable()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
+        </div>
+      </div>
+    </app-modal>
+  }
+
+  <!-- Modal Editar -->
+  @if (isEditOpen()) {
+    <app-modal [isOpen]="isEditOpen()" [title]="'Editar Cuenta por Cobrar'" (close)="closeEdit()">
+      <div class="space-y-4">
+        @if (formError()) {
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+            {{ formError() }}
+          </div>
+        }
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cliente *</label>
+            <input [(ngModel)]="editReceivable.customerName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Estado</label>
+            <select [(ngModel)]="editReceivable.status" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="pending">Pendiente</option>
+              <option value="partial">Parcial</option>
+              <option value="overdue">Vencida</option>
+              <option value="paid">Pagada</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto Original</label>
+            <input type="number" [(ngModel)]="editReceivable.originalAmount" disabled class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha Vencimiento</label>
+            <input type="date" [(ngModel)]="editReceivable.dueDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button (click)="closeEdit()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
+          <button (click)="updateReceivable()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Actualizar</button>
+        </div>
+      </div>
+    </app-modal>
+  }
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed bottom-4 right-4 z-50">
+      <div [class]="toast()!.type === 'success' ? 'bg-green-500' : toast()!.type === 'error' ? 'bg-red-500' : 'bg-blue-500'" class="text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2">
+        <span>{{ toast()!.message }}</span>
+      </div>
+    </div>
+  }
+
+</div>

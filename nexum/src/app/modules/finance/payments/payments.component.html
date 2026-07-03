@@ -1,0 +1,223 @@
+<div class="p-6 space-y-5">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Cobros y Pagos</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Gestión de cobros a clientes y pagos a proveedores</p>
+    </div>
+    <button (click)="openCreate()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Nuevo Pago
+    </button>
+  </div>
+
+  <!-- Stats -->
+  @if (stats()) {
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total Pagos</p>
+        <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ stats().total || 0 }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Cobros</p>
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ formatCurrency(stats().totalReceivables) }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pagos</p>
+        <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ formatCurrency(stats().totalPayables) }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Neto</p>
+        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ formatCurrency((stats().totalReceivables || 0) - (stats().totalPayables || 0)) }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <select [(ngModel)]="typeFilter" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todos</option>
+        <option value="receivable">Cobros</option>
+        <option value="payable">Pagos</option>
+      </select>
+      <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Todos los estados</option>
+        <option value="completed">Completado</option>
+        <option value="pending">Pendiente</option>
+        <option value="failed">Fallido</option>
+        <option value="cancelled">Cancelado</option>
+      </select>
+      <input type="date" [(ngModel)]="fromDate" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <input type="date" [(ngModel)]="toDate" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    </div>
+  </div>
+
+  <!-- Error -->
+  @if (hasError()) {
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      Error al cargar pagos
+    </div>
+  }
+
+  <!-- Tabla -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+    @if (isLoading()) {
+      <div class="flex justify-center py-12">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">No.</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fecha</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Tipo</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Método</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Monto</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Referencia</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (payment of pagedItems(); track payment.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ payment.paymentNumber }}</td>
+                <td class="px-4 py-3 dark:text-slate-300">{{ formatDate(payment.paymentDate) }}</td>
+                <td class="px-4 py-3">
+                  <span [class]="payment.paymentType === 'receivable' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'" class="px-2 py-1 rounded-full text-xs font-medium">
+                    {{ payment.paymentType === 'receivable' ? 'Cobro' : 'Pago' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 dark:text-slate-300">{{ getMethodLabel(payment.paymentMethod) }}</td>
+                <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ formatCurrency(payment.amount) }}</td>
+                <td class="px-4 py-3 dark:text-slate-300">{{ payment.referenceNumber || '-' }}</td>
+                <td class="px-4 py-3 text-center">
+                  <span [class]="getStatusClass(payment.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(payment.status) }}</span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <button (click)="viewDetails(payment)" class="text-blue-600 hover:text-blue-700 text-sm">Ver</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay pagos</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Paginación -->
+  @if (paginationConfig().totalPages > 1) {
+    <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)"></app-pagination>
+  }
+
+  <!-- Modal Crear -->
+  @if (isCreateOpen()) {
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nuevo Pago'" (close)="closeCreate()">
+      <div class="space-y-4">
+        @if (formError()) {
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+            {{ formError() }}
+          </div>
+        }
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo *</label>
+            <select [(ngModel)]="newPayment.paymentType" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="receivable">Cobro (Cliente)</option>
+              <option value="payable">Pago (Proveedor)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto *</label>
+            <input type="number" [(ngModel)]="newPayment.amount" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Método *</label>
+            <select [(ngModel)]="newPayment.paymentMethod" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="cash">Efectivo</option>
+              <option value="bank_transfer">Transferencia</option>
+              <option value="check">Cheque</option>
+              <option value="credit_card">Tarjeta Crédito</option>
+              <option value="debit_card">Tarjeta Débito</option>
+              <option value="other">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha *</label>
+            <input type="date" [(ngModel)]="newPayment.paymentDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Referencia</label>
+            <input [(ngModel)]="newPayment.referenceNumber" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta Relacionada</label>
+            <input [(ngModel)]="newPayment.relatedAccountId" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
+            <textarea [(ngModel)]="newPayment.description" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button (click)="closeCreate()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
+          <button (click)="savePayment()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
+        </div>
+      </div>
+    </app-modal>
+  }
+
+  <!-- Modal Detalles -->
+  @if (isDetailsOpen()) {
+    <app-modal [isOpen]="isDetailsOpen()" [title]="'Detalles del Pago'" (close)="closeDetails()">
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-slate-500 dark:text-slate-400">Número</p>
+            <p class="font-medium dark:text-white">{{ selectedPayment()?.paymentNumber }}</p>
+          </div>
+          <div>
+            <p class="text-slate-500 dark:text-slate-400">Fecha</p>
+            <p class="font-medium dark:text-white">{{ formatDate(selectedPayment()?.paymentDate) }}</p>
+          </div>
+          <div>
+            <p class="text-slate-500 dark:text-slate-400">Tipo</p>
+            <p class="font-medium dark:text-white">{{ selectedPayment()?.paymentType === 'receivable' ? 'Cobro' : 'Pago' }}</p>
+          </div>
+          <div>
+            <p class="text-slate-500 dark:text-slate-400">Método</p>
+            <p class="font-medium dark:text-white">{{ getMethodLabel(selectedPayment()?.paymentMethod) }}</p>
+          </div>
+          <div>
+            <p class="text-slate-500 dark:text-slate-400">Monto</p>
+            <p class="font-medium dark:text-white">{{ formatCurrency(selectedPayment()?.amount) }}</p>
+          </div>
+          <div>
+            <p class="text-slate-500 dark:text-slate-400">Estado</p>
+            <p class="font-medium dark:text-white">{{ getStatusLabel(selectedPayment()?.status) }}</p>
+          </div>
+        </div>
+        <div class="flex justify-end pt-4">
+          <button (click)="closeDetails()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cerrar</button>
+        </div>
+      </div>
+    </app-modal>
+  }
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed bottom-4 right-4 z-50">
+      <div [class]="toast()!.type === 'success' ? 'bg-green-500' : toast()!.type === 'error' ? 'bg-red-500' : 'bg-blue-500'" class="text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2">
+        <span>{{ toast()!.message }}</span>
+      </div>
+    </div>
+  }
+
+</div>

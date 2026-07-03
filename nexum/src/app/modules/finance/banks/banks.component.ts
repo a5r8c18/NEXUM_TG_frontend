@@ -1,94 +1,177 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-banks',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold dark:text-white">Cuentas Bancarias</h1>
-        <button (click)="showCreate.set(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">+ Nueva Cuenta</button>
-      </div>
-      <div class="flex gap-3 mb-4">
-        <select [(ngModel)]="statusFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos</option>
-          <option value="active">Activa</option>
-          <option value="inactive">Inactiva</option>
-          <option value="frozen">Congelada</option>
-        </select>
-        <select [(ngModel)]="typeFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos los tipos</option>
-          <option value="checking">Cuenta Corriente</option>
-          <option value="savings">Ahorro</option>
-          <option value="investment">Inversión</option>
-          <option value="credit">Crédito</option>
-        </select>
-      </div>
-      @if (isLoading()) {
-        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-      } @else {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Cuenta</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Banco</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Titular</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Saldo</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Disponible</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (bank of items(); track bank.id) {
-                <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td class="px-4 py-3 dark:text-slate-300">
-                    <div>
-                      <div class="font-medium">{{ bank.accountNumber }}</div>
-                      <div class="text-xs text-slate-500 dark:text-slate-400">{{ bank.accountType }}</div>
-                    </div>
-                  </td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ bank.bankName }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ bank.holderName }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ bank.balance | number:'1.2-2' }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ bank.availableBalance | number:'1.2-2' }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <span [class]="getStatusClass(bank.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(bank.status) }}</span>
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay cuentas bancarias</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </div>
-  `
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  templateUrl: './banks.component.html',
 })
-export class BanksComponent implements OnInit {
+export class BanksComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
+  private notificationService = inject(NotificationService);
+
   items = signal<any[]>([]);
+  stats = signal<any>(null);
   isLoading = signal(false);
-  showCreate = signal(false);
-  statusFilter = '';
-  typeFilter = '';
+  hasError = signal(false);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  ngOnInit() { this.loadData(); }
+  statusFilter = signal('');
+  typeFilter = signal('');
+  currentPage = signal(1);
+  pageSize = 20;
 
-  loadData() {
-    this.isLoading.set(true);
-    this.financeService.getBanks({ 
-      status: this.statusFilter || undefined,
-      accountType: this.typeFilter || undefined,
-    }).subscribe({
-      next: (data) => { this.items.set(data); this.isLoading.set(false); },
-      error: () => this.isLoading.set(false),
+  isCreateOpen = signal(false);
+  isEditOpen = signal(false);
+  selectedBank = signal<any>(null);
+  formError = signal('');
+
+  newBank: any = { bankName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP' };
+  editBank: any = {};
+
+  private refreshSub!: Subscription;
+  private toastSub!: Subscription;
+
+  filteredItems = computed(() => {
+    let list = this.items();
+    const status = this.statusFilter();
+    if (status) list = list.filter(b => b.status === status);
+    const type = this.typeFilter();
+    if (type) list = list.filter(b => b.accountType === type);
+    return list;
+  });
+
+  pagedItems = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredItems().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.filteredItems().length,
+    pageSize: this.pageSize,
+    totalPages: Math.ceil(this.filteredItems().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  ngOnInit(): void {
+    this.loadData();
+    this.loadStats();
+    this.refreshSub = this.notificationService.refresh$.subscribe(() => {
+      this.loadData();
+      this.loadStats();
     });
+    this.toastSub = this.notificationService.toasts$.subscribe(t => {
+      this.toast.set(t);
+      setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
+    this.toastSub?.unsubscribe();
+  }
+
+  loadData(): void {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.financeService.getBanks().subscribe({
+      next: (data: any) => {
+        this.items.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? []));
+        this.currentPage.set(1);
+        this.isLoading.set(false);
+      },
+      error: () => { this.hasError.set(true); this.isLoading.set(false); },
+    });
+  }
+
+  loadStats(): void {
+    this.financeService.getBankStats().subscribe({
+      next: (s: any) => this.stats.set(s),
+      error: () => {},
+    });
+  }
+
+  onFilterChange(): void {
+    this.currentPage.set(1);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  openCreate(): void {
+    this.newBank = { bankName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP' };
+    this.formError.set('');
+    this.isCreateOpen.set(true);
+  }
+
+  closeCreate(): void {
+    this.isCreateOpen.set(false);
+    this.formError.set('');
+  }
+
+  saveBank(): void {
+    if (!this.newBank.bankName?.trim() || !this.newBank.accountNumber?.trim() || !this.newBank.holderName?.trim()) {
+      this.formError.set('Banco, número de cuenta y titular son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.createBank(this.newBank).subscribe({
+      next: () => {
+        this.closeCreate();
+        this.loadData();
+        this.loadStats();
+        this.showToast('Cuenta bancaria creada exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear cuenta bancaria'),
+    });
+  }
+
+  openEdit(bank: any): void {
+    this.selectedBank.set(bank);
+    this.editBank = { ...bank };
+    this.formError.set('');
+    this.isEditOpen.set(true);
+  }
+
+  closeEdit(): void {
+    this.isEditOpen.set(false);
+    this.selectedBank.set(null);
+    this.formError.set('');
+  }
+
+  updateBank(): void {
+    if (!this.editBank.bankName?.trim() || !this.editBank.holderName?.trim()) {
+      this.formError.set('Banco y titular son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.updateBank(this.selectedBank()!.id, this.editBank).subscribe({
+      next: () => {
+        this.closeEdit();
+        this.loadData();
+        this.showToast('Cuenta bancaria actualizada exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al actualizar cuenta bancaria'),
+    });
+  }
+
+  viewTransactions(bank: any): void {
+    // TODO: Implementar vista de transacciones bancarias
+    this.showToast('Vista de transacciones próximamente', 'info');
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info'): void {
+    this.toast.set({ message, type });
+    setTimeout(() => this.toast.set(null), 4000);
   }
 
   getStatusClass(status: string): string {
@@ -104,5 +187,10 @@ export class BanksComponent implements OnInit {
   getStatusLabel(status: string): string {
     const map: Record<string, string> = { active: 'Activa', inactive: 'Inactiva', frozen: 'Congelada', closed: 'Cerrada' };
     return map[status] || status;
+  }
+
+  formatCurrency(value: number | undefined): string {
+    if (!value) return '$0.00';
+    return new Intl.NumberFormat('es-CU', { style: 'currency', currency: 'CUP' }).format(value);
   }
 }

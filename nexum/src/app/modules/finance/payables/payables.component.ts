@@ -1,81 +1,201 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-payables',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold dark:text-white">Cuentas por Pagar</h1>
-        <button (click)="showCreate.set(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">+ Nueva CxP</button>
-      </div>
-      <div class="flex gap-3 mb-4">
-        <select [(ngModel)]="statusFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos</option>
-          <option value="pending">Pendiente</option>
-          <option value="partial">Parcial</option>
-          <option value="overdue">Vencida</option>
-          <option value="paid">Pagada</option>
-        </select>
-        <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="loadData()" placeholder="Buscar proveedor..." class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm flex-1" />
-      </div>
-      @if (isLoading()) {
-        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-      } @else {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">No.</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Proveedor</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Monto</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Saldo</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Vencimiento</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (ap of items(); track ap.id) {
-                <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td class="px-4 py-3 dark:text-slate-300">{{ ap.apNumber }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ ap.supplierName }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ ap.originalAmount | number:'1.2-2' }}</td>
-                  <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ ap.balanceAmount | number:'1.2-2' }}</td>
-                  <td class="px-4 py-3 text-center dark:text-slate-300">{{ ap.dueDate }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <span [class]="getStatusClass(ap.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(ap.status) }}</span>
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay cuentas por pagar</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </div>
-  `
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  templateUrl: './payables.component.html',
 })
-export class PayablesComponent implements OnInit {
+export class PayablesComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
+  private notificationService = inject(NotificationService);
+  private confirmDialog = inject(ConfirmDialogService);
+
   items = signal<any[]>([]);
+  stats = signal<any>(null);
   isLoading = signal(false);
-  showCreate = signal(false);
-  statusFilter = '';
-  searchTerm = '';
+  hasError = signal(false);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  ngOnInit() { this.loadData(); }
+  searchTerm = signal('');
+  statusFilter = signal('');
+  agingFilter = signal('');
+  currentPage = signal(1);
+  pageSize = 20;
 
-  loadData() {
-    this.isLoading.set(true);
-    this.financeService.getPayables({ status: this.statusFilter || undefined, supplierName: this.searchTerm || undefined }).subscribe({
-      next: (data) => { this.items.set(data); this.isLoading.set(false); },
-      error: () => this.isLoading.set(false),
+  isCreateOpen = signal(false);
+  isEditOpen = signal(false);
+  selectedPayable = signal<any>(null);
+  formError = signal('');
+
+  newPayable: any = { supplierName: '', supplierId: '', originalAmount: 0, dueDate: '', description: '' };
+  editPayable: any = {};
+
+  private refreshSub!: Subscription;
+  private toastSub!: Subscription;
+
+  filteredItems = computed(() => {
+    let list = this.items();
+    const term = this.searchTerm().toLowerCase();
+    if (term) {
+      list = list.filter(ap =>
+        ap.supplierName?.toLowerCase().includes(term) ||
+        ap.apNumber?.toLowerCase().includes(term) ||
+        ap.supplierId?.toLowerCase().includes(term)
+      );
+    }
+    const status = this.statusFilter();
+    if (status) list = list.filter(ap => ap.status === status);
+    const aging = this.agingFilter();
+    if (aging) list = list.filter(ap => ap.agingCategory === aging);
+    return list;
+  });
+
+  pagedItems = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredItems().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.filteredItems().length,
+    pageSize: this.pageSize,
+    totalPages: Math.ceil(this.filteredItems().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  ngOnInit(): void {
+    this.loadData();
+    this.loadStats();
+    this.refreshSub = this.notificationService.refresh$.subscribe(() => {
+      this.loadData();
+      this.loadStats();
     });
+    this.toastSub = this.notificationService.toasts$.subscribe(t => {
+      this.toast.set(t);
+      setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
+    this.toastSub?.unsubscribe();
+  }
+
+  loadData(): void {
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.financeService.getPayables().subscribe({
+      next: (data: any) => {
+        this.items.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? []));
+        this.currentPage.set(1);
+        this.isLoading.set(false);
+      },
+      error: () => { this.hasError.set(true); this.isLoading.set(false); },
+    });
+  }
+
+  loadStats(): void {
+    this.financeService.getPayableStats().subscribe({
+      next: (s: any) => this.stats.set(s),
+      error: () => {},
+    });
+  }
+
+  onSearch(event: Event): void {
+    this.searchTerm.set((event.target as HTMLInputElement).value);
+    this.currentPage.set(1);
+  }
+
+  onFilterChange(): void {
+    this.currentPage.set(1);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  openCreate(): void {
+    this.newPayable = { supplierName: '', supplierId: '', originalAmount: 0, dueDate: '', description: '' };
+    this.formError.set('');
+    this.isCreateOpen.set(true);
+  }
+
+  closeCreate(): void {
+    this.isCreateOpen.set(false);
+    this.formError.set('');
+  }
+
+  savePayable(): void {
+    if (!this.newPayable.supplierName?.trim() || !this.newPayable.originalAmount || !this.newPayable.dueDate) {
+      this.formError.set('Proveedor, monto y fecha de vencimiento son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.createPayable(this.newPayable).subscribe({
+      next: () => {
+        this.closeCreate();
+        this.loadData();
+        this.loadStats();
+        this.showToast('Cuenta por pagar creada exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear cuenta por pagar'),
+    });
+  }
+
+  openEdit(payable: any): void {
+    this.selectedPayable.set(payable);
+    this.editPayable = { ...payable };
+    this.formError.set('');
+    this.isEditOpen.set(true);
+  }
+
+  closeEdit(): void {
+    this.isEditOpen.set(false);
+    this.selectedPayable.set(null);
+    this.formError.set('');
+  }
+
+  updatePayable(): void {
+    if (!this.editPayable.supplierName?.trim()) {
+      this.formError.set('Proveedor es obligatorio');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.updatePayable(this.selectedPayable()!.id, this.editPayable).subscribe({
+      next: () => {
+        this.closeEdit();
+        this.loadData();
+        this.showToast('Cuenta por pagar actualizada exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al actualizar cuenta por pagar'),
+    });
+  }
+
+  async markAsPaid(payable: any): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Marcar como pagada',
+      message: `Marcar "${payable.supplierName}" como pagada?`,
+      confirmText: 'Confirmar',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+    this.editPayable = { ...payable, status: 'paid' };
+    this.selectedPayable.set(payable);
+    this.updatePayable();
+  }
+
+  private showToast(message: string, type: 'success' | 'error' | 'info'): void {
+    this.toast.set({ message, type });
+    setTimeout(() => this.toast.set(null), 4000);
   }
 
   getStatusClass(status: string): string {
@@ -91,5 +211,15 @@ export class PayablesComponent implements OnInit {
   getStatusLabel(status: string): string {
     const map: Record<string, string> = { pending: 'Pendiente', partial: 'Parcial', paid: 'Pagada', overdue: 'Vencida' };
     return map[status] || status;
+  }
+
+  formatCurrency(value: number | undefined): string {
+    if (!value) return '$0.00';
+    return new Intl.NumberFormat('es-CU', { style: 'currency', currency: 'CUP' }).format(value);
+  }
+
+  formatDate(date: string | undefined): string {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('es-CU');
   }
 }
