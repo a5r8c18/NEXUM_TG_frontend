@@ -28,6 +28,7 @@ export class StockLimitsFormComponent implements OnInit, OnDestroy {
 
   // Form data
   formData = signal<CreateStockLimitRequest>({
+    companyId: 0,
     productId: '',
     warehouseId: '',
     minStock: 0,
@@ -99,6 +100,7 @@ export class StockLimitsFormComponent implements OnInit, OnDestroy {
     this.stockLimitsService.getStockLimit(id).subscribe({
       next: (stockLimit: StockLimit) => {
         this.formData.set({
+          companyId: Number(this.contextService.currentCompany()?.id) || 0,
           productId: stockLimit.productId,
           warehouseId: stockLimit.warehouseId,
           minStock: stockLimit.minStock,

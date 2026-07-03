@@ -204,12 +204,12 @@
     </div>
 
     <!-- Paginación -->
-    @if (paginationConfig().totalPages > 1) {
+    @if (filteredStockLimits().length > 0) {
       <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)"></app-pagination>
     }
 
     <!-- Estado vacío -->
-    @if (filteredStockLimits.length === 0 && !isLoading()) {
+    @if (filteredStockLimits().length === 0 && !isLoading()) {
       <div class="text-center py-20">
         <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
