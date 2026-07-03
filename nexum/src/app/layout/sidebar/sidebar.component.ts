@@ -11,6 +11,7 @@ interface NavItem {
   hasSubmenu?: boolean;
   submenu?: NavItem[];
   isExpanded?: boolean;
+  isComingSoon?: boolean;
 }
 
 @Component({
@@ -151,9 +152,9 @@ export class SidebarComponent {
       submenu: [
         { icon: 'Database', label: 'Catálogo', route: '/inventory/catalog' },
         { icon: 'ArrowRightLeft', label: 'Movimientos', route: '/inventory/movements' },
-        { icon: 'ShoppingCart', label: 'Órdenes de Compra', route: '/inventory/purchase-orders' },
+        { icon: 'ShoppingCart', label: 'Órdenes de Compra', route: '/inventory/purchase-orders', isComingSoon: true },
         { icon: 'FileText', label: 'Reportes', route: '/inventory/reports' },
-        { icon: 'Search', label: 'Conteo Físico', route: '/inventory/physical-count' },
+        { icon: 'Search', label: 'Conteo Físico', route: '/inventory/physical-count', isComingSoon: true },
         { icon: 'BarChart3', label: 'Analítica', route: '/inventory/analytics' },
         { icon: 'Truck', label: 'Proveedores', route: '/inventory/suppliers' },
         { icon: 'Warehouse', label: 'Almacenes', route: '/inventory/warehouses' },

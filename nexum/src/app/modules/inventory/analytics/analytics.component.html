@@ -31,10 +31,10 @@
       </select>
       <select [value]="periodFilter()" (change)="onPeriodChange($event)"
               class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <option value="30">Ultimos 30 dias</option>
-        <option value="90">Ultimos 90 dias</option>
-        <option value="180">Ultimos 6 meses</option>
-        <option value="365">Ultimo ano</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="90">Últimos 90 días</option>
+        <option value="180">Últimos 6 meses</option>
+        <option value="365">Último año</option>
       </select>
     </div>
   </div>
@@ -56,7 +56,7 @@
       } @else {
         <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ rotationData()?.averageRotation | number:'1.1-1' }}</p>
       }
-      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">veces/ano</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">veces/año</p>
     </div>
     <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
       <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Dias de Inventario</p>

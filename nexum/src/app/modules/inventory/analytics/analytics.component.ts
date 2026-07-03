@@ -51,7 +51,21 @@ export class InventoryAnalyticsComponent implements OnInit {
       period: this.periodFilter() ? Number(this.periodFilter()) : undefined,
     }).subscribe({
       next: (data: any) => {
-        this.rotationData.set(data);
+        // Map backend response to frontend expected structure
+        this.rotationData.set({
+          averageRotation: data.summary?.totalExits > 0 && data.summary?.totalStock > 0 
+            ? (data.summary.totalExits / data.summary.totalStock) * (365 / (data.period || 365))
+            : 0,
+          averageDaysInventory: data.summary?.averageDaysOfInventory || 0,
+          abcAnalysis: data.summary?.abcDistribution || { A: 0, B: 0, C: 0 },
+          byProduct: data.analytics?.map((item: any) => ({
+            productCode: item.productCode,
+            productName: item.productName,
+            rotation: item.rotationRate,
+            daysInventory: item.daysOfInventory,
+            abcClass: item.abcClass,
+          })) || [],
+        });
         this.isLoadingRotation.set(false);
       },
       error: () => {
@@ -68,7 +82,15 @@ export class InventoryAnalyticsComponent implements OnInit {
       category: this.categoryFilter() || undefined,
     }).subscribe({
       next: (data: any) => {
-        this.slowMovingData.set(Array.isArray(data) ? data : (data?.items ?? []));
+        // Map backend response to frontend expected structure
+        const slowMovingItems = data.slowMovingItems?.map((item: any) => ({
+          productCode: item.productCode,
+          productName: item.productName,
+          stock: item.currentStock,
+          totalValue: item.inventoryValue,
+          daysSinceLastMove: item.daysOfInventory,
+        })) || [];
+        this.slowMovingData.set(slowMovingItems);
         this.isLoadingSlow.set(false);
       },
       error: () => {
