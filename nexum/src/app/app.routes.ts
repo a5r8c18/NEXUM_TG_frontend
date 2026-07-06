@@ -118,7 +118,23 @@ export const routes: Routes = [
         path: 'inventory/purchase-orders',
         loadComponent: () => import('./modules/inventory/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
       },
+      {
+        path: 'inventory/purchases',
+        loadComponent: () => import('./modules/inventory/purchases-list/purchases-list.component').then(m => m.PurchasesListComponent)
+      },
+      {
+        path: 'inventory/purchases/:id/invoice',
+        loadComponent: () => import('./modules/inventory/purchase-invoice/purchase-invoice.component').then(m => m.PurchaseInvoiceComponent)
+      },
+      {
+        path: 'inventory/purchases/:id/reconcile',
+        loadComponent: () => import('./modules/inventory/purchase-reconcile/purchase-reconcile.component').then(m => m.PurchaseReconcileComponent)
+      },
       // Finance Module
+      {
+        path: 'finance/working-capital',
+        loadComponent: () => import('./modules/finance/working-capital/working-capital.component').then(m => m.WorkingCapitalComponent)
+      },
       {
         path: 'finance',
         loadComponent: () => import('./modules/finance/finance-dashboard.component').then(m => m.FinanceDashboardComponent)

@@ -25,4 +25,12 @@ export class PurchasesService {
   getPurchaseById(id: string): Observable<PurchaseDetailResponse> {
     return this.http.get<PurchaseDetailResponse>(`${this.apiUrl}/${id}`);
   }
+
+  registerSupplierInvoice(purchaseId: string, data: { invoiceNumber: string; invoiceDate: string }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${purchaseId}/invoice`, data);
+  }
+
+  reconcilePurchase(purchaseId: string, data: { purchaseOrderId?: string; deliveryNoteId?: string }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${purchaseId}/reconcile`, data);
+  }
 }

@@ -68,6 +68,24 @@ import { FinanceService } from '../../core/services/finance.service';
           </a>
         </div>
 
+        <!-- Acceso rápido Capital de Trabajo -->
+        <a routerLink="/finance/working-capital" class="flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl px-5 py-4 shadow-sm transition-all mb-6 cursor-pointer">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="font-semibold">Capital de Trabajo</p>
+              <p class="text-sm text-white/80">Análisis CCC · DSO · DPO · DIO · Tensión de caja</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+
         @if (dashboard()?.receivables?.totalOverdue) {
           <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 mb-6">
             <p class="text-amber-800 dark:text-amber-300 font-medium">
