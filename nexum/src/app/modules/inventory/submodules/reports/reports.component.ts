@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ReportsService } from '../../../../core/services/reports.service';
 import { NotificationService } from '../../../../core/services/notification.service';
@@ -13,7 +14,7 @@ type Report = ReceptionReport | DeliveryReport | TransferReport;
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent, ModalComponent],
   templateUrl: './reports.component.html',
 })
 export class ReportsComponent implements OnInit, OnDestroy {

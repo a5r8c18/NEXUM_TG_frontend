@@ -10,6 +10,11 @@ export interface ReportFilters {
 
 export interface ReceptionReport {
   id: string;
+  purchaseId?: string;
+  reportNumber?: string;
+  isInvoiced?: boolean;
+  isReconciled?: boolean;
+  invoiceNumber?: string;
   entity: string;
   warehouse: string;
   supplier: string;

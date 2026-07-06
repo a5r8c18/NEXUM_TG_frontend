@@ -119,10 +119,6 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/inventory/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
       },
       {
-        path: 'inventory/purchases',
-        loadComponent: () => import('./modules/inventory/purchases-list/purchases-list.component').then(m => m.PurchasesListComponent)
-      },
-      {
         path: 'inventory/purchases/:id/invoice',
         loadComponent: () => import('./modules/inventory/purchase-invoice/purchase-invoice.component').then(m => m.PurchaseInvoiceComponent)
       },
