@@ -378,7 +378,19 @@ export class JournalEntriesComponent implements OnInit {
     this.showModal.set(true);
   }
 
+  canEdit(comprobante: Voucher): boolean {
+    const isManual = !comprobante.sourceModule || comprobante.sourceModule === 'manual';
+    return isManual && comprobante.status === 'draft';
+  }
+
   editComprobante(comprobante: Voucher) {
+    if (comprobante.sourceModule && comprobante.sourceModule !== 'manual') {
+      this.showToast(
+        'Este comprobante fue generado por otro módulo y no puede editarse desde Contabilidad. Modifique la operación de origen.',
+        'error',
+      );
+      return;
+    }
     if (comprobante.status !== 'draft') {
       this.showToast('Solo se pueden editar comprobantes en borrador', 'error');
       return;

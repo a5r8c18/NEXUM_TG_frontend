@@ -37,13 +37,20 @@ export class InventoryService {
     console.log('📦 INVENTORY SERVICE - Parámetros finales:', params.toString());
     
     return this.http
-      .get<{ inventory: InventoryItem[] }>(this.apiUrl, { params })
+      .get<any[] | { inventory: any[] }>(this.apiUrl, { params })
       .pipe(map((res) => {
+        // El backend devuelve un array plano; se admite también { inventory: [] } por compatibilidad
+        const raw = Array.isArray(res) ? res : (res?.inventory ?? []);
+        // La entidad expone warehouseName; la tabla usa el campo warehouse
+        const items: InventoryItem[] = raw.map((it) => ({
+          ...it,
+          warehouse: it.warehouse ?? it.warehouseName,
+        }));
         console.log('✅ INVENTORY SERVICE - Respuesta recibida:', {
-          totalItems: res.inventory?.length || 0,
+          totalItems: items.length,
           data: res
         });
-        return res.inventory ?? [];
+        return items;
       }));
   }
 }
