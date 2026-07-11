@@ -28,6 +28,7 @@ export class JournalEntriesComponent implements OnInit {
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   currentPage = signal(1);
   pageSize = 10;
+  selectedIds = signal<Set<string>>(new Set());
   searchTerm = signal('');
   accountCodeFilter = signal('');
   subaccountCodeFilter = signal('');
@@ -550,6 +551,89 @@ export class JournalEntriesComponent implements OnInit {
       },
       error: (err) => {
         this.showToast(err.error?.message || 'Error al contabilizar', 'error');
+      },
+    });
+  }
+
+  // Batch selection helpers
+  isSelected(id: string): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  toggleSelection(id: string, checked: boolean) {
+    const set = new Set(this.selectedIds());
+    if (checked) {
+      set.add(id);
+    } else {
+      set.delete(id);
+    }
+    this.selectedIds.set(set);
+  }
+
+  toggleAll(checked: boolean) {
+    const set = new Set<string>();
+    if (checked) {
+      this.pagedComprobantes().forEach((c) => set.add(c.id));
+    }
+    this.selectedIds.set(set);
+  }
+
+  selectedCount = computed(() => this.selectedIds().size);
+
+  hasPostableSelected(): boolean {
+    const ids = this.selectedIds();
+    if (ids.size === 0) return false;
+    return this.comprobantes().every((c) => !ids.has(c.id) || c.status === 'draft');
+  }
+
+  hasCancellableSelected(): boolean {
+    const ids = this.selectedIds();
+    if (ids.size === 0) return false;
+    return this.comprobantes().every((c) => !ids.has(c.id) || c.status === 'draft' || c.status === 'posted');
+  }
+
+  async batchPost() {
+    const ids = Array.from(this.selectedIds());
+    if (ids.length === 0) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Contabilizar comprobantes',
+      message: `¿Contabilizar ${ids.length} comprobante(s) seleccionado(s)?`,
+      confirmText: 'Contabilizar',
+      type: 'success',
+    });
+    if (!confirmed) return;
+
+    this.accountingService.updateVouchersStatus(ids, 'posted').subscribe({
+      next: (res) => {
+        this.showToast(`${res.processed} contabilizado(s), ${res.failed} error(es)`, res.failed ? 'info' : 'success');
+        this.selectedIds.set(new Set());
+        this.loadComprobantes();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al contabilizar en lote', 'error');
+      },
+    });
+  }
+
+  async batchCancel() {
+    const ids = Array.from(this.selectedIds());
+    if (ids.length === 0) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Anular comprobantes',
+      message: `¿Anular ${ids.length} comprobante(s) seleccionado(s)?`,
+      confirmText: 'Anular',
+      type: 'danger',
+    });
+    if (!confirmed) return;
+
+    this.accountingService.updateVouchersStatus(ids, 'cancelled').subscribe({
+      next: (res) => {
+        this.showToast(`${res.processed} anulado(s), ${res.failed} error(es)`, res.failed ? 'info' : 'success');
+        this.selectedIds.set(new Set());
+        this.loadComprobantes();
+      },
+      error: (err) => {
+        this.showToast(err.error?.message || 'Error al anular en lote', 'error');
       },
     });
   }

@@ -385,6 +385,13 @@ export class AccountingService {
     return this.http.put<Voucher>(`${this.baseUrl}/vouchers/${id}/status`, { status });
   }
 
+  updateVouchersStatus(ids: string[], status: string) {
+    return this.http.put<{ processed: number; failed: number; errors: { id: string; error: string }[]; status: string }>(
+      `${this.baseUrl}/vouchers/batch/status`,
+      { ids, status },
+    );
+  }
+
   deleteVoucher(id: string) {
     return this.http.delete(`${this.baseUrl}/vouchers/${id}`);
   }
