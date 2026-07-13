@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
-import { HrService, Employee } from '../../../core/services/hr.service';
+import { HrService, Employee, Department } from '../../../core/services/hr.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../../core/offline/offline-first.service';
 
@@ -29,6 +29,29 @@ export class EmployeesComponent implements OnInit {
   statusFilter = signal('');
   contractFilter = signal('');
   isCreateOpen = signal(false);
+  isSaving = signal(false);
+  editingId = signal<string | null>(null);
+  departments = signal<Department[]>([]);
+
+  form: Partial<Employee> = this.emptyForm();
+
+  private emptyForm(): Partial<Employee> {
+    return {
+      employeeCode: '',
+      firstName: '',
+      lastName: '',
+      email: null,
+      phone: null,
+      position: null,
+      departmentId: null,
+      hireDate: null,
+      salary: 0,
+      contractType: 'full_time',
+      status: 'active',
+      documentId: null,
+      address: null,
+    };
+  }
 
   filteredEmployees = computed(() => {
     let filtered = this.employees();
@@ -63,7 +86,17 @@ export class EmployeesComponent implements OnInit {
     totalPages: Math.ceil(this.filteredEmployees().length / this.pageSize)
   }));
 
-  ngOnInit() { this.loadEmployees(); }
+  ngOnInit() {
+    this.loadEmployees();
+    this.loadDepartments();
+  }
+
+  loadDepartments() {
+    this.hrService.getDepartments().subscribe({
+      next: (data) => this.departments.set(data),
+      error: () => { /* departamentos opcionales */ }
+    });
+  }
 
   loadEmployees() {
     this.isLoading.set(true);
@@ -77,12 +110,62 @@ export class EmployeesComponent implements OnInit {
   applyFilters() { this.currentPage.set(1); }
   resetFilters() { this.searchTerm.set(''); this.statusFilter.set(''); this.contractFilter.set(''); this.currentPage.set(1); }
   onPageChange(page: number) { this.currentPage.set(page); }
-  openCreate() { this.isCreateOpen.set(true); }
+  openCreate() {
+    this.editingId.set(null);
+    this.form = this.emptyForm();
+    this.isCreateOpen.set(true);
+  }
+
+  openEdit(emp: Employee) {
+    this.editingId.set(emp.id);
+    this.form = {
+      employeeCode: emp.employeeCode,
+      firstName: emp.firstName,
+      lastName: emp.lastName,
+      email: emp.email,
+      phone: emp.phone,
+      position: emp.position,
+      departmentId: emp.departmentId,
+      hireDate: emp.hireDate,
+      salary: emp.salary,
+      contractType: emp.contractType,
+      status: emp.status,
+      documentId: emp.documentId,
+      address: emp.address,
+    };
+    this.isCreateOpen.set(true);
+  }
+
   closeCreate() { this.isCreateOpen.set(false); }
 
-  createEmployee() {
-    this.showToast('Funcionalidad de crear empleado en desarrollo', 'info');
-    this.closeCreate();
+  saveEmployee() {
+    if (!this.form.firstName?.trim() || !this.form.lastName?.trim()) {
+      this.showToast('Nombre y apellidos son obligatorios', 'error');
+      return;
+    }
+    if (this.form.departmentId) {
+      const dept = this.departments().find(d => d.id === this.form.departmentId);
+      this.form.departmentName = dept ? dept.name : null;
+    } else {
+      this.form.departmentName = null;
+    }
+    this.isSaving.set(true);
+    const id = this.editingId();
+    const request$ = id
+      ? this.hrService.updateEmployee(id, this.form)
+      : this.hrService.createEmployee(this.form);
+    request$.subscribe({
+      next: () => {
+        this.isSaving.set(false);
+        this.showToast(id ? 'Empleado actualizado' : 'Empleado registrado', 'success');
+        this.closeCreate();
+        this.loadEmployees();
+      },
+      error: () => {
+        this.isSaving.set(false);
+        this.showToast('Error al guardar el empleado', 'error');
+      }
+    });
   }
 
   async deleteEmployee(emp: Employee) {

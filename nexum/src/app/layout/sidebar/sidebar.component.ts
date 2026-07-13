@@ -140,6 +140,7 @@ export class SidebarComponent {
       isExpanded: false,
       submenu: [
         { icon: 'UserCheck', label: 'Empleados', route: '/hr/employees' },
+        { icon: 'Building', label: 'Departamentos', route: '/hr/departments' },
         { icon: 'Wallet', label: 'Nómina', route: '/hr/payroll' }
       ]
     },

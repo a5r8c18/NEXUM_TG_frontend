@@ -30,11 +30,19 @@ export class PayrollService {
     return this.http.post(this.apiUrl, data);
   }
 
-  process(id: number, processedBy: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/process`, { processedBy });
+  generate(data: { period: string; startDate: string; endDate: string; processedBy?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate`, data);
+  }
+
+  process(id: number, processedBy: string, costCenterId?: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}/process`, { processedBy, costCenterId });
   }
 
   markAsPaid(id: number): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/pay`, {});
+  }
+
+  cancel(id: number, reason?: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}/cancel`, { reason });
   }
 }

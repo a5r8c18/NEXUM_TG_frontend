@@ -200,8 +200,17 @@ export const routes: Routes = [
       },
       // HR Module
       {
+        path: 'hr',
+        redirectTo: 'hr/employees',
+        pathMatch: 'full'
+      },
+      {
         path: 'hr/employees',
         loadComponent: () => import('./modules/hr/employees/employees.component').then(m => m.EmployeesComponent)
+      },
+      {
+        path: 'hr/departments',
+        loadComponent: () => import('./modules/hr/departments/departments.component').then(m => m.DepartmentsComponent)
       },
       {
         path: 'hr/payroll',
