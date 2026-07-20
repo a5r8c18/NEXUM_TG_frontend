@@ -36,6 +36,12 @@ export class BanksComponent implements OnInit, OnDestroy {
   newBank: any = { bankName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP' };
   editBank: any = {};
 
+  readonly accountTypes = [
+    { value: 'checking', label: 'Cuenta Corriente' },
+    { value: 'expenses', label: 'Gastos' },
+    { value: 'mlc', label: 'MLC' },
+  ];
+
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
 
@@ -111,6 +117,15 @@ export class BanksComponent implements OnInit, OnDestroy {
     this.newBank = { bankName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP' };
     this.formError.set('');
     this.isCreateOpen.set(true);
+  }
+
+  onAccountTypeChange(bank: any): void {
+    if (bank.accountType === 'mlc' && bank.currency === 'CUP') {
+      bank.currency = 'USD';
+    }
+    if (bank.accountType !== 'mlc' && bank.currency !== 'CUP') {
+      bank.currency = 'CUP';
+    }
   }
 
   closeCreate(): void {
@@ -189,8 +204,13 @@ export class BanksComponent implements OnInit, OnDestroy {
     return map[status] || status;
   }
 
-  formatCurrency(value: number | undefined): string {
-    if (!value) return '$0.00';
-    return new Intl.NumberFormat('es-CU', { style: 'currency', currency: 'CUP' }).format(value);
+  getAccountTypeLabel(type: string): string {
+    const map: Record<string, string> = { checking: 'Cuenta Corriente', expenses: 'Gastos', mlc: 'MLC' };
+    return map[type] || type;
+  }
+
+  formatCurrency(value: number | undefined, currency: string = 'CUP'): string {
+    if (!value) return new Intl.NumberFormat('es-CU', { style: 'currency', currency }).format(0);
+    return new Intl.NumberFormat('es-CU', { style: 'currency', currency }).format(value);
   }
 }

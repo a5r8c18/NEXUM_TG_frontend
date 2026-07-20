@@ -45,10 +45,9 @@
       </select>
       <select [(ngModel)]="typeFilter" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <option value="">Todos los tipos</option>
-        <option value="checking">Cuenta Corriente</option>
-        <option value="savings">Ahorro</option>
-        <option value="investment">Inversión</option>
-        <option value="credit">Crédito</option>
+        @for (type of accountTypes; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
       </select>
     </div>
   </div>
@@ -86,12 +85,12 @@
               <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                 <td class="px-4 py-3 dark:text-slate-300">
                   <div class="font-medium">{{ bank.accountNumber }}</div>
-                  <div class="text-xs text-slate-500 dark:text-slate-400">{{ bank.accountType }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400">{{ getAccountTypeLabel(bank.accountType) }}</div>
                 </td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ bank.bankName }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ bank.holderName }}</td>
-                <td class="px-4 py-3 text-right dark:text-slate-300">{{ formatCurrency(bank.balance) }}</td>
-                <td class="px-4 py-3 text-right dark:text-slate-300">{{ formatCurrency(bank.availableBalance) }}</td>
+                <td class="px-4 py-3 text-right dark:text-slate-300">{{ formatCurrency(bank.balance, bank.currency) }}</td>
+                <td class="px-4 py-3 text-right dark:text-slate-300">{{ formatCurrency(bank.availableBalance, bank.currency) }}</td>
                 <td class="px-4 py-3 text-center">
                   <span [class]="getStatusClass(bank.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(bank.status) }}</span>
                 </td>
@@ -116,7 +115,7 @@
 
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
-    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Cuenta Bancaria'" (close)="closeCreate()">
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Cuenta Bancaria'" [confirmText]="'Guardar'" (closeEvent)="closeCreate()" (confirmEvent)="saveBank()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -134,11 +133,10 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo *</label>
-            <select [(ngModel)]="newBank.accountType" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="checking">Cuenta Corriente</option>
-              <option value="savings">Ahorro</option>
-              <option value="investment">Inversión</option>
-              <option value="credit">Crédito</option>
+            <select [(ngModel)]="newBank.accountType" (ngModelChange)="onAccountTypeChange(newBank)" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              @for (type of accountTypes; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
             </select>
           </div>
           <div>
@@ -152,15 +150,13 @@
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Moneda</label>
             <select [(ngModel)]="newBank.currency" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="CUP">CUP</option>
+              @if (newBank.accountType !== 'mlc') {
+                <option value="CUP">CUP</option>
+              }
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
             </select>
           </div>
-        </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeCreate()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="saveBank()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
         </div>
       </div>
     </app-modal>
@@ -168,7 +164,7 @@
 
   <!-- Modal Editar -->
   @if (isEditOpen()) {
-    <app-modal [isOpen]="isEditOpen()" [title]="'Editar Cuenta Bancaria'" (close)="closeEdit()">
+    <app-modal [isOpen]="isEditOpen()" [title]="'Editar Cuenta Bancaria'" [confirmText]="'Actualizar'" (closeEvent)="closeEdit()" (confirmEvent)="updateBank()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -190,6 +186,24 @@
             </select>
           </div>
           <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo *</label>
+            <select [(ngModel)]="editBank.accountType" (ngModelChange)="onAccountTypeChange(editBank)" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              @for (type of accountTypes; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Moneda</label>
+            <select [(ngModel)]="editBank.currency" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              @if (editBank.accountType !== 'mlc') {
+                <option value="CUP">CUP</option>
+              }
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Titular *</label>
             <input [(ngModel)]="editBank.holderName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
@@ -197,10 +211,6 @@
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo Actual</label>
             <input type="number" [(ngModel)]="editBank.balance" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-        </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeEdit()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="updateBank()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Actualizar</button>
         </div>
       </div>
     </app-modal>
