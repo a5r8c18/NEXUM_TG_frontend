@@ -216,6 +216,18 @@ export const routes: Routes = [
         path: 'hr/payroll',
         loadComponent: () => import('./modules/hr/payroll/payroll.component').then(m => m.PayrollComponent)
       },
+      {
+        path: 'hr/contracts',
+        loadComponent: () => import('./modules/hr/contracts/contracts.component').then(m => m.ContractsComponent)
+      },
+      {
+        path: 'hr/attendance',
+        loadComponent: () => import('./modules/hr/attendance/attendance.component').then(m => m.AttendanceComponent)
+      },
+      {
+        path: 'hr/leaves',
+        loadComponent: () => import('./modules/hr/leaves/leaves.component').then(m => m.LeavesComponent)
+      },
       // Messages Module
       {
         path: 'messages',

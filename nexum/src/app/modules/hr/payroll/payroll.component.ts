@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PayrollService } from '../../../core/services/payroll.service';
 import { AccountingService, CostCenter } from '../../../core/services/accounting.service';
+import { FinanceService } from '../../../core/services/finance.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -14,13 +15,13 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
     <div class="p-6">
       @if (toast()) {
         <div class="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border"
-             [class.bg-green-50]="toast()!.type === 'success'"
-             [class.text-green-800]="toast()!.type === 'success'"
-             [class.border-green-200]="toast()!.type === 'success'"
-             [class.bg-red-50]="toast()!.type === 'error'"
-             [class.text-red-800]="toast()!.type === 'error'"
-             [class.border-red-200]="toast()!.type === 'error'">
-          {{ toast()!.message }}
+             [class.bg-green-50]="toast()?.type === 'success'"
+             [class.text-green-800]="toast()?.type === 'success'"
+             [class.border-green-200]="toast()?.type === 'success'"
+             [class.bg-red-50]="toast()?.type === 'error'"
+             [class.text-red-800]="toast()?.type === 'error'"
+             [class.border-red-200]="toast()?.type === 'error'">
+          {{ toast()?.message }}
         </div>
       }
 
@@ -77,11 +78,12 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
                     <span [class]="getStatusClass(payroll.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(payroll.status) }}</span>
                   </td>
                   <td class="px-4 py-3 text-center">
+                    <button (click)="openDetail(payroll)" class="bg-slate-600 text-white px-3 py-1 rounded text-xs hover:bg-slate-700 transition-colors mr-1">Detalle</button>
                     @if (payroll.status === 'draft') {
                       <button (click)="openProcess(payroll)" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors mr-1">Procesar</button>
                     }
                     @if (payroll.status === 'processed') {
-                      <button (click)="markAsPaid(payroll.id)" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors mr-1">Marcar Pagada</button>
+                      <button (click)="openPay(payroll.id)" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors mr-1">Marcar Pagada</button>
                     }
                     @if (['draft', 'processed'].includes(payroll.status)) {
                       <button (click)="cancel(payroll.id)" class="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors">Cancelar</button>
@@ -126,6 +128,65 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
         </app-modal>
       }
 
+      <!-- Modal Detalle / Editar Líneas -->
+      @if (showDetail()) {
+        <app-modal [isOpen]="showDetail()" (closeEvent)="showDetail.set(false)" (confirmEvent)="saveItems()"
+                   title="Líneas de Nómina" [confirmText]="isBusy() ? 'Guardando...' : 'Guardar cambios'"
+                   confirmButtonClass="bg-blue-600 hover:bg-blue-700" maxWidthClass="max-w-4xl">
+          <div class="space-y-4">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-200"><tr>
+                  <th class="text-left px-3 py-2 font-medium text-slate-700">Empleado</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Salario base</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Horas extra</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Otros ingresos</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Retenciones</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Seguridad Social</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Neto</th>
+                  <th class="text-center px-3 py-2 font-medium text-slate-700">Recibo</th>
+                </tr></thead>
+                <tbody class="divide-y divide-slate-200">
+                  @for (item of detailItems(); track item.id) {
+                    <tr>
+                      <td class="px-3 py-2 text-slate-700">{{ item.employeeName }}</td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.baseSalary" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.overtimePay" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.otherIncome" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.deductions" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.socialSecurity" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2 text-right font-semibold text-xs">{{ item.netSalary | number:'1.2-2' }}</td>
+                      <td class="px-3 py-2 text-center"><button (click)="openReceipt(item)" class="text-blue-600 hover:text-blue-800 text-xs">🖨️</button></td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="8" class="px-3 py-4 text-center text-slate-500">No hay líneas</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <p class="text-xs text-slate-500">* La edición solo está disponible en estado borrador. En estados procesados/pagados use cancelar.</p>
+          </div>
+        </app-modal>
+      }
+
+      <!-- Modal Recibo -->
+      @if (showReceipt() && receiptItem()) {
+        <app-modal [isOpen]="showReceipt()" (closeEvent)="showReceipt.set(false)" (confirmEvent)="printReceipt()"
+                   title="Recibo de Pago" confirmText="Imprimir" confirmButtonClass="bg-blue-600 hover:bg-blue-700" maxWidthClass="max-w-lg">
+          <div id="receipt" class="p-4 border rounded-xl bg-white space-y-2 text-sm">
+            <div class="text-center border-b pb-2"><h3 class="font-bold text-lg">RECIBO DE PAGO</h3><p class="text-xs text-slate-500">Período: {{ detailPayroll()?.period }}</p></div>
+            <p><strong>Empleado:</strong> {{ receiptItem()?.employeeName }}</p>
+            <p><strong>Salario base:</strong> {{ receiptItem()?.baseSalary | number:'1.2-2' }}</p>
+            <p><strong>Horas extra:</strong> {{ receiptItem()?.overtimePay | number:'1.2-2' }}</p>
+            <p><strong>Otros ingresos:</strong> {{ receiptItem()?.otherIncome | number:'1.2-2' }}</p>
+            <p><strong>Retenciones:</strong> {{ receiptItem()?.deductions | number:'1.2-2' }}</p>
+            <p><strong>Seguridad Social:</strong> {{ receiptItem()?.socialSecurity | number:'1.2-2' }}</p>
+            <p class="text-lg font-bold text-right border-t pt-2">NETO: {{ receiptItem()?.netSalary | number:'1.2-2' }}</p>
+            <p class="text-xs text-slate-400 text-center">Generado por NEXUM TG</p>
+          </div>
+        </app-modal>
+      }
+
       <!-- Modal Procesar Nómina -->
       @if (showProcess()) {
         <app-modal [isOpen]="showProcess()" (closeEvent)="showProcess.set(false)" (confirmEvent)="confirmProcess()"
@@ -148,12 +209,36 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
           </div>
         </app-modal>
       }
+
+      <!-- Modal Pagar Nómina -->
+      @if (showPay()) {
+        <app-modal [isOpen]="showPay()" (closeEvent)="showPay.set(false)" (confirmEvent)="confirmPay()"
+                   title="Registrar Pago de Nómina"
+                   [confirmText]="isBusy() ? 'Pagando...' : 'Pagar'"
+                   confirmButtonClass="bg-green-600 hover:bg-green-700"
+                   maxWidthClass="max-w-md">
+          <div class="space-y-4">
+            <p class="text-xs text-slate-500">Al pagar se genera el asiento contable (nóminas por pagar contra tesorería). Si selecciona una cuenta bancaria, el saldo del banco en Finanzas se actualizará automáticamente.</p>
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Cuenta bancaria (opcional)</label>
+              <select [(ngModel)]="selectedBankAccountId"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option [ngValue]="null">Sin cuenta bancaria (solo asiento contable)</option>
+                @for (b of banks(); track b.id) {
+                  <option [ngValue]="b.id">{{ b.bankName }} - {{ b.accountNumber }} ({{ b.balance | number:'1.2-2' }})</option>
+                }
+              </select>
+            </div>
+          </div>
+        </app-modal>
+      }
     </div>
   `
 })
 export class PayrollComponent implements OnInit {
   private payrollService = inject(PayrollService);
   private accountingService = inject(AccountingService);
+  private financeService = inject(FinanceService);
   private confirmDialog = inject(ConfirmDialogService);
 
   items = signal<any[]>([]);
@@ -161,8 +246,15 @@ export class PayrollComponent implements OnInit {
   isBusy = signal(false);
   showGenerate = signal(false);
   showProcess = signal(false);
+  showDetail = signal(false);
+  showReceipt = signal(false);
+  showPay = signal(false);
   costCenters = signal<CostCenter[]>([]);
+  banks = signal<any[]>([]);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
+  detailPayroll = signal<any>(null);
+  detailItems = signal<any[]>([]);
+  receiptItem = signal<any>(null);
 
   statusFilter = '';
   periodFilter = '';
@@ -172,12 +264,18 @@ export class PayrollComponent implements OnInit {
   genForm: { period: string; startDate: string; endDate: string } = { period: '', startDate: '', endDate: '' };
   processingId: number | null = null;
   selectedCostCenterId: string | null = null;
+  payingId: number | null = null;
+  selectedBankAccountId: string | null = null;
 
   ngOnInit() {
     this.loadData();
     this.accountingService.getCostCenters({ activeOnly: 'true' }).subscribe({
       next: (data) => this.costCenters.set(data),
       error: () => { /* centros de costo opcionales */ }
+    });
+    this.financeService.getBanks({ status: 'active' }).subscribe({
+      next: (data) => this.banks.set(data || []),
+      error: () => { /* cuentas bancarias opcionales */ }
     });
   }
 
@@ -225,6 +323,55 @@ export class PayrollComponent implements OnInit {
     this.showProcess.set(true);
   }
 
+  openDetail(payroll: any) {
+    this.detailPayroll.set(payroll);
+    this.detailItems.set((payroll.items || []).map((i: any) => ({ ...i })));
+    this.showDetail.set(true);
+  }
+
+  recalcItem(item: any) {
+    item.baseSalary = Number(item.baseSalary) || 0;
+    item.overtimePay = Number(item.overtimePay) || 0;
+    item.otherIncome = Number(item.otherIncome) || 0;
+    item.deductions = Number(item.deductions) || 0;
+    item.socialSecurity = Number(item.socialSecurity) || 0;
+    item.grossSalary = item.baseSalary + item.overtimePay + item.otherIncome;
+    item.netSalary = item.grossSalary - item.deductions - item.socialSecurity;
+    this.detailItems.set([...this.detailItems()]);
+  }
+
+  saveItems() {
+    const payroll = this.detailPayroll();
+    if (!payroll) return;
+    if (payroll.status !== 'draft') { this.showToast('Solo se editan líneas en borrador', 'error'); return; }
+    this.isBusy.set(true);
+    this.payrollService.updateItems(payroll.id, this.detailItems()).subscribe({
+      next: () => {
+        this.isBusy.set(false);
+        this.showDetail.set(false);
+        this.showToast('Líneas actualizadas', 'success');
+        this.loadData();
+      },
+      error: (err: any) => { this.isBusy.set(false); this.showToast(err?.error?.message || 'Error actualizando líneas', 'error'); }
+    });
+  }
+
+  openReceipt(item: any) {
+    this.receiptItem.set(item);
+    this.showReceipt.set(true);
+  }
+
+  printReceipt() {
+    const content = document.getElementById('receipt');
+    if (!content) return;
+    const printWindow = window.open('', '_blank', 'width=600,height=400');
+    if (printWindow) {
+      printWindow.document.write('<html><head><title>Recibo</title></head><body>' + content.innerHTML + '</body></html>');
+      printWindow.document.close();
+      printWindow.print();
+    }
+  }
+
   confirmProcess() {
     if (this.processingId == null) return;
     this.isBusy.set(true);
@@ -242,17 +389,26 @@ export class PayrollComponent implements OnInit {
     });
   }
 
-  async markAsPaid(id: number) {
-    const confirmed = await this.confirmDialog.confirm({
-      title: 'Marcar como pagada',
-      message: '¿Registrar el pago de esta nómina? Se generará el asiento de pago.',
-      confirmText: 'Pagar',
-      type: 'info'
-    });
-    if (!confirmed) return;
-    this.payrollService.markAsPaid(id).subscribe({
-      next: () => { this.showToast('Nómina marcada como pagada', 'success'); this.loadData(); },
-      error: (err) => this.showToast(err?.error?.message || 'Error al pagar la nómina', 'error')
+  openPay(id: number) {
+    this.payingId = id;
+    this.selectedBankAccountId = null;
+    this.showPay.set(true);
+  }
+
+  confirmPay() {
+    if (this.payingId == null) return;
+    this.isBusy.set(true);
+    this.payrollService.markAsPaid(this.payingId, this.selectedBankAccountId || undefined).subscribe({
+      next: () => {
+        this.isBusy.set(false);
+        this.showPay.set(false);
+        this.showToast('Nómina marcada como pagada', 'success');
+        this.loadData();
+      },
+      error: (err) => {
+        this.isBusy.set(false);
+        this.showToast(err?.error?.message || 'Error al pagar la nómina', 'error');
+      }
     });
   }
 

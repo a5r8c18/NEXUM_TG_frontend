@@ -38,11 +38,15 @@ export class PayrollService {
     return this.http.put(`${this.apiUrl}/${id}/process`, { processedBy, costCenterId });
   }
 
-  markAsPaid(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/pay`, {});
+  markAsPaid(id: number, bankAccountId?: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}/pay`, { bankAccountId });
   }
 
   cancel(id: number, reason?: string): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/cancel`, { reason });
+  }
+
+  updateItems(id: number, items: any[]): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}/items`, { items });
   }
 }

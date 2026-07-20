@@ -308,8 +308,11 @@ onPurchaseSubmit(payload: CreatePurchasePayload & { movementCode: string; catego
     debitAccountCode: payload.debitAccountCode,   // 👈 AÑADIDO
     creditAccountCode: payload.creditAccountCode, // 👈 AÑADIDO
   }).subscribe({
-    next: () => {
+    next: (res: any) => {
       this.notificationService.showSuccess('Compra registrada correctamente');
+      if (res?.accountingWarning) {
+        this.notificationService.showError(res.accountingWarning);
+      }
       this.loadMovements();
       this.refreshStock();
     },

@@ -450,8 +450,11 @@ export class EntryPageComponent implements OnInit {
     };
     this.isSubmitting.set(true);
     this.offlineFirst.createPurchase(payload).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.notificationService.showSuccess('Compra registrada correctamente');
+        if (res?.accountingWarning) {
+          this.notificationService.showError(res.accountingWarning);
+        }
         this.isSubmitting.set(false);
         this.router.navigate(['/inventory/movements']);
       },
