@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -17,10 +16,10 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 export class PayablesComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
   private notificationService = inject(NotificationService);
-  private confirmDialog = inject(ConfirmDialogService);
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
+  totalPaid = computed(() => this.items().reduce((sum, ap) => sum + Number(ap.paidAmount || 0), 0));
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -33,11 +32,14 @@ export class PayablesComponent implements OnInit, OnDestroy {
 
   isCreateOpen = signal(false);
   isEditOpen = signal(false);
+  isPaymentOpen = signal(false);
   selectedPayable = signal<any>(null);
   formError = signal('');
 
   newPayable: any = { supplierName: '', supplierId: '', originalAmount: 0, dueDate: '', description: '' };
   editPayable: any = {};
+  paymentData: any = {};
+  bankAccounts = signal<any[]>([]);
 
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
@@ -75,6 +77,7 @@ export class PayablesComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadData();
     this.loadStats();
+    this.loadBankAccounts();
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
       this.loadData();
       this.loadStats();
@@ -106,6 +109,15 @@ export class PayablesComponent implements OnInit, OnDestroy {
   loadStats(): void {
     this.financeService.getPayableStats().subscribe({
       next: (s: any) => this.stats.set(s),
+      error: () => {},
+    });
+  }
+
+  loadBankAccounts(): void {
+    this.financeService.getBanks().subscribe({
+      next: (data: any) => {
+        this.bankAccounts.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? []));
+      },
       error: () => {},
     });
   }
@@ -180,17 +192,58 @@ export class PayablesComponent implements OnInit, OnDestroy {
     });
   }
 
-  async markAsPaid(payable: any): Promise<void> {
-    const confirmed = await this.confirmDialog.confirm({
-      title: 'Marcar como pagada',
-      message: `Marcar "${payable.supplierName}" como pagada?`,
-      confirmText: 'Confirmar',
-      type: 'warning',
-    });
-    if (!confirmed) return;
-    this.editPayable = { ...payable, status: 'paid' };
+  openPaymentModal(payable: any): void {
     this.selectedPayable.set(payable);
-    this.updatePayable();
+    this.paymentData = {
+      amount: payable.balanceAmount,
+      paymentMethod: 'bank_transfer',
+      bankAccountId: '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      description: `Liquidación ${payable.apNumber} - ${payable.supplierName}`,
+    };
+    this.formError.set('');
+    this.isPaymentOpen.set(true);
+  }
+
+  closePaymentModal(): void {
+    this.isPaymentOpen.set(false);
+    this.selectedPayable.set(null);
+    this.formError.set('');
+  }
+
+  processPayment(): void {
+    const ap = this.selectedPayable();
+    if (!ap) return;
+    const data = this.paymentData;
+    if (!data.amount || Number(data.amount) <= 0) {
+      this.formError.set('El monto a pagar debe ser mayor que cero');
+      return;
+    }
+    if ((data.paymentMethod === 'bank_transfer' || data.paymentMethod === 'check' ||
+         data.paymentMethod === 'credit_card' || data.paymentMethod === 'debit_card') && !data.bankAccountId) {
+      this.formError.set('Seleccione una cuenta bancaria para este método de pago');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.createPayment({
+      paymentType: 'payable',
+      accountPayableId: ap.id,
+      amount: Number(data.amount),
+      paymentMethod: data.paymentMethod,
+      bankAccountId: data.bankAccountId || null,
+      paymentDate: data.paymentDate,
+      description: data.description,
+      counterpartyName: ap.supplierName,
+      performedBy: 'Usuario',
+    }).subscribe({
+      next: () => {
+        this.closePaymentModal();
+        this.loadData();
+        this.loadStats();
+        this.showToast('Cuenta por pagar liquidada exitosamente', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al liquidar cuenta por pagar'),
+    });
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info'): void {

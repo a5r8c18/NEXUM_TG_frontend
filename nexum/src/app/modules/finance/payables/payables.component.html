@@ -29,7 +29,7 @@
       </div>
       <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
         <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pagado</p>
-        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ formatCurrency((stats().totalPending || 0) + (stats().totalOverdue || 0)) }}</p>
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ formatCurrency(totalPaid()) }}</p>
       </div>
     </div>
   }
@@ -104,7 +104,7 @@
                 <td class="px-4 py-3 text-center">
                   <button (click)="openEdit(ap)" class="text-blue-600 hover:text-blue-700 mr-2 text-sm">Editar</button>
                   @if (ap.status !== 'paid') {
-                    <button (click)="markAsPaid(ap)" class="text-green-600 hover:text-green-700 mr-2 text-sm">Pagar</button>
+                    <button (click)="openPaymentModal(ap)" class="text-green-600 hover:text-green-700 mr-2 text-sm">Liquidar</button>
                   }
                 </td>
               </tr>
@@ -124,7 +124,7 @@
 
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
-    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Cuenta por Pagar'" (close)="closeCreate()">
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Cuenta por Pagar'" [confirmText]="'Guardar'" (closeEvent)="closeCreate()" (confirmEvent)="savePayable()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -153,17 +153,13 @@
             <textarea [(ngModel)]="newPayable.description" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
         </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeCreate()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="savePayable()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
-        </div>
       </div>
     </app-modal>
   }
 
   <!-- Modal Editar -->
   @if (isEditOpen()) {
-    <app-modal [isOpen]="isEditOpen()" [title]="'Editar Cuenta por Pagar'" (close)="closeEdit()">
+    <app-modal [isOpen]="isEditOpen()" [title]="'Editar Cuenta por Pagar'" [confirmText]="'Actualizar'" (closeEvent)="closeEdit()" (confirmEvent)="updatePayable()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -193,9 +189,59 @@
             <input type="date" [(ngModel)]="editPayable.dueDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeEdit()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="updatePayable()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Actualizar</button>
+      </div>
+    </app-modal>
+  }
+
+  <!-- Modal Liquidar -->
+  @if (isPaymentOpen()) {
+    <app-modal [isOpen]="isPaymentOpen()" [title]="'Liquidar Cuenta por Pagar'" [confirmText]="'Liquidar'" (closeEvent)="closePaymentModal()" (confirmEvent)="processPayment()">
+      <div class="space-y-4">
+        @if (formError()) {
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+            {{ formError() }}
+          </div>
+        }
+        @if (selectedPayable()) {
+          <div class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 text-sm">
+            <p><span class="font-medium">Proveedor:</span> {{ selectedPayable().supplierName }}</p>
+            <p><span class="font-medium">Saldo pendiente:</span> {{ formatCurrency(selectedPayable().balanceAmount) }}</p>
+          </div>
+        }
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto a pagar *</label>
+            <input type="number" [(ngModel)]="paymentData.amount" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha de pago *</label>
+            <input type="date" [(ngModel)]="paymentData.paymentDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Método de pago *</label>
+            <select [(ngModel)]="paymentData.paymentMethod" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="bank_transfer">Transferencia bancaria</option>
+              <option value="check">Cheque</option>
+              <option value="credit_card">Tarjeta de crédito</option>
+              <option value="debit_card">Tarjeta de débito</option>
+              <option value="cash">Efectivo</option>
+            </select>
+          </div>
+          @if (paymentData.paymentMethod === 'bank_transfer' || paymentData.paymentMethod === 'check' || paymentData.paymentMethod === 'credit_card' || paymentData.paymentMethod === 'debit_card') {
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta bancaria *</label>
+              <select [(ngModel)]="paymentData.bankAccountId" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Seleccionar cuenta</option>
+                @for (bank of bankAccounts(); track bank.id) {
+                  <option [value]="bank.id">{{ bank.bankName }} - {{ bank.accountNumber || bank.accountName }}</option>
+                }
+              </select>
+            </div>
+          }
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
+            <textarea [(ngModel)]="paymentData.description" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
         </div>
       </div>
     </app-modal>
