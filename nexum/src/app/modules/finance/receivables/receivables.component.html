@@ -29,7 +29,7 @@
       </div>
       <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
         <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Cobrado</p>
-        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ formatCurrency((stats().totalPending || 0) + (stats().totalOverdue || 0)) }}</p>
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ formatCurrency(stats().totalPaid) }}</p>
       </div>
     </div>
   }
@@ -124,7 +124,7 @@
 
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
-    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Cuenta por Cobrar'" (close)="closeCreate()">
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Cuenta por Cobrar'" [confirmText]="'Guardar'" (closeEvent)="closeCreate()" (confirmEvent)="saveReceivable()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -153,17 +153,13 @@
             <textarea [(ngModel)]="newReceivable.description" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
         </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeCreate()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="saveReceivable()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
-        </div>
       </div>
     </app-modal>
   }
 
   <!-- Modal Editar -->
   @if (isEditOpen()) {
-    <app-modal [isOpen]="isEditOpen()" [title]="'Editar Cuenta por Cobrar'" (close)="closeEdit()">
+    <app-modal [isOpen]="isEditOpen()" [title]="'Editar Cuenta por Cobrar'" [confirmText]="'Actualizar'" (closeEvent)="closeEdit()" (confirmEvent)="updateReceivable()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -192,10 +188,6 @@
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha Vencimiento</label>
             <input type="date" [(ngModel)]="editReceivable.dueDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-        </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeEdit()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="updateReceivable()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Actualizar</button>
         </div>
       </div>
     </app-modal>

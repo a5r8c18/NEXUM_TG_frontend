@@ -88,7 +88,7 @@
 
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
-    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Caja'" (close)="closeCreate()">
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nueva Caja'" [confirmText]="'Guardar'" (closeEvent)="closeCreate()" (confirmEvent)="saveCashRegister()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -113,17 +113,13 @@
             <input type="number" [(ngModel)]="newCashRegister.currentBalance" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeCreate()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="saveCashRegister()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
-        </div>
       </div>
     </app-modal>
   }
 
   <!-- Modal Abrir Caja -->
   @if (isOpenModal()) {
-    <app-modal [isOpen]="isOpenModal()" [title]="'Abrir Caja'" (close)="closeOpenModal()">
+    <app-modal [isOpen]="isOpenModal()" [title]="'Abrir Caja'" [confirmText]="'Abrir'" (closeEvent)="closeOpenModal()" (confirmEvent)="confirmOpen()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -134,30 +130,22 @@
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo de Apertura (opcional)</label>
           <input type="number" [(ngModel)]="openingBalance" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
         </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeOpenModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="confirmOpen()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">Abrir</button>
-        </div>
       </div>
     </app-modal>
   }
 
   <!-- Modal Cerrar Caja -->
   @if (isCloseModal()) {
-    <app-modal [isOpen]="isCloseModal()" [title]="'Cerrar Caja'" (close)="closeCloseModal()">
+    <app-modal [isOpen]="isCloseModal()" [title]="'Cerrar Caja'" [confirmText]="'Cerrar'" (closeEvent)="closeCloseModal()" (confirmEvent)="confirmClose()">
       <div class="space-y-4">
         <p class="text-sm text-slate-600 dark:text-slate-400">¿Está seguro de cerrar esta caja?</p>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeCloseModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="confirmClose()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">Cerrar</button>
-        </div>
       </div>
     </app-modal>
   }
 
   <!-- Modal Arqueo -->
   @if (isAuditModal()) {
-    <app-modal [isOpen]="isAuditModal()" [title]="'Arqueo de Caja'" (close)="closeAuditModal()">
+    <app-modal [isOpen]="isAuditModal()" [title]="'Arqueo de Caja'" [confirmText]="'Realizar Arqueo'" (closeEvent)="closeAuditModal()" (confirmEvent)="confirmAudit()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -174,17 +162,13 @@
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo Físico en Caja *</label>
           <input type="number" [(ngModel)]="physicalBalance" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
         </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeAuditModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="confirmAudit()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Realizar Arqueo</button>
-        </div>
       </div>
     </app-modal>
   }
 
   <!-- Modal Depósito -->
   @if (isDepositModal()) {
-    <app-modal [isOpen]="isDepositModal()" [title]="'Depósito a Banco'" (close)="closeDepositModal()">
+    <app-modal [isOpen]="isDepositModal()" [title]="'Depósito a Banco'" [confirmText]="'Depositar'" (closeEvent)="closeDepositModal()" (confirmEvent)="confirmDeposit()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -209,10 +193,6 @@
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
             <textarea [(ngModel)]="depositDescription" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
-        </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeDepositModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="confirmDeposit()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">Depositar</button>
         </div>
       </div>
     </app-modal>

@@ -119,7 +119,7 @@
 
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
-    <app-modal [isOpen]="isCreateOpen()" [title]="'Nuevo Pago'" (close)="closeCreate()">
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nuevo Pago'" [confirmText]="'Guardar'" (closeEvent)="closeCreate()" (confirmEvent)="savePayment()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -166,17 +166,13 @@
             <textarea [(ngModel)]="newPayment.description" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
         </div>
-        <div class="flex justify-end gap-3 pt-4">
-          <button (click)="closeCreate()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cancelar</button>
-          <button (click)="savePayment()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
-        </div>
       </div>
     </app-modal>
   }
 
   <!-- Modal Detalles -->
   @if (isDetailsOpen()) {
-    <app-modal [isOpen]="isDetailsOpen()" [title]="'Detalles del Pago'" (close)="closeDetails()">
+    <app-modal [isOpen]="isDetailsOpen()" [title]="'Detalles del Pago'" [confirmText]="'Cerrar'" (closeEvent)="closeDetails()" (confirmEvent)="closeDetails()">
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div>
@@ -203,9 +199,6 @@
             <p class="text-slate-500 dark:text-slate-400">Estado</p>
             <p class="font-medium dark:text-white">{{ getStatusLabel(selectedPayment()?.status) }}</p>
           </div>
-        </div>
-        <div class="flex justify-end pt-4">
-          <button (click)="closeDetails()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm">Cerrar</button>
         </div>
       </div>
     </app-modal>
