@@ -1,14 +1,15 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { HrService, Department } from '../../../core/services/hr.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-departments',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
   template: `
     <div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
 
@@ -61,7 +62,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
       <!-- Grid -->
       @if (!isLoading()) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          @for (dept of departments(); track dept.id) {
+          @for (dept of pagedDepartments(); track dept.id) {
             <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5 hover:shadow-md transition-shadow">
               <div class="flex items-start justify-between">
                 <div>
@@ -108,6 +109,12 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             </div>
           }
         </div>
+
+        @if (paginationConfig().totalPages > 1) {
+          <div class="mt-6">
+            <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
+          </div>
+        }
       }
 
       <!-- Modal Crear / Editar -->
@@ -145,6 +152,8 @@ export class DepartmentsComponent implements OnInit {
   private confirmDialog = inject(ConfirmDialogService);
 
   departments = signal<Department[]>([]);
+  currentPage = signal(1);
+  pageSize = 9;
   isLoading = signal(false);
   isSaving = signal(false);
   isModalOpen = signal(false);
@@ -152,6 +161,20 @@ export class DepartmentsComponent implements OnInit {
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
 
   form: Partial<Department> = this.emptyForm();
+
+  pagedDepartments = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.departments().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.departments().length,
+    totalPages: Math.ceil(this.departments().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  onPageChange(page: number) { this.currentPage.set(page); }
 
   private emptyForm(): Partial<Department> {
     return { name: '', description: null, managerName: null };
@@ -162,7 +185,7 @@ export class DepartmentsComponent implements OnInit {
   load() {
     this.isLoading.set(true);
     this.hrService.getDepartments().subscribe({
-      next: (data) => { this.departments.set(data); this.isLoading.set(false); },
+      next: (data) => { this.departments.set(data); this.currentPage.set(1); this.isLoading.set(false); },
       error: () => { this.isLoading.set(false); this.showToast('Error al cargar departamentos', 'error'); }
     });
   }

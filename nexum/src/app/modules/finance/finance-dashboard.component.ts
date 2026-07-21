@@ -12,8 +12,14 @@ import { FinanceService } from '../../core/services/finance.service';
       <h1 class="text-2xl font-bold mb-6 dark:text-white">Finanzas</h1>
 
       @if (isLoading()) {
-        <div class="flex justify-center py-12">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="flex items-center justify-center py-20">
+          <div class="flex flex-col items-center gap-3 text-slate-500">
+            <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span class="text-sm">Cargando...</span>
+          </div>
         </div>
       } @else {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">

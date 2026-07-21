@@ -1,14 +1,15 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { HrService, LeaveRequest, Employee } from '../../../core/services/hr.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-leaves',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
   template: `
     <div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
       @if (toast()) {
@@ -34,7 +35,15 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
         </select>
       </div>
       @if (isLoading()) {
-        <div class="flex justify-center py-20"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-600"></div></div>
+        <div class="flex items-center justify-center py-20">
+          <div class="flex flex-col items-center gap-3 text-slate-500">
+            <svg class="w-8 h-8 animate-spin text-rose-500" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span class="text-sm">Cargando licencias...</span>
+          </div>
+        </div>
       } @else {
         <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
           <table class="w-full text-sm"><thead class="bg-slate-50 border-b border-slate-200"><tr>
@@ -47,7 +56,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             <th class="text-center px-5 py-3 font-medium text-slate-700 uppercase text-xs">Acciones</th>
           </tr></thead>
           <tbody class="divide-y divide-slate-200">
-            @for (l of leaves(); track l.id) {
+            @for (l of pagedLeaves(); track l.id) {
               <tr class="hover:bg-slate-50/50">
                 <td class="px-5 py-4 font-medium text-slate-700">{{ l.employeeName }}</td>
                 <td class="px-5 py-4 text-slate-600">{{ typeLabel(l.type) }}</td>
@@ -70,6 +79,12 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
           </tbody>
           </table>
         </div>
+
+        @if (paginationConfig().totalPages > 1) {
+          <div class="mt-6">
+            <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
+          </div>
+        }
       }
       @if (isModalOpen()) {
         <app-modal [isOpen]="isModalOpen()" (closeEvent)="closeModal()" (confirmEvent)="save()" [title]="editingId() ? 'Editar Solicitud' : 'Nueva Solicitud'" [confirmText]="isSaving() ? 'Guardando...' : 'Guardar'" confirmButtonClass="bg-rose-600 hover:bg-rose-700">
@@ -105,6 +120,8 @@ export class LeavesComponent implements OnInit {
 
   leaves = signal<LeaveRequest[]>([]);
   employees = signal<Employee[]>([]);
+  currentPage = signal(1);
+  pageSize = 10;
   isLoading = signal(false);
   isSaving = signal(false);
   isModalOpen = signal(false);
@@ -113,6 +130,20 @@ export class LeavesComponent implements OnInit {
   filterStatus = '';
   filterType = '';
   form: any = this.emptyForm();
+
+  pagedLeaves = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.leaves().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.leaves().length,
+    totalPages: Math.ceil(this.leaves().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  onPageChange(page: number) { this.currentPage.set(page); }
 
   ngOnInit() { this.loadData(); }
 
@@ -123,7 +154,7 @@ export class LeavesComponent implements OnInit {
   loadData() {
     this.isLoading.set(true);
     this.hrService.getLeaves({ status: this.filterStatus, type: this.filterType }).subscribe({
-      next: (res: any) => { this.leaves.set(res.leaves || res || []); this.isLoading.set(false); },
+      next: (res: any) => { this.leaves.set(res.leaves || res || []); this.currentPage.set(1); this.isLoading.set(false); },
       error: () => { this.isLoading.set(false); this.showToast('error', 'Error cargando solicitudes'); }
     });
     this.hrService.getEmployees().subscribe({

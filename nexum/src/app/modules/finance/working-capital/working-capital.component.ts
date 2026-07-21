@@ -36,9 +36,14 @@ import { firstValueFrom } from 'rxjs';
       </div>
 
       @if (isLoading()) {
-        <div class="flex flex-col items-center justify-center py-20 gap-3">
-          <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <p class="text-sm text-slate-500 dark:text-slate-400">Calculando indicadores...</p>
+        <div class="flex items-center justify-center py-20">
+          <div class="flex flex-col items-center gap-3 text-slate-500">
+            <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span class="text-sm">Calculando indicadores...</span>
+          </div>
         </div>
       } @else if (report()) {
 

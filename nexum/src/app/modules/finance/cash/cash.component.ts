@@ -4,12 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-cash',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
   templateUrl: './cash.component.html',
 })
 export class CashComponent implements OnInit, OnDestroy {
@@ -43,7 +44,26 @@ export class CashComponent implements OnInit, OnDestroy {
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
 
+  currentPage = signal(1);
+  pageSize = 10;
+
   availableBanks = computed(() => this.banks().filter(b => b.status === 'active'));
+
+  pagedItems = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.items().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.items().length,
+    totalPages: Math.ceil(this.items().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -72,6 +92,7 @@ export class CashComponent implements OnInit, OnDestroy {
     ]).then(([registers, stats]) => {
       this.items.set(registers || []);
       this.stats.set(stats || {});
+      this.currentPage.set(1);
       this.isLoading.set(false);
     }).catch(() => { this.hasError.set(true); this.isLoading.set(false); });
   }

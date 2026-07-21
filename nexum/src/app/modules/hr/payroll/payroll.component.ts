@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PayrollService } from '../../../core/services/payroll.service';
@@ -6,11 +6,12 @@ import { AccountingService, CostCenter } from '../../../core/services/accounting
 import { FinanceService } from '../../../core/services/finance.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-payroll',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
   template: `
     <div class="p-6">
       @if (toast()) {
@@ -49,7 +50,15 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
       </div>
 
       @if (isLoading()) {
-        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+        <div class="flex items-center justify-center py-20">
+          <div class="flex flex-col items-center gap-3 text-slate-500">
+            <svg class="w-8 h-8 animate-spin text-violet-500" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span class="text-sm">Cargando nóminas...</span>
+          </div>
+        </div>
       } @else {
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <table class="w-full text-sm">
@@ -66,7 +75,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
               </tr>
             </thead>
             <tbody>
-              @for (payroll of items(); track payroll.id) {
+              @for (payroll of pagedItems(); track payroll.id) {
                 <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ payroll.id }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ payroll.period }}</td>
@@ -96,6 +105,12 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
             </tbody>
           </table>
         </div>
+
+        @if (paginationConfig().totalPages > 1) {
+          <div class="mt-6">
+            <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
+          </div>
+        }
       }
 
       <!-- Modal Generar Nómina -->
@@ -242,6 +257,8 @@ export class PayrollComponent implements OnInit {
   private confirmDialog = inject(ConfirmDialogService);
 
   items = signal<any[]>([]);
+  currentPage = signal(1);
+  pageSize = 10;
   isLoading = signal(false);
   isBusy = signal(false);
   showGenerate = signal(false);
@@ -260,6 +277,20 @@ export class PayrollComponent implements OnInit {
   periodFilter = '';
   fromDate = '';
   toDate = '';
+
+  pagedItems = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.items().slice(start, start + this.pageSize);
+  });
+
+  paginationConfig = computed<PaginationConfig>(() => ({
+    currentPage: this.currentPage(),
+    totalItems: this.items().length,
+    totalPages: Math.ceil(this.items().length / this.pageSize),
+    itemsPerPage: this.pageSize,
+  }));
+
+  onPageChange(page: number) { this.currentPage.set(page); }
 
   genForm: { period: string; startDate: string; endDate: string } = { period: '', startDate: '', endDate: '' };
   processingId: number | null = null;
@@ -287,7 +318,7 @@ export class PayrollComponent implements OnInit {
       startDate: this.fromDate || undefined,
       endDate: this.toDate || undefined,
     }).subscribe({
-      next: (data) => { this.items.set(data?.payrolls || []); this.isLoading.set(false); },
+      next: (data) => { this.items.set(data?.payrolls || []); this.currentPage.set(1); this.isLoading.set(false); },
       error: () => { this.isLoading.set(false); this.showToast('Error al cargar nóminas', 'error'); },
     });
   }
