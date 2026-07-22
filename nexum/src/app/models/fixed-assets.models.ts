@@ -21,6 +21,7 @@ export interface FixedAsset {
   acquisitionDate: string;
   location?: string;
   responsiblePerson?: string;
+  employeeId?: string;
   depreciationRate: number;
   currentValue: number;
   status: 'active' | 'disposed' | 'transferred';
@@ -40,6 +41,7 @@ export interface CreateFixedAssetDto {
   acquisitionDate: string;
   location?: string;
   responsiblePerson?: string;
+  employeeId?: string;
 }
 
 export interface UpdateFixedAssetDto {
@@ -47,6 +49,7 @@ export interface UpdateFixedAssetDto {
   description?: string;
   location?: string;
   responsiblePerson?: string;
+  employeeId?: string;
   status?: 'active' | 'disposed' | 'transferred';
 }
 
@@ -54,10 +57,24 @@ export interface FixedAssetFilters {
   status?: string;
   groupNumber?: number;
   search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface FixedAssetsResponse {
+  assets: FixedAsset[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface DisposeAssetDto {
   reason: string;
   disposalType: 'deterioro' | 'obsolescencia' | 'rotura' | 'faltante' | 'venta' | 'donacion';
   disposalDate?: string;
+  bankAccountId?: string;
+  saleAmount?: number;
 }
