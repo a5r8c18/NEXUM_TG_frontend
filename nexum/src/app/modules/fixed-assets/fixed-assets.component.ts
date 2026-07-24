@@ -10,6 +10,7 @@ import {
   DepreciationGroup,
   DisposeAssetDto
 } from '../../core/services/fixed-assets.service';
+import { HrService, Employee } from '../../core/services/hr.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../core/offline/offline-first.service';
@@ -24,6 +25,7 @@ import { signal, computed } from '@angular/core';
 })
 export class FixedAssetsComponent implements OnInit, OnDestroy {
   private fixedAssetsService = inject(FixedAssetsService);
+  private hrService = inject(HrService);
   private notificationService = inject(NotificationService);
   private fb = inject(FormBuilder);
   private confirmDialog = inject(ConfirmDialogService);
@@ -32,6 +34,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   // Signals
   assets = signal<FixedAsset[]>([]);
+  employees = signal<Employee[]>([]);
   catalog = signal<DepreciationGroup[]>([]);
   isLoading = signal(false);
   showForm = signal(false);
@@ -68,6 +71,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.buildForm();
     this.loadAll();
+    this.loadEmployees();
   }
 
   ngOnDestroy() {
@@ -85,6 +89,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       acquisitionValue: [null, [Validators.required, Validators.min(0.01)]],
       acquisitionDate: ['', Validators.required],
       location: [''],
+      employeeId: [''],
       responsiblePerson: [''],
     });
 
@@ -163,6 +168,15 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     }
   }
 
+  loadEmployees() {
+    if (this.networkStatus.isOnline()) {
+      this.hrService.getEmployees({ status: 'active' })
+        .toPromise()
+        .then(employees => this.employees.set(employees || []))
+        .catch(() => this.employees.set([]));
+    }
+  }
+
   openCreate() {
     this.editingAsset = null;
     this.form.reset();
@@ -182,6 +196,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       acquisitionValue: asset.acquisitionValue,
       acquisitionDate: asset.acquisitionDate.substring(0, 10),
       location: asset.location ?? '',
+      employeeId: asset.employeeId ?? '',
       responsiblePerson: asset.responsiblePerson ?? '',
     });
     this.updateFormControlsState();
@@ -198,6 +213,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           name: this.form.value.name,
           description: this.form.value.description || undefined,
           location: this.form.value.location || undefined,
+          employeeId: this.form.value.employeeId || undefined,
           responsiblePerson: this.form.value.responsiblePerson || undefined,
         };
         await this.fixedAssetsService.updateFixedAsset(this.editingAsset.id, dto).toPromise();
@@ -213,6 +229,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           acquisitionValue: +this.form.value.acquisitionValue,
           acquisitionDate: this.form.value.acquisitionDate,
           location: this.form.value.location || undefined,
+          employeeId: this.form.value.employeeId || undefined,
           responsiblePerson: this.form.value.responsiblePerson || undefined,
         };
         await this.fixedAssetsService.createFixedAsset(dto).toPromise();
