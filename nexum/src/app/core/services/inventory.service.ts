@@ -53,4 +53,9 @@ export class InventoryService {
         return items;
       }));
   }
+
+  getSubledger(warehouseId: string, productCode: string, companyId: number): Observable<any> {
+    const params = new HttpParams().set('companyId', companyId.toString());
+    return this.http.get(`${environment.apiUrl}/inventory-warehouse/subledger/${warehouseId}/${productCode}`, { params });
+  }
 }

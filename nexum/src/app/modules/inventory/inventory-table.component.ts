@@ -228,4 +228,13 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
       queryParams: { product: productCode }
     });
   }
+
+  viewSubledger(warehouseId: string | undefined, productCode: string): void {
+    const wh = warehouseId || this.selectedWarehouseId();
+    if (!wh) {
+      this.notificationService.showError('Seleccione un almacén para ver la tarjeta de estiba');
+      return;
+    }
+    this.router.navigate(['/inventory/subledger', wh, productCode]);
+  }
 }
