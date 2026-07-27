@@ -153,11 +153,15 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
               <table class="w-full text-sm">
                 <thead class="bg-slate-50 border-b border-slate-200"><tr>
                   <th class="text-left px-3 py-2 font-medium text-slate-700">Empleado</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Salario base</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Horas extra</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Otros ingresos</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Retenciones</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Seguridad Social</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Base</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Extra</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Otros ing.</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">SS</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Imp.</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Pens.</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Sind.</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Otras ret.</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-700">Prov. Vac.</th>
                   <th class="text-right px-3 py-2 font-medium text-slate-700">Neto</th>
                   <th class="text-center px-3 py-2 font-medium text-slate-700">Recibo</th>
                 </tr></thead>
@@ -165,11 +169,15 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                   @for (item of detailItems(); track item.id) {
                     <tr>
                       <td class="px-3 py-2 text-slate-700">{{ item.employeeName }}</td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.baseSalary" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.overtimePay" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.otherIncome" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.deductions" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.socialSecurity" (ngModelChange)="recalcItem(item)" class="w-24 px-2 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.baseSalary" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.overtimePay" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.bonuses" (ngModelChange)="recalcItem(item)" class="w-16 px-1 py-1 border rounded text-right text-xs" title="Bonos"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.socialSecurity" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.taxWithholding" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.pension" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.healthInsurance" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.otherDeductions" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2 text-right text-xs text-slate-500">{{ item.vacationProvision | number:'1.2-2' }}</td>
                       <td class="px-3 py-2 text-right font-semibold text-xs">{{ item.netSalary | number:'1.2-2' }}</td>
                       <td class="px-3 py-2 text-center"><button (click)="openReceipt(item)" class="text-blue-600 hover:text-blue-800 text-xs">🖨️</button></td>
                     </tr>
@@ -193,9 +201,13 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
             <p><strong>Empleado:</strong> {{ receiptItem()?.employeeName }}</p>
             <p><strong>Salario base:</strong> {{ receiptItem()?.baseSalary | number:'1.2-2' }}</p>
             <p><strong>Horas extra:</strong> {{ receiptItem()?.overtimePay | number:'1.2-2' }}</p>
-            <p><strong>Otros ingresos:</strong> {{ receiptItem()?.otherIncome | number:'1.2-2' }}</p>
-            <p><strong>Retenciones:</strong> {{ receiptItem()?.deductions | number:'1.2-2' }}</p>
-            <p><strong>Seguridad Social:</strong> {{ receiptItem()?.socialSecurity | number:'1.2-2' }}</p>
+            <p><strong>Bonos/comisiones:</strong> {{ (receiptItem()?.bonuses || 0) + (receiptItem()?.commissions || 0) + (receiptItem()?.allowances || 0) | number:'1.2-2' }}</p>
+            <p><strong>Seguridad Social (5%):</strong> {{ receiptItem()?.socialSecurity | number:'1.2-2' }}</p>
+            <p><strong>Impuesto sobre ingresos:</strong> {{ receiptItem()?.taxWithholding | number:'1.2-2' }}</p>
+            <p><strong>Pensión:</strong> {{ receiptItem()?.pension | number:'1.2-2' }}</p>
+            <p><strong>Sindicato:</strong> {{ receiptItem()?.healthInsurance | number:'1.2-2' }}</p>
+            <p><strong>Otras retenciones:</strong> {{ receiptItem()?.otherDeductions | number:'1.2-2' }}</p>
+            <p><strong>Provisión vacaciones:</strong> {{ receiptItem()?.vacationProvision | number:'1.2-2' }}</p>
             <p class="text-lg font-bold text-right border-t pt-2">NETO: {{ receiptItem()?.netSalary | number:'1.2-2' }}</p>
             <p class="text-xs text-slate-400 text-center">Generado por NEXUM TG</p>
           </div>
@@ -363,11 +375,18 @@ export class PayrollComponent implements OnInit {
   recalcItem(item: any) {
     item.baseSalary = Number(item.baseSalary) || 0;
     item.overtimePay = Number(item.overtimePay) || 0;
-    item.otherIncome = Number(item.otherIncome) || 0;
-    item.deductions = Number(item.deductions) || 0;
+    item.bonuses = Number(item.bonuses) || 0;
+    item.commissions = Number(item.commissions) || 0;
+    item.allowances = Number(item.allowances) || 0;
     item.socialSecurity = Number(item.socialSecurity) || 0;
-    item.grossSalary = item.baseSalary + item.overtimePay + item.otherIncome;
-    item.netSalary = item.grossSalary - item.deductions - item.socialSecurity;
+    item.healthInsurance = Number(item.healthInsurance) || 0;
+    item.pension = Number(item.pension) || 0;
+    item.taxWithholding = Number(item.taxWithholding) || 0;
+    item.otherDeductions = Number(item.otherDeductions) || 0;
+    item.vacationProvision = Number(item.vacationProvision) || 0;
+    item.grossSalary = item.baseSalary + item.overtimePay + item.bonuses + item.commissions + item.allowances;
+    item.totalDeductions = item.socialSecurity + item.healthInsurance + item.pension + item.taxWithholding + item.otherDeductions;
+    item.netSalary = item.grossSalary - item.totalDeductions;
     this.detailItems.set([...this.detailItems()]);
   }
 
