@@ -365,6 +365,10 @@ export class AccountingService {
     return this.http.get<Voucher[]>(`${this.baseUrl}/vouchers`, { params });
   }
 
+  getPendingVouchers() {
+    return this.http.get<Voucher[]>(`${this.baseUrl}/accounting/pending`);
+  }
+
   getVoucherStatistics() {
     return this.http.get<VoucherStatistics>(`${this.baseUrl}/vouchers/statistics`);
   }

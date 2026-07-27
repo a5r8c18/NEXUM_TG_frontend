@@ -175,6 +175,10 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/accounting/submodules/journal-entries/journal-entries.component').then(m => m.JournalEntriesComponent)
       },
       {
+        path: 'accounting/pending',
+        loadComponent: () => import('./modules/accounting/submodules/pending-vouchers/pending-vouchers.component').then(m => m.PendingVouchersComponent)
+      },
+      {
         path: 'accounting/reports',
         loadComponent: () => import('./modules/accounting/submodules/reports/reports.component').then(m => m.ReportsComponent)
       },
