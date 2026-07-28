@@ -71,6 +71,14 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/inventory/physical-count/physical-count.component').then(m => m.PhysicalCountComponent)
       },
       {
+        path: 'inventory/material-requests',
+        loadComponent: () => import('./modules/inventory/submodules/material-requests/material-requests.component').then(m => m.MaterialRequestsComponent)
+      },
+      {
+        path: 'inventory/warehouse-returns',
+        loadComponent: () => import('./modules/inventory/submodules/warehouse-returns/warehouse-returns.component').then(m => m.WarehouseReturnsComponent)
+      },
+      {
         path: 'inventory/analytics',
         loadComponent: () => import('./modules/inventory/analytics/analytics.component').then(m => m.InventoryAnalyticsComponent)
       },
