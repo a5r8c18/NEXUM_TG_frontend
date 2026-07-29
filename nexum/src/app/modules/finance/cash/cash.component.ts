@@ -34,7 +34,7 @@ export class CashComponent implements OnInit, OnDestroy {
   formError = signal('');
   auditResult = signal<any>(null);
 
-  newCashRegister: any = { registerCode: '', registerName: '', responsibleName: '', currentBalance: 0 };
+  newCashRegister: any = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0 };
   openingBalance = 0;
   physicalBalance = 0;
   depositBankAccountId = '';
@@ -105,7 +105,7 @@ export class CashComponent implements OnInit, OnDestroy {
   }
 
   openCreate(): void {
-    this.newCashRegister = { registerCode: '', registerName: '', responsibleName: '', currentBalance: 0 };
+    this.newCashRegister = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0 };
     this.formError.set('');
     this.isCreateOpen.set(true);
   }
