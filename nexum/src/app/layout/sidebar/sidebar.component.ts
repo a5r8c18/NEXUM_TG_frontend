@@ -124,12 +124,19 @@ export class SidebarComponent {
       hasSubmenu: true,
       isExpanded: false,
       submenu: [
-        { icon: 'TrendingUp', label: 'Cuentas por Cobrar', route: '/finance/receivables' },
-        { icon: 'TrendingDown', label: 'Cuentas por Pagar', route: '/finance/payables' },
-        { icon: 'CreditCard', label: 'Cuentas Bancarias', route: '/finance/banks' },
-        { icon: 'Banknote', label: 'Caja (Efectivo)', route: '/finance/cash' },
-        { icon: 'DollarSign', label: 'Cobros y Pagos', route: '/finance/payments' },
-        { icon: 'Database', label: 'Conciliación Bancaria', route: '/finance/bank-reconciliation' }
+        { icon: 'CreditCard', label: 'Banco', route: '/finance/banks', hasSubmenu: true, isExpanded: false, submenu: [
+          { icon: 'TrendingUp', label: 'Ingreso', route: '#' },
+          { icon: 'TrendingDown', label: 'Egreso', route: '#' },
+          { icon: 'Database', label: 'Conciliación Bancaria', route: '/finance/bank-reconciliation' },
+        ] },
+        { icon: 'Banknote', label: 'Caja (Efectivo)', route: '/finance/cash', hasSubmenu: true, isExpanded: false, submenu: [
+          { icon: 'TrendingUp', label: 'Ingreso', route: '#' },
+          { icon: 'TrendingDown', label: 'Egreso', route: '#' },
+        ] },
+        { icon: 'Wallet', label: 'Cobros y Pagos', hasSubmenu: true, isExpanded: false, submenu: [
+          { icon: 'TrendingUp', label: 'Cuentas por Cobrar', route: '/finance/receivables' },
+          { icon: 'TrendingDown', label: 'Cuentas por Pagar', route: '/finance/payables' },
+        ] }
       ]
     },
     { 
