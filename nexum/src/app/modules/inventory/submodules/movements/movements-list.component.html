@@ -119,7 +119,7 @@
                 class="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
           Limpiar
         </button>
-        <app-export-component [exportData]="exportData" (exportComplete)="onExportComplete($event)" />
+        <app-export-component [exportDataFn]="exportDataFn" (exportComplete)="onExportComplete($event)" />
       </div>
     </div>
   </div>

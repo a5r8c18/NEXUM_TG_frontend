@@ -1,4 +1,8 @@
 import { Component, signal, input, output } from '@angular/core';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+export type ExportDataProvider = ExportData | (() => Promise<ExportData>);
 
 export interface ExportData {
   headers: string[];
@@ -13,7 +17,8 @@ export interface ExportData {
 })
 export class ExportComponentComponent {
   // Inputs
-  exportData = input.required<ExportData>();
+  exportData = input<ExportData>();
+  exportDataFn = input<() => Promise<ExportData>>();
   isLoading = signal(false);
 
   // Outputs
@@ -24,10 +29,9 @@ export class ExportComponentComponent {
   async exportToPDF(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const { headers, data, fileName } = this.exportData();
+      const { headers, data, fileName } = await this.resolveExportData();
       const pdfFileName = `${fileName}_${new Date().toISOString().split('T')[0]}.pdf`;
       
-      // Simulación de exportación a PDF
       await this.simulatePDFExport(headers, data, pdfFileName);
       
       this.exportComplete.emit({ type: 'pdf', fileName: pdfFileName });
@@ -41,10 +45,9 @@ export class ExportComponentComponent {
   async exportToExcel(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const { headers, data, fileName } = this.exportData();
+      const { headers, data, fileName } = await this.resolveExportData();
       const excelFileName = `${fileName}_${new Date().toISOString().split('T')[0]}.xlsx`;
       
-      // Simulación de exportación a Excel
       await this.simulateExcelExport(headers, data, excelFileName);
       
       this.exportComplete.emit({ type: 'excel', fileName: excelFileName });
@@ -55,15 +58,33 @@ export class ExportComponentComponent {
     }
   }
 
+  private async resolveExportData(): Promise<ExportData> {
+    const fn = this.exportDataFn();
+    if (fn) {
+      return fn();
+    }
+    return this.exportData()!;
+  }
+
   private async simulatePDFExport(headers: string[], data: any[][], fileName: string): Promise<void> {
-    // Simulación de delay para exportación PDF
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // En una implementación real, aquí usarías una librería como jsPDF
-    console.log('Exportando a PDF:', { headers, data, fileName });
-    
-    // Simulación de descarga
-    this.downloadFile(fileName, 'application/pdf', this.generatePDFContent(headers, data));
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    autoTable(doc, {
+      head: [headers],
+      body: data,
+      startY: 14,
+      styles: { fontSize: 8, cellPadding: 1.2 },
+      headStyles: { fillColor: [220, 38, 38], textColor: 255 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { top: 10, right: 8, bottom: 14, left: 8 },
+      didDrawPage: (dataArg) => {
+        const page = (dataArg as any).pageNumber;
+        doc.setFontSize(8);
+        doc.text(`Página ${page}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
+      },
+    });
+
+    doc.save(fileName);
   }
 
   private async simulateExcelExport(headers: string[], data: any[][], fileName: string): Promise<void> {
@@ -112,11 +133,13 @@ export class ExportComponentComponent {
     window.URL.revokeObjectURL(url);
   }
 
-  get totalItems(): number {
-    return this.exportData().data.length;
+  async totalItems(): Promise<number> {
+    return (await this.resolveExportData()).data.length;
   }
 
   get hasData(): boolean {
-    return this.totalItems > 0;
+    const syncData = this.exportData();
+    if (syncData) return syncData.data.length > 0;
+    return true;
   }
 }

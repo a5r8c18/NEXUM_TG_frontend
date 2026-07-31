@@ -65,6 +65,7 @@ export interface MovementItem {
   relatedMovementId?: string;
   expenseElement?: string;
   voucherId?: string;
+  reportNumber?: string;
   purchase?: {
     id: string;
     document: string;

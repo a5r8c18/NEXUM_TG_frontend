@@ -147,14 +147,15 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
 
   get exportData(): ExportData {
     return {
-      headers: ['Código', 'Nombre', 'Almacén', 'Entradas', 'Salidas', 'Existencias'],
+      headers: ['Código', 'Nombre', 'Almacén', 'Cantidad', 'Unidad', 'Precio', 'Importe'],
       data: this.items().map(item => [
         item.productCode,
         item.productName,
         item.warehouse || 'Sin almacén',
-        item.entries.toString(),
-        item.exits.toString(),
-        item.stock.toString()
+        item.stock.toString(),
+        item.productUnit || 'und',
+        this.formatCurrency(item.unitPrice || 0),
+        this.formatCurrency(item.stock * (item.unitPrice || 0)),
       ]),
       fileName: 'inventario'
     };

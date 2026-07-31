@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, lastValueFrom } from 'rxjs';
 import { MovementsService } from '../../../../core/services/movements.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
 import { WarehouseService } from '../../../../core/services/warehouse.service';
@@ -251,21 +251,37 @@ export class MovementsListComponent implements OnInit, OnDestroy {
 
   // ─── Exportación ──────────────────────────────────────────────────────────
 
-  get exportData(): ExportData {
+  private buildExportData(movements: MovementItem[]): ExportData {
     return {
       headers: ['Tipo', 'Código', 'Producto', 'Cantidad', 'Importe', 'Fecha', 'Observación'],
-      data: this.movements().map(m => [
+      data: movements.map(m => [
         this.translateType(m.type),
         m.movementCode || '-',
         `${m.product.productName} (${m.product.productCode})`,
         m.quantity.toString(),
-        this.formatCurrency(m.totalAmount),
+        this.formatCurrency(m.totalAmount ?? 0),
         this.formatDate(m.createdAt),
-        m.reason || '-',
+        m.reportNumber || m.reason || '-',
       ]),
       fileName: 'movimientos_inventario'
     };
   }
+
+  get exportData(): ExportData {
+    return this.buildExportData(this.movements());
+  }
+
+  exportDataFn = async (): Promise<ExportData> => {
+    const filters: MovementFilters = {
+      product: this.searchTerm() || undefined,
+      fromDate: this.fromDate() || undefined,
+      toDate: this.toDate() || undefined,
+      warehouse: this.selectedWarehouse() || undefined,
+      movement_type: (this.selectedMovementType() as any) || undefined,
+    };
+    const all = await lastValueFrom(this.offlineFirst.getMovements(filters));
+    return this.buildExportData(all ?? []);
+  };
 
   onExportComplete(event: { type: 'pdf' | 'excel'; fileName: string }): void {
     this.notificationService.showSuccess(`Exportación ${event.type.toUpperCase()} completada`);
