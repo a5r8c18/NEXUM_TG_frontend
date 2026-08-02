@@ -56,7 +56,6 @@
               <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Cantidad</th>
               <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Precio</th>
               <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Importe</th>
-              <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Existencia</th>
             </tr>
           </thead>
           <tbody>
@@ -82,11 +81,10 @@
                 </td>
                 <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{{ formatCurrency(row.unitPrice) }}</td>
                 <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{{ formatCurrency(row.totalAmount) }}</td>
-                <td class="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">{{ row.balance }}</td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="9" class="px-4 py-16 text-center text-slate-500">
+                <td colspan="8" class="px-4 py-16 text-center text-slate-500">
                   Este producto no tiene movimientos registrados.
                 </td>
               </tr>
