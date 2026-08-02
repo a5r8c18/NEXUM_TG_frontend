@@ -231,6 +231,7 @@
                         <td class="px-2 py-2">
                           <input type="number" min="1" [max]="item.stock" placeholder="1"
                                  [ngModel]="item.quantity"
+                                 [ngModelOptions]="{standalone: true}"
                                  (ngModelChange)="updateQuantity(i, $event)"
                                  class="w-full px-2 py-2 border rounded-lg text-xs text-center focus:outline-none focus:ring-1 focus:ring-red-500 transition-all"
                                  [class.border-slate-200]="item.quantity <= item.stock"

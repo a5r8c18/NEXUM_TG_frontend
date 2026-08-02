@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { MovementItem, MovementFilters, DirectEntryDto, ExitDto, TransferDto, ReturnDto, MovementTypeOption } from '../../models/inventory.models';
+import { MovementItem, MovementFilters, DirectEntryDto, ExitDto, TransferDto, ReturnDto, MovementTypeOption, ProductHistory } from '../../models/inventory.models';
 
 export type { TransferDto } from '../../models/inventory.models';
 
@@ -37,6 +37,7 @@ export class MovementsService {
       if (filters.fromDate) params = params.set('start_date', filters.fromDate);
       if (filters.toDate) params = params.set('end_date', filters.toDate);
       if (filters.product) params = params.set('product_name', filters.product);
+      if (filters.productCode) params = params.set('product_code', filters.productCode);
       if (filters.warehouse) params = params.set('warehouse', filters.warehouse);
       if (filters.movement_type) params = params.set('movement_type', filters.movement_type);
     }
@@ -58,10 +59,27 @@ export class MovementsService {
       if (filters.fromDate) params = params.set('start_date', filters.fromDate);
       if (filters.toDate) params = params.set('end_date', filters.toDate);
       if (filters.product) params = params.set('product_name', filters.product);
+      if (filters.productCode) params = params.set('product_code', filters.productCode);
       if (filters.warehouse) params = params.set('warehouse', filters.warehouse);
       if (filters.movement_type) params = params.set('movement_type', filters.movement_type);
     }
     return this.http.get<PaginatedResponse<MovementItem>>(this.apiUrl, { params });
+  }
+
+  getProductHistory(
+    productCode: string,
+    filters?: { warehouse?: string; fromDate?: string; toDate?: string },
+    companyId?: number,
+  ): Observable<ProductHistory> {
+    let params = new HttpParams();
+    if (companyId) params = params.set('companyId', companyId.toString());
+    if (filters?.warehouse) params = params.set('warehouse', filters.warehouse);
+    if (filters?.fromDate) params = params.set('start_date', filters.fromDate);
+    if (filters?.toDate) params = params.set('end_date', filters.toDate);
+    return this.http.get<ProductHistory>(
+      `${this.apiUrl}/history/${encodeURIComponent(productCode)}`,
+      { params },
+    );
   }
 
   registerDirectEntry(data: DirectEntryDto & { warehouseId: string }, companyId?: number): Observable<any> {

@@ -487,7 +487,7 @@ export class EntryWizardComponent implements OnInit, OnChanges {
 
   // --- Category helpers ---
   categoryLabel(cat: InventoryCategory): string {
-    const map: Record<string, string> = { insumo: 'Insumo', mercancia: 'Mercancía', produccion: 'Producción' };
+    const map: Record<string, string> = { insumo: 'Insumo', mercancia: 'Mercancía para la venta', produccion: 'Producción terminada' };
     return map[cat] ?? cat;
   }
 
@@ -527,7 +527,7 @@ export class EntryWizardComponent implements OnInit, OnChanges {
         types: this.entryTypes.filter(t => t.category === 'insumo')
       },
       {
-        name: 'Mercancías',
+        name: 'Mercancía para la venta',
         description: 'Productos terminados y bienes para la venta',
         color: 'bg-indigo-500',
         bgColor: 'bg-indigo-100',
@@ -538,7 +538,7 @@ export class EntryWizardComponent implements OnInit, OnChanges {
         types: this.entryTypes.filter(t => t.category === 'mercancia')
       },
       {
-        name: 'Producción',
+        name: 'Producción terminada',
         description: 'Productos de proceso y producción interna',
         color: 'bg-teal-500',
         bgColor: 'bg-teal-100',

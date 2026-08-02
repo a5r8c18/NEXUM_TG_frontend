@@ -470,8 +470,8 @@ export class EntryPageComponent implements OnInit {
   getCategoriesByTypes() {
     const defs = [
       { name: 'Insumos', cat: 'insumo' },
-      { name: 'Mercancías', cat: 'mercancia' },
-      { name: 'Producción', cat: 'produccion' },
+      { name: 'Mercancía para la venta', cat: 'mercancia' },
+      { name: 'Producción terminada', cat: 'produccion' },
     ];
     return defs.map(d => ({ ...d, types: this.entryTypes().filter((t: MovementTypeOption) => t.category === d.cat) })).filter(d => d.types.length > 0);
   }

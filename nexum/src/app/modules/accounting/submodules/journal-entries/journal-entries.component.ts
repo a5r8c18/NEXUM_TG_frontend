@@ -333,7 +333,9 @@ export class JournalEntriesComponent implements OnInit {
       'inventory': 'Inventario',
       'invoices': 'Facturación',
       'fixed-assets': 'Activos Fijos',
-      'hr': 'Nómina'
+      'payroll': 'Nómina',
+      'finance': 'Finanzas',
+      'hr': 'Recursos Humanos'
     };
     return labels[source] || source;
   }

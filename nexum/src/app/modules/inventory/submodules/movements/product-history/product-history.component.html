@@ -1,0 +1,99 @@
+<div class="p-6 space-y-6">
+
+  <!-- Encabezado -->
+  <div>
+    <button (click)="goBack()" class="text-sm text-slate-600 hover:text-slate-900 mb-2">
+      ← Volver al inventario
+    </button>
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Historial del producto</h1>
+    @if (history()) {
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        {{ history()?.productName }} ({{ history()?.productCode }})
+        @if (history()?.warehouseName) {
+          <span> — Almacén: {{ history()?.warehouseName }}</span>
+        }
+      </p>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="text-center py-20 text-slate-500">Cargando historial...</div>
+  } @else if (error()) {
+    <div class="text-center py-20 text-red-600">{{ error() }}</div>
+  } @else if (history()) {
+
+    <!-- Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Existencia actual</p>
+        <p class="text-xl font-bold text-slate-900 dark:text-white">
+          {{ history()?.currentBalance }} {{ history()?.productUnit }}
+        </p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Precio unitario</p>
+        <p class="text-xl font-bold text-slate-900 dark:text-white">
+          {{ formatCurrency(history()?.unitPrice) }}
+        </p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+        <p class="text-xs text-slate-500 uppercase tracking-wide">Movimientos</p>
+        <p class="text-xl font-bold text-slate-900 dark:text-white">{{ rows.length }}</p>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Fecha</th>
+              <th class="text-left px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Concepto</th>
+              <th class="text-left px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Nº Informe</th>
+              <th class="text-left px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">U/M</th>
+              <th class="text-left px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Tipo</th>
+              <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Cantidad</th>
+              <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Precio</th>
+              <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Importe</th>
+              <th class="text-right px-4 py-3 font-semibold text-xs text-slate-600 uppercase tracking-wider">Existencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows; track row.id) {
+              <tr (click)="openReport(row)"
+                  title="Ver informe {{ row.reportNumber }}"
+                  class="border-t border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+                <td class="px-4 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ formatDate(row.date) }}</td>
+                <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ row.concept }}</td>
+                <td class="px-4 py-3">
+                  <span class="font-mono text-xs text-blue-700 underline decoration-dotted">{{ row.reportNumber }}</span>
+                </td>
+                <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ row.productUnit }}</td>
+                <td class="px-4 py-3">
+                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full border {{ typeClass(row.movementType) }}">
+                    {{ translateType(row.movementType) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right font-medium"
+                    [class.text-green-700]="row.quantityIn > 0"
+                    [class.text-red-700]="row.quantityOut > 0">
+                  {{ row.quantityIn > 0 ? '+' : '-' }}{{ row.quantityIn > 0 ? row.quantityIn : row.quantityOut }}
+                </td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{{ formatCurrency(row.unitPrice) }}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{{ formatCurrency(row.totalAmount) }}</td>
+                <td class="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">{{ row.balance }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="px-4 py-16 text-center text-slate-500">
+                  Este producto no tiene movimientos registrados.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

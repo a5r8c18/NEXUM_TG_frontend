@@ -115,6 +115,10 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/inventory/submodules/movements/movements-list.component').then(m => m.MovementsListComponent)
       },
       {
+        path: 'inventory/history/:productCode',
+        loadComponent: () => import('./modules/inventory/submodules/movements/product-history/product-history.component').then(m => m.ProductHistoryComponent)
+      },
+      {
         path: 'inventory/subledger/:warehouseId/:productCode',
         loadComponent: () => import('./modules/inventory/submodules/subledger/subledger.component').then(m => m.SubledgerComponent)
       },

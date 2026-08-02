@@ -1,7 +1,7 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ReportsService } from '../../../../core/services/reports.service';
 import { NotificationService } from '../../../../core/services/notification.service';
@@ -20,6 +20,10 @@ type Report = ReceptionReport | DeliveryReport | TransferReport;
 export class ReportsComponent implements OnInit, OnDestroy {
   private reportsService = inject(ReportsService);
   private notificationService = inject(NotificationService);
+  private route = inject(ActivatedRoute);
+
+  /** Documento a abrir automáticamente al llegar desde el historial de un producto. */
+  private pendingReportRef: { number?: string; movementId?: string } | null = null;
 
   reports = signal<Report[]>([]);
   isLoading = signal(false);
@@ -42,6 +46,17 @@ export class ReportsComponent implements OnInit, OnDestroy {
   private toastSub!: Subscription;
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const tab = params.get('tab');
+    if (tab === 'reception' || tab === 'delivery' || tab === 'transfer') {
+      this.activeTab.set(tab);
+    }
+    const number = params.get('number');
+    const movementId = params.get('movement');
+    if (number || movementId) {
+      this.pendingReportRef = { number: number || undefined, movementId: movementId || undefined };
+    }
+
     this.loadReports();
     this.refreshSub = this.notificationService.refresh$.subscribe(() => this.loadReports());
     this.toastSub = this.notificationService.toasts$.subscribe(t => {
@@ -75,6 +90,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
         this.reports.set(data);
         this.currentPage.set(1);
         this.isLoading.set(false);
+        this.openPendingReport();
       },
       error: () => {
         this.hasError.set(true);
@@ -143,6 +159,24 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   openDetails(report: Report): void {
     this.selectedReport.set(report);
+  }
+
+  /** Abre el informe indicado por query params tras cargar el listado. */
+  private openPendingReport(): void {
+    const ref = this.pendingReportRef;
+    if (!ref) return;
+    this.pendingReportRef = null;
+
+    const match = this.reports().find((r: any) =>
+      (ref.number && (r.reportNumber === ref.number || r.code === ref.number)) ||
+      (ref.movementId && (r.id === ref.movementId || r.relatedMovementId === ref.movementId)),
+    );
+
+    if (match) {
+      this.selectedReport.set(match);
+    } else {
+      this.showToast('No se encontró el informe asociado al movimiento', 'error');
+    }
   }
 
   closeDetails(): void {

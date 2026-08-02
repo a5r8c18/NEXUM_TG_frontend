@@ -79,11 +79,12 @@ export class ExitFormComponent {
 
   onConfirm(): void {
     if (!this.movementCode?.trim()) return;
-    if (!this.quantity || this.quantity <= 0) return;
+    const qty = Math.max(1, Number(this.quantity) || 1);
+    if (qty <= 0) return;
 
     const item: ExitItemDto = {
       productCode: this.productCode,
-      quantity: this.quantity,
+      quantity: qty,
       expenseElement: this.expenseElement || undefined,
     };
 
@@ -107,7 +108,7 @@ export class ExitFormComponent {
   }
 
   get totalAmount(): number {
-    return (this.quantity || 0) * (this.unitPrice || 0);
+    return (Number(this.quantity) || 0) * (this.unitPrice || 0);
   }
 
   categoryLabel(cat: InventoryCategory): string {

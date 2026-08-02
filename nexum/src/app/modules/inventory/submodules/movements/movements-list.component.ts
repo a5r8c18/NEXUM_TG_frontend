@@ -51,6 +51,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   totalPages = signal(0);
 
   searchTerm = signal('');
+  selectedProductCode = signal('');
   fromDate = signal('');
   toDate = signal('');
 
@@ -76,10 +77,10 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   private toastSub!: Subscription;
 
   ngOnInit(): void {
-    // Read product query param from URL (e.g. from inventory table history link)
-    const productParam = this.route.snapshot.queryParamMap.get('product');
-    if (productParam) {
-      this.searchTerm.set(productParam);
+    // Read product_code query param from URL (e.g. from inventory table history link)
+    const productCodeParam = this.route.snapshot.queryParamMap.get('product_code');
+    if (productCodeParam) {
+      this.selectedProductCode.set(productCodeParam);
     }
 
     this.loadMovements();
@@ -129,6 +130,7 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       fromDate: filters?.fromDate || this.fromDate() || undefined,
       toDate: filters?.toDate || this.toDate() || undefined,
       product: filters?.product || this.searchTerm() || undefined,
+      productCode: filters?.productCode || this.selectedProductCode() || undefined,
       warehouse: this.selectedWarehouse() || undefined,
       movement_type: this.selectedMovementType() || undefined,
     };
@@ -154,11 +156,13 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       fromDate: this.fromDate() || undefined,
       toDate: this.toDate() || undefined,
       product: this.searchTerm() || undefined,
+      productCode: this.selectedProductCode() || undefined,
     }, 1);
   }
 
   clearFilters(): void {
     this.searchTerm.set('');
+    this.selectedProductCode.set('');
     this.fromDate.set('');
     this.toDate.set('');
     this.selectedWarehouse.set('');

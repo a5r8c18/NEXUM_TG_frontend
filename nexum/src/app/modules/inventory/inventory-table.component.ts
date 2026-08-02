@@ -224,9 +224,10 @@ export class InventoryTableComponent implements OnInit, OnDestroy {
     return '$' + amount.toLocaleString('es-CU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  viewMovementHistory(productCode: string): void {
-    this.router.navigate(['/inventory/movements'], {
-      queryParams: { product: productCode }
+  viewMovementHistory(productCode: string, warehouseId?: string): void {
+    const warehouse = warehouseId || this.selectedWarehouseId();
+    this.router.navigate(['/inventory/history', productCode], {
+      queryParams: warehouse ? { warehouse } : {}
     });
   }
 

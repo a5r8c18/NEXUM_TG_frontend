@@ -30,6 +30,8 @@ export class AuthService {
   private currentUserSignal = signal<NexumUser | null>(null);
   private currentCompanyIdSignal = signal<number>(1);
   private isDevMode = signal(false);
+  /** Promesa de refresco en curso, para no lanzar varias en paralelo. */
+  private refreshInFlight: Promise<string | null> | null = null;
   
   // BehaviorSubject para manejar estado de autenticación de forma reactiva
   private authStateSubject = new BehaviorSubject<{ isAuthenticated: boolean; user: NexumUser | null }>({
@@ -284,12 +286,90 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    const token = localStorage.getItem('authToken');
-    console.log('🔐 AUTH: getToken() - Token exists:', !!token);
-    if (token) {
-      console.log('🔐 AUTH: Token length:', token.length);
+    return localStorage.getItem('authToken');
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
+  }
+
+  /** Decodifica el payload del JWT sin verificar la firma. */
+  private decodeJwt(token: string): any | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      return JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    } catch {
+      return null;
     }
-    return token;
+  }
+
+  /**
+   * Indica si el access token ya expiró (o es ilegible).
+   * Se aplica un margen de 10s para evitar carreras con la expiración exacta.
+   */
+  isTokenExpired(token?: string | null): boolean {
+    const jwt = token ?? this.getToken();
+    if (!jwt) return true;
+    const payload = this.decodeJwt(jwt);
+    if (!payload?.exp) return true;
+    return payload.exp * 1000 <= Date.now() + 10_000;
+  }
+
+  /**
+   * Renueva el access token usando el refresh token almacenado.
+   * Devuelve el nuevo access token o null si no fue posible renovar.
+   */
+  async refreshSession(): Promise<string | null> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) return null;
+
+    // Evita múltiples llamadas simultáneas a /auth/refresh
+    if (this.refreshInFlight) return this.refreshInFlight;
+
+    this.refreshInFlight = (async () => {
+      try {
+        const response = await firstValueFrom(
+          this.http.post<any>(`${this.apiUrl}/auth/refresh`, { refreshToken }),
+        );
+        if (!response?.accessToken) return null;
+
+        this.setTokens(response.accessToken, response.refreshToken);
+
+        // Mantener el usuario en memoria/localStorage coherente con el nuevo token
+        const stored = localStorage.getItem('currentUser');
+        const previous = stored ? (JSON.parse(stored) as NexumUser) : null;
+        const user: NexumUser = {
+          ...(previous as NexumUser),
+          ...response.user,
+          currentCompanyId: previous?.currentCompanyId ?? response.user?.companyId,
+        };
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        this.currentUserSignal.set(user);
+        this.isAuthenticatedSignal.set(true);
+        this.authStateSubject.next({ isAuthenticated: true, user });
+
+        return response.accessToken as string;
+      } catch {
+        return null;
+      } finally {
+        this.refreshInFlight = null;
+      }
+    })();
+
+    return this.refreshInFlight;
+  }
+
+  /** Limpia la sesión local sin navegar (usado cuando el token ya expiró). */
+  clearSession(): void {
+    this.currentUserSignal.set(null);
+    this.isAuthenticatedSignal.set(false);
+    this.currentCompanyIdSignal.set(1);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('refreshToken');
+    this.contextService.clearContext();
+    this.authStateSubject.next({ isAuthenticated: false, user: null });
   }
 
   hasRole(role: string): boolean {
@@ -442,6 +522,23 @@ export class AuthService {
     const userStr = localStorage.getItem('currentUser');
 
     if (token && userStr) {
+      // Un token expirado NO debe restaurar la sesión: de lo contrario la app
+      // se pinta como autenticada y todas las peticiones fallan con 401.
+      if (this.isTokenExpired(token)) {
+        if (this.getRefreshToken()) {
+          void this.refreshSession().then((newToken) => {
+            if (newToken) {
+              this.checkAuthStatus();
+            } else {
+              this.clearSession();
+            }
+          });
+        } else {
+          this.clearSession();
+        }
+        return;
+      }
+
       try {
         const user = JSON.parse(userStr) as NexumUser;
         this.currentUserSignal.set(user);

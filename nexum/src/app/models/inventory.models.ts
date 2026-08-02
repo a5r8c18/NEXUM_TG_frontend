@@ -80,10 +80,48 @@ export interface MovementTypeOption {
   category: InventoryCategory;
 }
 
+export type ReportKind = 'reception' | 'delivery' | 'transfer';
+
+export interface ProductHistoryRow {
+  id: string;
+  date: string;
+  movementCode: string | null;
+  movementDescription: string | null;
+  concept: string;
+  movementType: 'entry' | 'exit' | 'return' | 'transfer';
+  category: string | null;
+  productUnit: string;
+  quantity: number;
+  quantityIn: number;
+  quantityOut: number;
+  unitPrice: number;
+  totalAmount: number;
+  balance: number;
+  reportNumber: string;
+  reportType: ReportKind;
+  purchaseId: string | null;
+  voucherId: string | null;
+  sourceWarehouse: string | null;
+  destinationWarehouse: string | null;
+  reason: string | null;
+}
+
+export interface ProductHistory {
+  productCode: string;
+  productName: string;
+  productUnit: string;
+  warehouseId: string | null;
+  warehouseName: string | null;
+  currentBalance: number;
+  unitPrice: number;
+  movements: ProductHistoryRow[];
+}
+
 export interface MovementFilters {
   fromDate?: string;
   toDate?: string;
   product?: string;
+  productCode?: string;
   warehouse?: string;
   movement_type?: string;
 }

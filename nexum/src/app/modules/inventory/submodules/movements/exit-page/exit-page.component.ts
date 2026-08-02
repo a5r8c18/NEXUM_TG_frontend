@@ -138,10 +138,11 @@ export class ExitPageComponent implements OnInit {
     this.updateTotals();
   }
 
-  updateQuantity(index: number, quantity: number): void {
+  updateQuantity(index: number, quantity: number | string): void {
     const currentItems = this.items();
     const item = currentItems[index];
-    item.quantity = quantity < 1 ? 1 : quantity;
+    const qty = Math.max(1, Number(quantity) || 1);
+    item.quantity = qty;
     item.totalAmount = item.quantity * item.unitPrice;
     this.items.set([...currentItems]);
     this.updateTotals();
@@ -267,7 +268,7 @@ export class ExitPageComponent implements OnInit {
       creditAccountCode: this.selectedCreditAccount()?.code,
       items: this.items().map(item => ({
         productCode: item.productCode,
-        quantity: item.quantity
+        quantity: Number(item.quantity) || 1
       }))
     };
 
