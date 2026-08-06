@@ -60,16 +60,26 @@ export class SyncQueueService {
           await offlineDb.syncQueue.update(item.id!, { status: 'completed' });
           this.networkStatus.decrementPending();
         } catch (error: any) {
+          // Un 4xx significa que el servidor rechazó los datos: reintentarlo
+          // nunca va a funcionar, así que se marca como conflicto de inmediato
+          // para que el usuario lo corrija o lo descarte.
+          const isDataError =
+            error?.status >= 400 &&
+            error?.status < 500 &&
+            error?.status !== 408 &&
+            error?.status !== 429;
+
           const retries = item.retries + 1;
-          const status = retries >= 3 ? 'failed' : 'pending';
+          const status = isDataError || retries >= 3 ? 'failed' : 'pending';
           await offlineDb.syncQueue.update(item.id!, {
             status,
             retries,
-            errorMessage: error?.message || 'Error de sincronización',
+            errorMessage:
+              error?.error?.message || error?.message || 'Error de sincronización',
           });
 
-          if (retries >= 3) {
-            console.error(`Sync failed after 3 retries for ${item.entity}/${item.action}:`, error);
+          if (status === 'failed') {
+            console.error(`Sync failed for ${item.entity}/${item.action}:`, error);
           }
         }
       }

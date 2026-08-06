@@ -37,6 +37,15 @@ export class OfflineFirstService {
     return this.auth.getCurrentCompanyId();
   }
 
+  /**
+   * Un error solo se considera de red (y por tanto reintentable offline) si no
+   * hubo respuesta del servidor o este no estaba disponible. Un 4xx es un error
+   * de datos: encolarlo lo reintentaría indefinidamente sin posibilidad de éxito.
+   */
+  private isNetworkError(err: any): boolean {
+    return err?.status === 0 || err?.status === 503 || err?.status === 504;
+  }
+
   // ═══════════════════════════════════════════════════════
   //  INVENTARIO
   // ═══════════════════════════════════════════════════════
@@ -100,7 +109,12 @@ export class OfflineFirstService {
   registerDirectEntry(data: any): Observable<any> {
     if (this.network.isOnline()) {
       return this.movementsService.registerDirectEntry(data, this.companyId).pipe(
-        catchError(() => from(this.createOfflineMovement(data, 'movements/direct-entry')))
+        catchError((err) => {
+          if (this.isNetworkError(err)) {
+            return from(this.createOfflineMovement(data, 'movements/direct-entry'));
+          }
+          throw err;
+        })
       );
     }
     return from(this.createOfflineMovement(data, 'movements/direct-entry'));
@@ -109,7 +123,12 @@ export class OfflineFirstService {
   registerExit(data: any): Observable<any> {
     if (this.network.isOnline()) {
       return this.movementsService.registerExit(data, this.companyId).pipe(
-        catchError(() => from(this.createOfflineMovement(data, 'movements/exit')))
+        catchError((err) => {
+          if (this.isNetworkError(err)) {
+            return from(this.createOfflineMovement(data, 'movements/exit'));
+          }
+          throw err;
+        })
       );
     }
     return from(this.createOfflineMovement(data, 'movements/exit'));
@@ -118,7 +137,12 @@ export class OfflineFirstService {
   createReturn(data: any): Observable<any> {
     if (this.network.isOnline()) {
       return this.movementsService.createReturn(data, this.companyId).pipe(
-        catchError(() => from(this.createOfflineMovement(data, 'movements/return')))
+        catchError((err) => {
+          if (this.isNetworkError(err)) {
+            return from(this.createOfflineMovement(data, 'movements/return'));
+          }
+          throw err;
+        })
       );
     }
     return from(this.createOfflineMovement(data, 'movements/return'));
@@ -127,7 +151,12 @@ export class OfflineFirstService {
   createTransfer(data: any): Observable<any> {
     if (this.network.isOnline()) {
       return this.movementsService.createTransfer(data, this.companyId).pipe(
-        catchError(() => from(this.createOfflineMovement(data, 'movements/transfer')))
+        catchError((err) => {
+          if (this.isNetworkError(err)) {
+            return from(this.createOfflineMovement(data, 'movements/transfer'));
+          }
+          throw err;
+        })
       );
     }
     return from(this.createOfflineMovement(data, 'movements/transfer'));

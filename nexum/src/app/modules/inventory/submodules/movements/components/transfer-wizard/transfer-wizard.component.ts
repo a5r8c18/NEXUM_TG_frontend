@@ -7,6 +7,12 @@ import { MovementsService } from '../../../../../../core/services/movements.serv
 import { WarehouseService } from '../../../../../../core/services/warehouse.service';
 import { InventoryService } from '../../../../../../core/services/inventory.service';
 
+const TRANSFER_EXIT_CODES: Record<string, string> = {
+  insumo: '1102',
+  mercancia: '2102',
+  produccion: '3102',
+};
+
 @Component({
   selector: 'app-transfer-wizard',
   standalone: true,
@@ -108,7 +114,7 @@ export class TransferWizardComponent implements OnChanges {
     this.isLoadingStock.set(true);
     this.inventoryService.getInventory({
       warehouse: this.sourceWarehouseId,
-      search: this.stockSearch || undefined,
+      product: this.stockSearch || undefined,
       isActive: true
     }).subscribe({
       next: (data: InventoryItem[]) => {
@@ -136,7 +142,9 @@ export class TransferWizardComponent implements OnChanges {
       productName: product.productName,
       quantity: 1,
       unitPrice: product.unitPrice || 0,
-      totalAmount: product.unitPrice || 0
+      totalAmount: product.unitPrice || 0,
+      stock: product.stock || 0,
+      unit: product.productUnit || 'und'
     };
     this.items.set([...this.items(), newItem]);
     this.updateTotals();
@@ -164,10 +172,10 @@ export class TransferWizardComponent implements OnChanges {
   }
 
   onCategoryChange(): void {
-    // Asignar el código de movimiento de transferencia según la categoría
-    const type = this.transferTypes().find(t => t.category === this.selectedCategory);
-    const fallback: Record<string, string> = { insumo: '1102', mercancia: '2102', produccion: '3102' };
-    this.movementCode = type?.code || fallback[this.selectedCategory] || '';
+    // El código de transferencia enviada es fijo por categoría (1102/2102/3102)
+    const expected = TRANSFER_EXIT_CODES[this.selectedCategory] || '';
+    const type = this.transferTypes().find(t => t.code === expected);
+    this.movementCode = type?.code || expected;
   }
 
   onSourceWarehouseChange(): void {
@@ -191,10 +199,10 @@ export class TransferWizardComponent implements OnChanges {
   }
 
   private loadTransferTypes(): void {
-    this.movementsService.getMovementTypes('transfer').subscribe({
-      next: (types: any) => {
-        console.log('✅ Tipos de transferencia cargados:', types);
-        this.transferTypes.set(types || []);
+    this.movementsService.getMovementTypes('exit').subscribe({
+      next: (types: MovementTypeOption[]) => {
+        const codes = Object.values(TRANSFER_EXIT_CODES);
+        this.transferTypes.set((types || []).filter(t => codes.includes(t.code)));
       },
       error: (err) => {
         console.error('❌ Error cargando tipos de transferencia:', err);
