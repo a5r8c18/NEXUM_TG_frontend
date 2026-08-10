@@ -139,7 +139,6 @@
                 <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Documento</th>
                 @if (activeTab() === 'reception') {
                   <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Proveedor</th>
-                  <th class="px-5 py-3 text-center text-xs font-medium text-slate-700 uppercase tracking-wider">Ciclo Contable</th>
                 }
                 <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Entidad</th>
                 <th class="px-5 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Almacén</th>
@@ -159,7 +158,14 @@
               <tr class="hover:bg-slate-50/50 transition-colors">
                 @if (!isTransfer(item)) {
                   <td class="px-5 py-4">
-                    <span class="text-sm font-medium text-slate-900">{{ $any(item).document }}</span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-slate-900">{{ $any(item).document }}</span>
+                      @if (isReturn(item)) {
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 whitespace-nowrap">
+                          Devolución
+                        </span>
+                      }
+                    </div>
                   </td>
                   @if (activeTab() === 'reception') {
                     <td class="px-5 py-4">
@@ -212,30 +218,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                     </button>
-                    @if (activeTab() === 'reception' && isReception(item) && item.purchaseId) {
-                      @if (!item.isInvoiced) {
-                        <a [routerLink]="['/inventory/purchases', item.purchaseId, 'invoice']"
-                           class="bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
-                           title="Registrar factura del proveedor">
-                          Factura
-                        </a>
-                      } @else if (!item.isReconciled) {
-                        <a [routerLink]="['/inventory/purchases', item.purchaseId, 'reconcile']"
-                           class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
-                           title="Conciliar documentos">
-                          Conciliar
-                        </a>
-                      } @else {
-                        <span class="text-green-600 text-xs font-semibold" title="Ciclo completo">✓ OK</span>
-                      }
-                    }
                   </div>
                 </td>
               </tr>
             }
             @empty {
               <tr>
-                <td [attr.colspan]="activeTab() === 'reception' ? 7 : activeTab() === 'transfer' ? 7 : 6" class="px-5 py-16 text-center">
+                <td [attr.colspan]="activeTab() === 'delivery' ? 6 : 7" class="px-5 py-16 text-center">
                   <div class="flex flex-col items-center gap-2 text-slate-400">
                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -283,6 +272,10 @@
         } @else if (isReception(report)) {
           <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
             Informe de Recepción
+          </span>
+        } @else if (isReturn(report)) {
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            Devolución de Almacén
           </span>
         } @else {
           <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">

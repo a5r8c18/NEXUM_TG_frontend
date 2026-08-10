@@ -1,5 +1,21 @@
 <div class="min-h-screen bg-slate-50">
 
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border transition-all"
+         [class.bg-green-50]="toast()!.type === 'success'"
+         [class.text-green-800]="toast()!.type === 'success'"
+         [class.border-green-200]="toast()!.type === 'success'"
+         [class.bg-red-50]="toast()!.type === 'error'"
+         [class.text-red-800]="toast()!.type === 'error'"
+         [class.border-red-200]="toast()!.type === 'error'"
+         [class.bg-blue-50]="toast()!.type === 'info'"
+         [class.text-blue-800]="toast()!.type === 'info'"
+         [class.border-blue-200]="toast()!.type === 'info'">
+      {{ toast()!.message }}
+    </div>
+  }
+
   <!-- Header -->
   <div class="bg-white border-b border-slate-200 px-6 py-4">
     <div class="max-w-6xl mx-auto flex items-center gap-4">
@@ -336,6 +352,7 @@
 
                     <td class="px-2 py-2">
                       <input formControlName="unit" type="text" placeholder="UN"
+                             (input)="onUnitInput($any($event.target).value, i)"
                              class="w-full px-2 py-2 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500 transition-all"
                              [class.border-slate-200]="!productFieldInvalid($any(productGroup), 'unit')"
                              [class.border-red-400]="productFieldInvalid($any(productGroup), 'unit')"/>

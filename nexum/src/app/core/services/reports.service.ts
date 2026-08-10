@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ReportFilters {
@@ -59,5 +59,43 @@ export class ReportsService {
     if (filters?.destinationWarehouse) params.append('destinationWarehouse', filters.destinationWarehouse);
     const query = params.toString();
     return this.http.get<any[]>(`${this.apiUrl}/transfers${query ? '?' + query : ''}`);
+  }
+
+  getReturnReports(filters?: ReportFilters): Observable<any[]> {
+    const params = new URLSearchParams();
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    if (filters?.product) params.append('product', filters.product);
+    if (filters?.entity) params.append('entity', filters.entity);
+    if (filters?.warehouse) params.append('warehouse', filters.warehouse);
+    if (filters?.document) params.append('document', filters.document);
+    params.append('limit', '200');
+    const query = params.toString();
+    return this.http.get<any[]>(`${environment.apiUrl}/warehouse-returns${query ? '?' + query : ''}`).pipe(
+      map((items: any[]) =>
+        (items || []).map((r: any) => ({
+          id: r.id,
+          isReturn: true as const,
+          reportNumber: r.returnNumber,
+          document: r.returnNumber,
+          entity: r.supplierName || r.returnedBy || '-',
+          warehouse: r.sourceWarehouseName || r.sourceWarehouseId || '-',
+          reason: r.returnReason || r.notes || '-',
+          category: r.category || null,
+          details: {
+            products: (r.items || []).map((it: any) => ({
+              code: it.productCode,
+              description: it.productName,
+              unit: it.productUnit || 'und',
+              quantity: it.quantityReturned,
+              unitPrice: it.unitPrice,
+              amount: it.totalPrice,
+            })),
+            totalAmount: r.totalAmount || 0,
+          },
+          created_at: r.createdAt || r.created_at,
+        })),
+      ),
+    );
   }
 }

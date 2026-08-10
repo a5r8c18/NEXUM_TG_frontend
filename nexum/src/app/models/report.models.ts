@@ -92,6 +92,30 @@ export interface TransferReport {
   created_at: string;
 }
 
+export interface ReturnReport {
+  id: string;
+  /** Marca discriminante: se muestra dentro de los vales de entrega. */
+  isReturn: true;
+  reportNumber: string;
+  document: string;
+  entity: string;
+  warehouse: string;
+  reason: string;
+  category: string | null;
+  details: {
+    products: Array<{
+      code: string;
+      description: string;
+      unit: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+    }>;
+    totalAmount: number;
+  };
+  created_at: string;
+}
+
 export interface TransferReportFilters {
   fromDate?: string;
   toDate?: string;

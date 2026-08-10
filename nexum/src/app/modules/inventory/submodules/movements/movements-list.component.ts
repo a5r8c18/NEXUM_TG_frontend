@@ -8,14 +8,13 @@ import { InventoryService } from '../../../../core/services/inventory.service';
 import { WarehouseService } from '../../../../core/services/warehouse.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
-import { MovementItem, MovementFilters, DirectEntryDto, ExitDto, TransferDto, ReturnDto, MovementTypeOption, InventoryCategory } from '../../../../models/inventory.models';
+import { MovementItem, MovementFilters, DirectEntryDto, ExitDto, TransferDto, MovementTypeOption, InventoryCategory } from '../../../../models/inventory.models';
 import { CreatePurchasePayload } from '../../../../models/purchase.models';
 import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 import { EntryWizardComponent } from './components/entry-wizard/entry-wizard.component';
 import { ExitFormComponent } from './components/exit-form/exit-form.component';
 import { TransferFormComponent } from './components/transfer-form/transfer-form.component';
 import { TransferWizardComponent } from './components/transfer-wizard/transfer-wizard.component';
-import { ReturnWizardComponent } from './components/return-wizard/return-wizard.component';
 import { ExportComponentComponent, ExportData } from '../../../../shared/components/export/export-component.component';
 
 @Component({
@@ -23,7 +22,7 @@ import { ExportComponentComponent, ExportData } from '../../../../shared/compone
   standalone: true,
   imports: [
     CommonModule, FormsModule, PaginationComponent,
-    EntryWizardComponent, ExitFormComponent, TransferFormComponent, TransferWizardComponent, ReturnWizardComponent, ExportComponentComponent
+    EntryWizardComponent, ExitFormComponent, TransferFormComponent, TransferWizardComponent, ExportComponentComponent
   ],
   templateUrl: './movements-list.component.html',
 })
@@ -62,9 +61,6 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   isTransferFormOpen = signal(false);
   selectedForExit: MovementItem | null = null;
   selectedForTransfer: MovementItem | null = null;
-
-  // --- Return Wizard (devolución de compra, multi-producto) ---
-  isReturnWizardOpen = signal(false);
 
   // --- Warehouses (for transfer and filters) ---
   warehouses: { id: string; name: string }[] = [];
@@ -246,7 +242,9 @@ export class MovementsListComponent implements OnInit, OnDestroy {
       return 'bg-red-50 text-red-700 border-red-200';
     if (type === 'transfer' || type === 'TRANSFER')
       return 'bg-blue-50 text-blue-700 border-blue-200';
-    return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+    if (type === 'return' || type === 'RETURN')
+      return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+    return 'bg-slate-50 text-slate-700 border-slate-200';
   }
 
   isEntry(m: MovementItem): boolean {
@@ -313,32 +311,28 @@ export class MovementsListComponent implements OnInit, OnDestroy {
   }
 
   // movements-list.component.ts (fragmento modificado)
-onPurchaseSubmit(payload: CreatePurchasePayload & { movementCode: string; category: InventoryCategory }): void {
-    console.log('📦 Enviando compra con cuentas:', {
-    debit: payload.debitAccountCode,
-    credit: payload.creditAccountCode,
-    products: payload.products.length
-  });
-  this.offlineFirst.createPurchase({
-    entity: payload.entity,
-    warehouse: payload.warehouse,
-    supplier: payload.supplier,
-    document: payload.document,
-    products: payload.products,
-    debitAccountCode: payload.debitAccountCode,   // 👈 AÑADIDO
-    creditAccountCode: payload.creditAccountCode, // 👈 AÑADIDO
-  }).subscribe({
-    next: (res: any) => {
-      this.notificationService.showSuccess('Compra registrada correctamente');
-      if (res?.accountingWarning) {
-        this.notificationService.showError(res.accountingWarning);
-      }
-      this.loadMovements();
-      this.refreshStock();
-    },
-    error: () => this.notificationService.showError('Error al registrar compra')
-  });
-}
+  onPurchaseSubmit(payload: CreatePurchasePayload & { category: InventoryCategory }): void {
+    this.offlineFirst.createPurchase({
+      entity: payload.entity,
+      warehouse: payload.warehouse,
+      supplier: payload.supplier,
+      document: payload.document,
+      products: payload.products,
+      debitAccountCode: payload.debitAccountCode,
+      creditAccountCode: payload.creditAccountCode,
+    }).subscribe({
+      next: (res: any) => {
+        this.notificationService.showSuccess('Compra registrada correctamente');
+        if (res?.accountingWarning) {
+          this.notificationService.showError(res.accountingWarning);
+        }
+        this.loadMovements();
+        this.refreshStock();
+      },
+      error: () => this.notificationService.showError('Error al registrar compra')
+    });
+  }
+
   // ─── Exit Page (multi-product) ─────────────────────────────────────────
 
   openExitWizard(): void {
@@ -409,28 +403,6 @@ onPurchaseSubmit(payload: CreatePurchasePayload & { movementCode: string; catego
         this.refreshStock();
       },
       error: () => this.notificationService.showError('Error al registrar transferencia')
-    });
-  }
-
-  // ─── Devolución ───────────────────────────────────────────────────────────
-
-  openReturnWizard(): void {
-    this.isReturnWizardOpen.set(true);
-  }
-
-  closeReturnWizard(): void {
-    this.isReturnWizardOpen.set(false);
-  }
-
-  onReturnWizardSubmit(returnData: ReturnDto): void {
-    this.offlineFirst.createReturn(returnData).subscribe({
-      next: () => {
-        this.notificationService.showSuccess('Devolución registrada correctamente');
-        this.closeReturnWizard();
-        this.loadMovements();
-        this.refreshStock();
-      },
-      error: () => this.notificationService.showError('Error al registrar devolución')
     });
   }
 

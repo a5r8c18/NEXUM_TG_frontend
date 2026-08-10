@@ -91,7 +91,8 @@ export class ProductHistoryComponent implements OnInit {
       case 'entry': return 'bg-green-50 text-green-700 border-green-200';
       case 'exit': return 'bg-red-50 text-red-700 border-red-200';
       case 'transfer': return 'bg-blue-50 text-blue-700 border-blue-200';
-      default: return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'return': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      default: return 'bg-slate-50 text-slate-700 border-slate-200';
     }
   }
 

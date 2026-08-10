@@ -1,20 +1,21 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
+import { Subscription, forkJoin, map, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ReportsService } from '../../../../core/services/reports.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { ReportFilters, ReceptionReport, DeliveryReport, TransferReport } from '../../../../models/report.models';
+import { ReportFilters, ReceptionReport, DeliveryReport, TransferReport, ReturnReport } from '../../../../models/report.models';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 
-type Report = ReceptionReport | DeliveryReport | TransferReport;
+type Report = ReceptionReport | DeliveryReport | TransferReport | ReturnReport;
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
   templateUrl: './reports.component.html',
 })
 export class ReportsComponent implements OnInit, OnDestroy {
@@ -48,7 +49,10 @@ export class ReportsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
     const tab = params.get('tab');
-    if (tab === 'reception' || tab === 'delivery' || tab === 'transfer') {
+    // Las devoluciones se listan dentro de los vales de entrega.
+    if (tab === 'return') {
+      this.activeTab.set('delivery');
+    } else if (tab === 'reception' || tab === 'delivery' || tab === 'transfer') {
       this.activeTab.set(tab);
     }
     const number = params.get('number');
@@ -78,7 +82,18 @@ export class ReportsComponent implements OnInit, OnDestroy {
     const serviceCall = tab === 'reception'
       ? this.reportsService.getReceptionReports(f)
       : tab === 'delivery'
-        ? this.reportsService.getDeliveryReports(f)
+        // Los vales de entrega incluyen las devoluciones (mismo tipo de documento de salida).
+        ? forkJoin({
+            delivery: this.reportsService.getDeliveryReports(f).pipe(catchError(() => of([]))),
+            returns: this.reportsService.getReturnReports(f).pipe(catchError(() => of([]))),
+          }).pipe(
+            map(({ delivery, returns }) =>
+              [...delivery, ...returns].sort(
+                (a: any, b: any) =>
+                  new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              ),
+            ),
+          )
         : this.reportsService.getTransferReports({
             fromDate: f.fromDate,
             toDate: f.toDate,
@@ -202,6 +217,10 @@ export class ReportsComponent implements OnInit, OnDestroy {
     return 'sourceWarehouse' in report;
   }
 
+  isReturn(report: Report): report is ReturnReport {
+    return (report as any).isReturn === true;
+  }
+
   hasExpirationDate(product: any): product is { expirationDate?: string } {
     return 'expirationDate' in product;
   }
@@ -214,7 +233,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
       type = 'Traslado';
       header = [`SC-2-22 Comprobante de Traslado`, `Almacén Origen: ${report.sourceWarehouse || '-'}`, `Almacén Destino: ${report.destinationWarehouse || '-'}`, `Motivo: ${report.reason || '-'}`, ''];
     } else {
-      type = this.isReception(report) ? 'Recepción' : 'Entrega';
+      type = this.isReception(report) ? 'Recepción' : this.isReturn(report) ? 'Devolución' : 'Entrega';
       header = [`Informe de ${type}`, `Documento: ${(report as any).document || '-'}`, `Entidad: ${(report as any).entity || '-'}`, `Almacén: ${(report as any).warehouse || '-'}`, ''];
     }
     const colHeaders = ['Código', 'Descripción', 'Unidad', 'Cantidad', 'P. Unitario', 'Importe'];

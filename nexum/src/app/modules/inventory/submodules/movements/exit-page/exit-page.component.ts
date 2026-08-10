@@ -253,6 +253,15 @@ export class ExitPageComponent implements OnInit {
     // Handle expense element update
   }
 
+  /** Devolución de compra a entidades: la entidad es el proveedor al que se devuelve. */
+  get isPurchaseReturn(): boolean {
+    return ['1107', '2107'].includes(this.headerForm.get('movementCode')?.value);
+  }
+
+  get entityLabel(): string {
+    return this.isPurchaseReturn ? 'Proveedor (entidad) *' : 'Entidad destino';
+  }
+
   onSubmit(): void {
     const movementCode = this.headerForm.get('movementCode')?.value;
     if (!movementCode || !this.warehouseId || this.items().length === 0) {
@@ -260,10 +269,19 @@ export class ExitPageComponent implements OnInit {
       return;
     }
 
+    // En devoluciones de compra el proveedor identifica la cuenta por pagar a cancelar.
+    if (this.isPurchaseReturn && !this.entity.trim()) {
+      this.notificationService.showError(
+        'Indique el proveedor al que se devuelve para poder cancelar la cuenta por pagar',
+      );
+      return;
+    }
+
     const exitData: ExitDto = {
       movementCode: movementCode,
       warehouseId: this.warehouseId,
       reason: this.reason,
+      entity: this.entity.trim() || undefined,
       debitAccountCode: this.selectedDebitAccount()?.code,
       creditAccountCode: this.selectedCreditAccount()?.code,
       items: this.items().map(item => ({

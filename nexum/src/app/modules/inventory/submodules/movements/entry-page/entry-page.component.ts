@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, computed, ElementRef, ViewChildren, QueryList, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, computed, ElementRef, ViewChildren, QueryList, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
@@ -32,7 +32,7 @@ const EXPENSE_ELEMENTS = [
   imports: [CommonModule, FormsModule, ReactiveFormsModule, AccountSelectorComponent],
   templateUrl: './entry-page.component.html',
 })
-export class EntryPageComponent implements OnInit {
+export class EntryPageComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private fb = inject(FormBuilder);
   private movementsService = inject(MovementsService);
@@ -42,6 +42,10 @@ export class EntryPageComponent implements OnInit {
   private notificationService = inject(NotificationService);
   private offlineFirst = inject(OfflineFirstService);
   private cdr = inject(ChangeDetectorRef);
+
+  // Toast local para mostrar mensajes del NotificationService en esta página
+  toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  private toastSub!: any;
 
   // State
   isLoading = signal(false);
@@ -121,6 +125,14 @@ export class EntryPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+    this.toastSub = this.notificationService.toasts$.subscribe((t) => {
+      this.toast.set(t);
+      setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.toastSub?.unsubscribe();
   }
 
   private loadData(): void {
@@ -186,9 +198,9 @@ export class EntryPageComponent implements OnInit {
     const group = this.fb.group({
       code: ['', Validators.required],
       description: ['', Validators.required],
-      unit: ['', Validators.required],
-      quantity: [1, [Validators.required, Validators.min(1)]],
-      amount: [0, [Validators.required, Validators.min(0.01)]],
+      unit: ['und'],
+      quantity: [null, [Validators.required, Validators.min(1)]],
+      amount: [null, [Validators.required, Validators.min(0.01)]],
       unitPrice: [{ value: 0, disabled: true }],
       expirationDate: ['', this.dateValidator],
     });
@@ -207,16 +219,32 @@ export class EntryPageComponent implements OnInit {
   }
 
   onAmountInput(value: string, row: number, inputEl: HTMLInputElement): void {
-    const num = parseFloat(value);
     const g = this.products.at(row);
-    g.get('amount')?.setValue(isNaN(num) ? 0 : num);
+    const clean = (value ?? '').toString().trim().replace(',', '.');
+    if (clean === '') {
+      g.get('amount')?.setValue(null);
+    } else {
+      const num = parseFloat(clean);
+      g.get('amount')?.setValue(isNaN(num) ? null : num);
+    }
     this.cdr.detectChanges();
   }
 
   onQuantityInput(value: string, row: number, inputEl: HTMLInputElement): void {
-    const num = parseInt(value, 10);
     const g = this.products.at(row);
-    g.get('quantity')?.setValue(isNaN(num) || num < 1 ? 1 : num);
+    const clean = (value ?? '').toString().trim();
+    if (clean === '') {
+      g.get('quantity')?.setValue(null);
+    } else {
+      const num = parseInt(clean, 10);
+      g.get('quantity')?.setValue(isNaN(num) || num < 1 ? 1 : num);
+    }
+    this.cdr.detectChanges();
+  }
+
+  onUnitInput(value: string, row: number): void {
+    const g = this.products.at(row);
+    g.get('unit')?.setValue((value ?? '').toString().trim());
     this.cdr.detectChanges();
   }
 
@@ -246,6 +274,8 @@ export class EntryPageComponent implements OnInit {
   // ── Autocomplete productos en tabla (fixed dropdown) ───────────────────────
 
   onProdCodeSearch(term: string, row: number, inputEl: HTMLInputElement): void {
+    const g = this.products.at(row);
+    g.get('code')?.setValue(term);
     if (!term) { this.closeProdDropdown(); return; }
     const lower = term.toLowerCase();
     this.prodFilteredProducts = this.allProducts.filter(p => p.productCode?.toLowerCase().includes(lower)).slice(0, 8);
@@ -255,6 +285,8 @@ export class EntryPageComponent implements OnInit {
   }
 
   onProdDescSearch(term: string, row: number, inputEl: HTMLInputElement): void {
+    const g = this.products.at(row);
+    g.get('description')?.setValue(term);
     if (!term) { this.closeProdDropdown(); return; }
     const lower = term.toLowerCase();
     this.prodFilteredProducts = this.allProducts.filter(p => p.productName?.toLowerCase().includes(lower)).slice(0, 8);
@@ -367,9 +399,26 @@ export class EntryPageComponent implements OnInit {
     return !!(c?.invalid && (c.touched || c.dirty));
   }
 
+  private removeEmptyProductRows(): void {
+    // Eliminar de abajo hacia arriba para no alterar los índices
+    for (let i = this.products.length - 1; i >= 0; i--) {
+      const g = this.products.at(i);
+      const code = g.get('code')?.value?.toString().trim() ?? '';
+      const desc = g.get('description')?.value?.toString().trim() ?? '';
+      if (!code && !desc) {
+        this.products.removeAt(i);
+      }
+    }
+    // Garantizar al menos una fila editable
+    if (this.products.length === 0) {
+      this.addProduct();
+    }
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────
 
   onSubmit(): void {
+    this.removeEmptyProductRows();
     if (this.entryForm.invalid) {
       this.entryForm.markAllAsTouched();
       this.notificationService.showError('Completa los campos obligatorios');
@@ -419,6 +468,7 @@ export class EntryPageComponent implements OnInit {
   }
 
   private submitPurchase(raw: any): void {
+    const category = this.selectedType()?.category ?? 'mercancia';
     const payload: CreatePurchasePayload = {
       entity: raw.entity,
       warehouse: raw.warehouseId,
@@ -429,7 +479,8 @@ export class EntryPageComponent implements OnInit {
         product_name: p.description,
         quantity: parseFloat(p.quantity),
         unit_price: this.getUnitPrice(i),
-        unit: p.unit || null,
+        unit: (p.unit || '').trim() || 'und',
+        category,
         expiration_date: this.formatDate(p.expirationDate),
       })),
       debitAccountCode: this.selectedDebitAccount()?.code,

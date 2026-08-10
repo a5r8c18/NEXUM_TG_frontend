@@ -80,7 +80,7 @@ export interface MovementTypeOption {
   category: InventoryCategory;
 }
 
-export type ReportKind = 'reception' | 'delivery' | 'transfer';
+export type ReportKind = 'reception' | 'delivery' | 'transfer' | 'return';
 
 export interface ProductHistoryRow {
   id: string;

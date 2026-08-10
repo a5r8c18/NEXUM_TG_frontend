@@ -39,6 +39,7 @@ export interface CreatePurchaseProductPayload {
   quantity: number;
   unit_price: number;
   unit?: string | null;
+  category?: string | null;
   expiration_date?: string | null;
 }
 
