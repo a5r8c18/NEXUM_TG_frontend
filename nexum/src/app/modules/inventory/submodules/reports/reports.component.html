@@ -366,7 +366,7 @@
                 <td class="px-4 py-2 text-sm text-slate-700">{{ product.description }}</td>
                 <td class="px-4 py-2 text-sm text-slate-700">{{ product.unit }}</td>
                 <td class="px-4 py-2 text-sm text-slate-700 text-right">{{ product.quantity }}</td>
-                <td class="px-4 py-2 text-sm text-slate-700 text-right">${{ product.unitPrice | number:'1.2-2' }}</td>
+                <td class="px-4 py-2 text-sm text-slate-700 text-right">${{ product.unitPrice | number:'1.2-8' }}</td>
                 <td class="px-4 py-2 text-sm text-slate-700 text-right font-semibold">${{ product.amount | number:'1.2-2' }}</td>
                 @if (isReception(report) && hasExpirationDate(product)) {
                   <td class="px-4 py-2 text-sm text-slate-700">{{ product.expirationDate ?? '-' }}</td>
