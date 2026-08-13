@@ -149,7 +149,7 @@ export class SidebarComponent {
         { icon: 'UserCheck', label: 'Empleados', route: '/hr/employees' },
         { icon: 'Building', label: 'Departamentos', route: '/hr/departments' },
         { icon: 'FileText', label: 'Contratos', route: '/hr/contracts' },
-        { icon: 'Clock', label: 'Asistencia', route: '/hr/attendance' },
+        { icon: 'Clock', label: 'Asistencia', route: '/hr/attendance', isComingSoon: true },
         { icon: 'Calendar', label: 'Vacaciones / Licencias', route: '/hr/leaves' },
         { icon: 'Wallet', label: 'Nómina', route: '/hr/payroll' }
       ]
