@@ -13,6 +13,9 @@ export interface Employee {
   position: string | null;
   departmentId: string | null;
   departmentName: string | null;
+  costCenterId: string | null;
+  costCenterName?: string | null;
+  expenseAccountCode?: string | null;
   hireDate: string | null;
   salary: number;
   contractType: 'full_time' | 'part_time' | 'contractor' | 'intern';

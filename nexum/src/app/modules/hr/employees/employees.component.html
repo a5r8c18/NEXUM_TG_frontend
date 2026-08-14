@@ -258,6 +258,21 @@
           </select>
         </div>
         <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Centro de Costo</label>
+          <select [(ngModel)]="form.costCenterId"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+            <option [ngValue]="null">Heredar del departamento</option>
+            @for (cc of costCenters(); track cc.id) {
+              <option [ngValue]="cc.id">{{ cc.code }} - {{ cc.name }}</option>
+            }
+          </select>
+          @if (selectedCostCenter()?.expenseAccountCode) {
+            <p class="text-xs text-slate-500 font-mono">Cuenta de gasto: {{ selectedCostCenter()?.expenseAccountCode }}</p>
+          } @else if (selectedCostCenter()) {
+            <p class="text-xs text-amber-600">Este centro no tiene cuenta de gasto asignada.</p>
+          }
+        </div>
+        <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Fecha de ingreso</label>
           <input type="date" [(ngModel)]="form.hireDate"
                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>

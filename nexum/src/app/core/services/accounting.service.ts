@@ -128,6 +128,7 @@ export interface CostCenter {
   type: 'production' | 'administrative' | 'sales' | 'maintenance' | 'research' | 'marketing' | 'general';
   manager: string | null;
   budget: number;
+  expenseAccountCode: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

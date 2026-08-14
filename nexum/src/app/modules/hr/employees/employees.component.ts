@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { HrService, Employee, Department } from '../../../core/services/hr.service';
+import { AccountingService, CostCenter } from '../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../../core/offline/offline-first.service';
 
@@ -15,6 +16,7 @@ import { OfflineFirstService } from '../../../core/offline/offline-first.service
 })
 export class EmployeesComponent implements OnInit {
   private hrService = inject(HrService);
+  private accountingService = inject(AccountingService);
   private confirmDialog = inject(ConfirmDialogService);
   private offlineFirst = inject(OfflineFirstService);
 
@@ -32,8 +34,15 @@ export class EmployeesComponent implements OnInit {
   isSaving = signal(false);
   editingId = signal<string | null>(null);
   departments = signal<Department[]>([]);
+  costCenters = signal<CostCenter[]>([]);
 
   form: Partial<Employee> = this.emptyForm();
+
+  selectedCostCenter = computed(() => {
+    const id = this.form.costCenterId;
+    if (!id) return null;
+    return this.costCenters().find(cc => cc.id === id) || null;
+  });
 
   private emptyForm(): Partial<Employee> {
     return {
@@ -44,6 +53,7 @@ export class EmployeesComponent implements OnInit {
       phone: null,
       position: null,
       departmentId: null,
+      costCenterId: null,
       hireDate: null,
       salary: 0,
       contractType: 'full_time',
@@ -89,12 +99,20 @@ export class EmployeesComponent implements OnInit {
   ngOnInit() {
     this.loadEmployees();
     this.loadDepartments();
+    this.loadCostCenters();
   }
 
   loadDepartments() {
     this.hrService.getDepartments().subscribe({
       next: (data) => this.departments.set(data),
       error: () => { /* departamentos opcionales */ }
+    });
+  }
+
+  loadCostCenters() {
+    this.accountingService.getCostCenters().subscribe({
+      next: (data) => this.costCenters.set(data),
+      error: () => { /* centros de costo opcionales */ }
     });
   }
 
@@ -126,6 +144,7 @@ export class EmployeesComponent implements OnInit {
       phone: emp.phone,
       position: emp.position,
       departmentId: emp.departmentId,
+      costCenterId: emp.costCenterId,
       hireDate: emp.hireDate,
       salary: emp.salary,
       contractType: emp.contractType,

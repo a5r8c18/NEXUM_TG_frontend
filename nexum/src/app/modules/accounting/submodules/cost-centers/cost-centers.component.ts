@@ -87,6 +87,7 @@ export class CostCentersComponent implements OnInit {
       code: ['', [Validators.required, Validators.pattern(/^[A-Z0-9\-]{2,15}$/)]],
       name: ['', [Validators.required, Validators.minLength(2)]],
       manager: [''],
+      expenseAccountCode: [''],
       isActive: [true],
     });
 
@@ -133,6 +134,7 @@ export class CostCentersComponent implements OnInit {
       type: 'production',
       manager: '',
       budget: 0,
+      expenseAccountCode: '',
       isActive: true,
     });
     this.showCreateModal.set(true);
@@ -147,6 +149,7 @@ export class CostCentersComponent implements OnInit {
       type: costCenter.type,
       manager: costCenter.manager || '',
       budget: costCenter.budget || 0,
+      expenseAccountCode: costCenter.expenseAccountCode || '',
       isActive: costCenter.isActive,
     });
     this.showEditModal.set(true);
