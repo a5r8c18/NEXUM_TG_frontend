@@ -218,12 +218,33 @@
             }
           </div>
 
-          <div class="space-y-1">
+          <div class="space-y-1 relative">
             <label class="text-xs font-medium text-slate-600">Cuenta de gasto</label>
-            <input type="text" [formControl]="$any(costCenterForm.get('expenseAccountCode'))"
-                   placeholder="Ej: 700-0020, 731, 822"
+            <input type="text" [value]="accountSearch()"
+                   (input)="onAccountSearch($event)"
+                   (focus)="showAccountDropdown.set(true)"
+                   (blur)="showAccountDropdown.set(false)"
+                   placeholder="Escriba para buscar cuentas de gastos..."
                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"/>
-            <p class="text-xs text-slate-500">Código PUC que se usará por defecto en la nómina.</p>
+            <input type="hidden" [formControl]="$any(costCenterForm.get('expenseAccountCode'))"/>
+            @if (showAccountDropdown() && filteredAccounts().length > 0) {
+              <div class="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                @for (acc of filteredAccounts(); track acc.id) {
+                  <button type="button" (mousedown)="selectExpenseAccount(acc)"
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                    <span class="font-mono font-medium">{{ acc.code }}</span>
+                    <span class="text-slate-500 ml-2">{{ acc.name }}</span>
+                  </button>
+                }
+              </div>
+            }
+            @if (selectedExpenseAccount()) {
+              <p class="text-xs text-slate-500">{{ selectedExpenseAccount()?.code }} — {{ selectedExpenseAccount()?.name }}</p>
+            } @else if (costCenterForm.get('expenseAccountCode')?.value) {
+              <p class="text-xs text-amber-600">Cuenta no encontrada en el nomenclador.</p>
+            } @else {
+              <p class="text-xs text-slate-500">Código PUC que se usará por defecto en la nómina.</p>
+            }
           </div>
 
           <div class="flex justify-end gap-3 p-5 border-t border-slate-200">
@@ -271,12 +292,33 @@
             }
           </div>
 
-          <div class="space-y-1">
+          <div class="space-y-1 relative">
             <label class="text-xs font-medium text-slate-600">Cuenta de gasto</label>
-            <input type="text" [formControl]="$any(costCenterForm.get('expenseAccountCode'))"
-                   placeholder="Ej: 700-0020, 731, 822"
+            <input type="text" [value]="accountSearch()"
+                   (input)="onAccountSearch($event)"
+                   (focus)="showAccountDropdown.set(true)"
+                   (blur)="showAccountDropdown.set(false)"
+                   placeholder="Escriba para buscar cuentas de gastos..."
                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"/>
-            <p class="text-xs text-slate-500">Código PUC que se usará por defecto en la nómina.</p>
+            <input type="hidden" [formControl]="$any(costCenterForm.get('expenseAccountCode'))"/>
+            @if (showAccountDropdown() && filteredAccounts().length > 0) {
+              <div class="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                @for (acc of filteredAccounts(); track acc.id) {
+                  <button type="button" (mousedown)="selectExpenseAccount(acc)"
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                    <span class="font-mono font-medium">{{ acc.code }}</span>
+                    <span class="text-slate-500 ml-2">{{ acc.name }}</span>
+                  </button>
+                }
+              </div>
+            }
+            @if (selectedExpenseAccount()) {
+              <p class="text-xs text-slate-500">{{ selectedExpenseAccount()?.code }} — {{ selectedExpenseAccount()?.name }}</p>
+            } @else if (costCenterForm.get('expenseAccountCode')?.value) {
+              <p class="text-xs text-amber-600">Cuenta no encontrada en el nomenclador.</p>
+            } @else {
+              <p class="text-xs text-slate-500">Código PUC que se usará por defecto en la nómina.</p>
+            }
           </div>
 
           <div class="flex justify-end gap-3 p-5 border-t border-slate-200">

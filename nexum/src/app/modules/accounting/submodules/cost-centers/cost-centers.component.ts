@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { Subject } from 'rxjs';
-import { AccountingService, CostCenter, CostCenterFilters, CostCenterStatistics } from '../../../../core/services/accounting.service';
+import { AccountingService, CostCenter, CostCenterFilters, CostCenterStatistics, Account } from '../../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
@@ -19,9 +19,31 @@ export class CostCentersComponent implements OnInit {
   private confirmDialog = inject(ConfirmDialogService);
 
   costCenters = signal<CostCenter[]>([]);
-    isLoading = signal(false);
+  isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Expense account autocomplete
+  expenseAccounts = signal<Account[]>([]);
+  accountSearch = signal('');
+  showAccountDropdown = signal(false);
+
+  filteredAccounts = computed(() => {
+    const term = this.accountSearch().toLowerCase();
+    if (!term) return this.expenseAccounts().slice(0, 8);
+    return this.expenseAccounts()
+      .filter(a =>
+        a.code.toLowerCase().includes(term) ||
+        a.name.toLowerCase().includes(term)
+      )
+      .slice(0, 8);
+  });
+
+  selectedExpenseAccount = computed(() => {
+    const code = this.costCenterForm.get('expenseAccountCode')?.value as string;
+    if (!code) return null;
+    return this.expenseAccounts().find(a => a.code === code) || null;
+  });
 
   // Filters
   searchTerm = signal('');
@@ -97,6 +119,17 @@ export class CostCentersComponent implements OnInit {
 
   ngOnInit() {
     this.loadCostCenters();
+    this.loadExpenseAccounts();
+  }
+
+  loadExpenseAccounts() {
+    this.accountingService.getAccounts({
+      type: 'expense',
+      activeOnly: 'true',
+    }).subscribe({
+      next: (data) => this.expenseAccounts.set(data),
+      error: () => this.expenseAccounts.set([]),
+    });
   }
 
   private setupDebouncedSearch() {
@@ -137,6 +170,8 @@ export class CostCentersComponent implements OnInit {
       expenseAccountCode: '',
       isActive: true,
     });
+    this.accountSearch.set('');
+    this.showAccountDropdown.set(false);
     this.showCreateModal.set(true);
   }
 
@@ -152,7 +187,30 @@ export class CostCentersComponent implements OnInit {
       expenseAccountCode: costCenter.expenseAccountCode || '',
       isActive: costCenter.isActive,
     });
+    this.accountSearch.set(costCenter.expenseAccountCode || '');
+    this.showAccountDropdown.set(false);
     this.showEditModal.set(true);
+  }
+
+  onAccountSearch(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.accountSearch.set(value);
+    this.showAccountDropdown.set(true);
+    if (this.selectedExpenseAccount()?.code !== value) {
+      this.costCenterForm.patchValue({ expenseAccountCode: value }, { emitEvent: false });
+    }
+  }
+
+  selectExpenseAccount(account: Account) {
+    this.costCenterForm.patchValue({ expenseAccountCode: account.code }, { emitEvent: false });
+    this.accountSearch.set(`${account.code} - ${account.name}`);
+    this.showAccountDropdown.set(false);
+  }
+
+  clearExpenseAccount() {
+    this.costCenterForm.patchValue({ expenseAccountCode: '' }, { emitEvent: false });
+    this.accountSearch.set('');
+    this.showAccountDropdown.set(false);
   }
 
   closeModals() {

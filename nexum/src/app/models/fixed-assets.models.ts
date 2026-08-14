@@ -9,6 +9,14 @@ export interface DepreciationGroup {
   subgroups: DepreciationSubgroup[];
 }
 
+export interface FixedAssetArea {
+  id: number;
+  companyId: number;
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
 export interface FixedAsset {
   id: string;
   assetCode: string;
@@ -20,8 +28,12 @@ export interface FixedAsset {
   acquisitionValue: number;
   acquisitionDate: string;
   location?: string;
+  areaId?: number;
+  area?: FixedAssetArea;
   responsiblePerson?: string;
   employeeId?: string;
+  costCenterId?: string;
+  costCenter?: { id: string; name: string; expenseAccountCode?: string };
   depreciationRate: number;
   currentValue: number;
   status: 'active' | 'disposed' | 'transferred';
@@ -40,16 +52,20 @@ export interface CreateFixedAssetDto {
   acquisitionValue: number;
   acquisitionDate: string;
   location?: string;
-  responsiblePerson?: string;
+  areaId?: number;
   employeeId?: string;
+  costCenterId?: string;
+  responsiblePerson?: string;
 }
 
 export interface UpdateFixedAssetDto {
   name?: string;
   description?: string;
   location?: string;
-  responsiblePerson?: string;
+  areaId?: number;
   employeeId?: string;
+  costCenterId?: string;
+  responsiblePerson?: string;
   status?: 'active' | 'disposed' | 'transferred';
 }
 

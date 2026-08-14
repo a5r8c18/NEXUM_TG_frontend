@@ -5,12 +5,14 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { 
   FixedAssetsService, 
   FixedAsset, 
+  FixedAssetArea,
   CreateFixedAssetDto, 
   UpdateFixedAssetDto, 
   DepreciationGroup,
   DisposeAssetDto
 } from '../../core/services/fixed-assets.service';
 import { HrService, Employee } from '../../core/services/hr.service';
+import { AccountingService, CostCenter } from '../../core/services/accounting.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../core/offline/offline-first.service';
@@ -26,6 +28,7 @@ import { signal, computed } from '@angular/core';
 export class FixedAssetsComponent implements OnInit, OnDestroy {
   private fixedAssetsService = inject(FixedAssetsService);
   private hrService = inject(HrService);
+  private accountingService = inject(AccountingService);
   private notificationService = inject(NotificationService);
   private fb = inject(FormBuilder);
   private confirmDialog = inject(ConfirmDialogService);
@@ -35,11 +38,17 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   // Signals
   assets = signal<FixedAsset[]>([]);
   employees = signal<Employee[]>([]);
+  areas = signal<FixedAssetArea[]>([]);
+  costCenters = signal<CostCenter[]>([]);
   catalog = signal<DepreciationGroup[]>([]);
   isLoading = signal(false);
   showForm = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  showAreaModal = signal(false);
+  editingArea: FixedAssetArea | null = null;
+  areaForm!: FormGroup;
 
   // Form
   form!: FormGroup;
@@ -54,6 +63,20 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   selectedGroup = computed(() => {
     const groupNumber = this.form?.get('groupNumber')?.value;
     return this.catalog().find(g => g.group_number === groupNumber) ?? null;
+  });
+
+  selectedCostCenter = computed(() => {
+    const costCenterId = this.form?.get('costCenterId')?.value;
+    return this.costCenters().find(cc => cc.id === costCenterId) ?? null;
+  });
+
+  expenseAccountCode = computed(() => {
+    return this.selectedCostCenter()?.expenseAccountCode ?? '';
+  });
+
+  selectedArea = computed(() => {
+    const areaId = this.form?.get('areaId')?.value;
+    return this.areas().find(a => a.id === areaId) ?? null;
   });
 
   totalAcquisitionValue = computed(() => 
@@ -72,6 +95,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     this.buildForm();
     this.loadAll();
     this.loadEmployees();
+    this.loadAreas();
+    this.loadCostCenters();
   }
 
   ngOnDestroy() {
@@ -89,16 +114,31 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       acquisitionValue: [null, [Validators.required, Validators.min(0.01)]],
       acquisitionDate: ['', Validators.required],
       location: [''],
+      areaId: [null],
       employeeId: [''],
+      costCenterId: [''],
       responsiblePerson: [''],
     });
 
+    this.buildAreaForm();
     this.buildDisposeForm();
     this.buildDepreciationForm();
 
     this.form.get('groupNumber')?.valueChanges.subscribe(() => {
       this.form.patchValue({ subgroup: '' });
       this.updateFormControlsState();
+    });
+
+    this.form.get('costCenterId')?.valueChanges.subscribe(() => {
+      this.form.patchValue({ responsiblePerson: this.expenseAccountCode() }, { emitEvent: false });
+    });
+  }
+
+  buildAreaForm() {
+    this.areaForm = this.fb.group({
+      name: ['', Validators.required],
+      description: [''],
+      isActive: [true],
     });
   }
 
@@ -177,6 +217,24 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     }
   }
 
+  loadAreas() {
+    if (this.networkStatus.isOnline()) {
+      this.fixedAssetsService.getAreas()
+        .toPromise()
+        .then(areas => this.areas.set(areas || []))
+        .catch(() => this.areas.set([]));
+    }
+  }
+
+  loadCostCenters() {
+    if (this.networkStatus.isOnline()) {
+      this.accountingService.getCostCenters()
+        .toPromise()
+        .then(centers => this.costCenters.set(centers || []))
+        .catch(() => this.costCenters.set([]));
+    }
+  }
+
   openCreate() {
     this.editingAsset = null;
     this.form.reset();
@@ -196,7 +254,9 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       acquisitionValue: asset.acquisitionValue,
       acquisitionDate: asset.acquisitionDate.substring(0, 10),
       location: asset.location ?? '',
+      areaId: asset.areaId ?? null,
       employeeId: asset.employeeId ?? '',
+      costCenterId: asset.costCenterId ?? '',
       responsiblePerson: asset.responsiblePerson ?? '',
     });
     this.updateFormControlsState();
@@ -229,7 +289,9 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           acquisitionValue: +this.form.value.acquisitionValue,
           acquisitionDate: this.form.value.acquisitionDate,
           location: this.form.value.location || undefined,
+          areaId: this.form.value.areaId ? +this.form.value.areaId : undefined,
           employeeId: this.form.value.employeeId || undefined,
+          costCenterId: this.form.value.costCenterId || undefined,
           responsiblePerson: this.form.value.responsiblePerson || undefined,
         };
         await this.fixedAssetsService.createFixedAsset(dto).toPromise();
@@ -399,6 +461,69 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       'fully_depreciated': 'bg-amber-100 text-amber-800',
     };
     return classes[status] || 'bg-slate-100 text-slate-800';
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ── ÁREAS ──
+  // ══════════════════════════════════════════════════════════
+
+  openAreaModal(area?: FixedAssetArea) {
+    this.editingArea = area || null;
+    if (area) {
+      this.areaForm.patchValue({
+        name: area.name,
+        description: area.description || '',
+        isActive: area.isActive,
+      });
+    } else {
+      this.areaForm.reset({ name: '', description: '', isActive: true });
+    }
+    this.showAreaModal.set(true);
+  }
+
+  closeAreaModal() {
+    this.showAreaModal.set(false);
+    this.editingArea = null;
+  }
+
+  async onAreaSubmit() {
+    if (this.areaForm.invalid) return;
+
+    this.isLoading.set(true);
+    try {
+      const data = this.areaForm.value;
+      if (this.editingArea) {
+        await this.fixedAssetsService.updateArea(this.editingArea.id, data).toPromise();
+        this.showToast('Área actualizada correctamente', 'success');
+      } else {
+        await this.fixedAssetsService.createArea(data).toPromise();
+        this.showToast('Área creada correctamente', 'success');
+      }
+      await this.loadAreas();
+      this.closeAreaModal();
+    } catch (error) {
+      this.showToast('Error al guardar el área', 'error');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async deleteArea(area: FixedAssetArea) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar área',
+      message: `¿Eliminar el área "${area.name}"?`,
+      confirmText: 'Eliminar',
+      type: 'danger'
+    });
+    if (!confirmed) return;
+
+    try {
+      await this.fixedAssetsService.deleteArea(area.id).toPromise();
+      this.showToast('Área eliminada correctamente', 'success');
+      await this.loadAreas();
+    } catch (error) {
+      this.showToast('Error al eliminar el área', 'error');
+    }
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info'): void {

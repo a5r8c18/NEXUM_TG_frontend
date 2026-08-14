@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { 
   FixedAsset, 
+  FixedAssetArea,
   CreateFixedAssetDto, 
   UpdateFixedAssetDto, 
   DepreciationGroup,
@@ -64,6 +65,22 @@ export class FixedAssetsService {
       .pipe(map(response => response.catalog || []));
   }
 
+  getAreas(): Observable<FixedAssetArea[]> {
+    return this.http.get<FixedAssetArea[]>(`${this.apiUrl}/areas`);
+  }
+
+  createArea(data: Partial<FixedAssetArea>): Observable<FixedAssetArea> {
+    return this.http.post<FixedAssetArea>(`${this.apiUrl}/areas`, data);
+  }
+
+  updateArea(id: number, data: Partial<FixedAssetArea>): Observable<FixedAssetArea> {
+    return this.http.put<FixedAssetArea>(`${this.apiUrl}/areas/${id}`, data);
+  }
+
+  deleteArea(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/areas/${id}`);
+  }
+
   exportToExcel(): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/export/excel`, { responseType: 'blob' });
   }
@@ -77,4 +94,4 @@ export class FixedAssetsService {
   }
 }
 
-export type { FixedAsset, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters, DisposeAssetDto };
+export type { FixedAsset, FixedAssetArea, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters, DisposeAssetDto };

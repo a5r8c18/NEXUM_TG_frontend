@@ -28,6 +28,13 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
+      <button (click)="openAreaModal()"
+              class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+        Áreas
+      </button>
       <button (click)="openDepreciationModal()"
               class="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-xl hover:bg-amber-700 transition-colors shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,31 +287,106 @@
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Ubicación</label>
-        <input formControlName="location"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Almacén, oficina, etc.">
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Empleado responsable</label>
-        <select formControlName="employeeId"
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Área</label>
+        <select formControlName="areaId"
                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">Seleccionar empleado...</option>
-          @for (emp of employees(); track emp.id) {
-            <option [value]="emp.id">{{ emp.firstName }} {{ emp.lastName }}</option>
+          <option value="">Seleccionar área...</option>
+          @for (area of areas(); track area.id) {
+            <option [value]="area.id">{{ area.name }}</option>
           }
         </select>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Responsable (manual)</label>
-        <input formControlName="responsiblePerson"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nombre del responsable">
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Centro de costo</label>
+        <select formControlName="costCenterId"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Seleccionar centro de costo...</option>
+          @for (cc of costCenters(); track cc.id) {
+            <option [value]="cc.id">{{ cc.code }} — {{ cc.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta de gasto</label>
+        <input formControlName="responsiblePerson" [readOnly]="true"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Se autocompleta según el centro de costo">
       </div>
     </div>
   </form>
+</app-modal>
+
+<!-- Modal Áreas -->
+<app-modal
+  [isOpen]="showAreaModal()"
+  title="Áreas"
+  iconEmoji="🗂️"
+  iconBgClass="bg-emerald-50"
+  (closeEvent)="closeAreaModal()">
+  <div class="space-y-4 max-h-[70vh] overflow-y-auto">
+    <div class="flex justify-end">
+      <button (click)="openAreaModal()"
+              class="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors">
+        + Nueva área
+      </button>
+    </div>
+    @if (areas().length === 0) {
+      <p class="text-sm text-slate-500 text-center py-6">No hay áreas registradas.</p>
+    } @else {
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left px-3 py-2 font-semibold text-slate-600">Nombre</th>
+            <th class="text-left px-3 py-2 font-semibold text-slate-600">Descripción</th>
+            <th class="text-center px-3 py-2 font-semibold text-slate-600">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (area of areas(); track area.id) {
+            <tr>
+              <td class="px-3 py-2">{{ area.name }}</td>
+              <td class="px-3 py-2 text-slate-500">{{ area.description }}</td>
+              <td class="px-3 py-2 text-center">
+                <button (click)="openAreaModal(area)" class="text-blue-600 hover:underline mr-2">Editar</button>
+                <button (click)="deleteArea(area)" class="text-red-600 hover:underline">Eliminar</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    @if (editingArea || !showAreaModal() === false) {
+      <form [formGroup]="areaForm" class="border-t border-slate-200 pt-4 space-y-3">
+        <h4 class="text-sm font-semibold text-slate-700">{{ editingArea ? 'Editar área' : 'Nueva área' }}</h4>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Nombre *</label>
+          <input formControlName="name"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                 placeholder="Nombre del área">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Descripción</label>
+          <textarea formControlName="description" rows="2"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="Detalles..."></textarea>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button (click)="editingArea = null; areaForm.reset({ isActive: true })"
+                  class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button (click)="onAreaSubmit()"
+                  [disabled]="areaForm.invalid"
+                  class="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">
+            Guardar
+          </button>
+        </div>
+      </form>
+    }
+  </div>
 </app-modal>
 
 <!-- Modal Procesar Depreciación -->
