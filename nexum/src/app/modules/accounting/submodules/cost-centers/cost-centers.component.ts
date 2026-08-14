@@ -27,6 +27,7 @@ export class CostCentersComponent implements OnInit {
   expenseAccounts = signal<Account[]>([]);
   accountSearch = signal('');
   showAccountDropdown = signal(false);
+  expenseAccountCode = signal('');
 
   filteredAccounts = computed(() => {
     const term = this.accountSearch().toLowerCase();
@@ -40,7 +41,7 @@ export class CostCentersComponent implements OnInit {
   });
 
   selectedExpenseAccount = computed(() => {
-    const code = this.costCenterForm.get('expenseAccountCode')?.value as string;
+    const code = this.expenseAccountCode();
     if (!code) return null;
     return this.expenseAccounts().find(a => a.code === code) || null;
   });
@@ -171,6 +172,7 @@ export class CostCentersComponent implements OnInit {
       isActive: true,
     });
     this.accountSearch.set('');
+    this.expenseAccountCode.set('');
     this.showAccountDropdown.set(false);
     this.showCreateModal.set(true);
   }
@@ -187,7 +189,8 @@ export class CostCentersComponent implements OnInit {
       expenseAccountCode: costCenter.expenseAccountCode || '',
       isActive: costCenter.isActive,
     });
-    this.accountSearch.set(costCenter.expenseAccountCode || '');
+    this.accountSearch.set(costCenter.expenseAccountCode ? `${costCenter.expenseAccountCode}` : '');
+    this.expenseAccountCode.set(costCenter.expenseAccountCode || '');
     this.showAccountDropdown.set(false);
     this.showEditModal.set(true);
   }
@@ -196,20 +199,23 @@ export class CostCentersComponent implements OnInit {
     const value = (event.target as HTMLInputElement).value;
     this.accountSearch.set(value);
     this.showAccountDropdown.set(true);
-    if (this.selectedExpenseAccount()?.code !== value) {
-      this.costCenterForm.patchValue({ expenseAccountCode: value }, { emitEvent: false });
-    }
+    const match = this.expenseAccounts().find(a => `${a.code} - ${a.name}` === value || a.code === value);
+    const code = match ? match.code : value;
+    this.costCenterForm.patchValue({ expenseAccountCode: code }, { emitEvent: false });
+    this.expenseAccountCode.set(code);
   }
 
   selectExpenseAccount(account: Account) {
     this.costCenterForm.patchValue({ expenseAccountCode: account.code }, { emitEvent: false });
     this.accountSearch.set(`${account.code} - ${account.name}`);
+    this.expenseAccountCode.set(account.code);
     this.showAccountDropdown.set(false);
   }
 
   clearExpenseAccount() {
     this.costCenterForm.patchValue({ expenseAccountCode: '' }, { emitEvent: false });
     this.accountSearch.set('');
+    this.expenseAccountCode.set('');
     this.showAccountDropdown.set(false);
   }
 

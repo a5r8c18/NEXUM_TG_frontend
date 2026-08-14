@@ -172,7 +172,17 @@ export class SidebarComponent {
         { icon: 'AlertTriangle', label: 'Límites de Stock', route: '/inventory/stock-limits' }
       ]
     },
-    { icon: 'Building', label: 'Activos Fijos', route: '/billing/fixed-assets' },
+    { 
+      icon: 'Building', 
+      label: 'Activos Fijos', 
+      route: '/billing/fixed-assets',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: [
+        { icon: 'Package', label: 'Activos', route: '/billing/fixed-assets' },
+        { icon: 'MapPin', label: 'Áreas', route: '/billing/fixed-assets/areas' },
+      ]
+    },
     { 
       icon: 'Receipt', 
       label: 'Facturacion', 

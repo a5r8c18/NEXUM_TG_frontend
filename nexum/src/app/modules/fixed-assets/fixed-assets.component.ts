@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { 
   FixedAssetsService, 
@@ -34,6 +35,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   private confirmDialog = inject(ConfirmDialogService);
   private offlineFirst = inject(OfflineFirstService);
   private networkStatus = inject(NetworkStatusService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   // Signals
   assets = signal<FixedAsset[]>([]);
@@ -46,6 +49,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  view = signal<'assets' | 'areas'>('assets');
   showAreaModal = signal(false);
   editingArea: FixedAssetArea | null = null;
   areaForm!: FormGroup;
@@ -92,11 +96,16 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   );
 
   ngOnInit() {
+    const tab = this.route.snapshot.data?.['tab'] as 'assets' | 'areas';
+    this.view.set(tab || 'assets');
     this.buildForm();
     this.loadAll();
     this.loadEmployees();
     this.loadAreas();
     this.loadCostCenters();
+    if (this.view() === 'areas') {
+      this.showAreaModal.set(true);
+    }
   }
 
   ngOnDestroy() {
@@ -129,8 +138,9 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       this.updateFormControlsState();
     });
 
-    this.form.get('costCenterId')?.valueChanges.subscribe(() => {
-      this.form.patchValue({ responsiblePerson: this.expenseAccountCode() }, { emitEvent: false });
+    this.form.get('costCenterId')?.valueChanges.subscribe((value) => {
+      const cc = this.costCenters().find(c => c.id === value);
+      this.form.patchValue({ responsiblePerson: cc?.expenseAccountCode || '' }, { emitEvent: false });
     });
   }
 
