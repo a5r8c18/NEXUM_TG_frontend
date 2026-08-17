@@ -19,7 +19,8 @@ import {
   AddImprovementDto,
   TransferAssetDto
 } from '../../core/services/fixed-assets.service';
-import { CompanyService, Company } from '../../core/services/company.service';
+import { CompanyService } from '../../core/services/company.service';
+import { Company } from '../../models/company.models';
 import { HrService, Employee } from '../../core/services/hr.service';
 import { AccountingService, CostCenter } from '../../core/services/accounting.service';
 import { NotificationService } from '../../core/services/notification.service';
