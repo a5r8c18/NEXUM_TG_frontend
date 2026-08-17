@@ -51,8 +51,13 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   view = signal<'assets' | 'areas'>('assets');
   showAreaModal = signal(false);
+  showAreaForm = signal(false);
   editingArea: FixedAssetArea | null = null;
   areaForm!: FormGroup;
+
+  private groupNumberValue = signal<number | null>(null);
+  private costCenterIdValue = signal<string>('');
+  private areaIdValue = signal<number | null>(null);
 
   // Form
   form!: FormGroup;
@@ -65,12 +70,14 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   // Computed
   selectedGroup = computed(() => {
-    const groupNumber = this.form?.get('groupNumber')?.value;
-    return this.catalog().find(g => g.group_number === groupNumber) ?? null;
+    const groupNumber = this.groupNumberValue();
+    if (groupNumber === null) return null;
+    return this.catalog().find(g => Number(g.group_number) === groupNumber) ?? null;
   });
 
   selectedCostCenter = computed(() => {
-    const costCenterId = this.form?.get('costCenterId')?.value;
+    const costCenterId = this.costCenterIdValue();
+    if (!costCenterId) return null;
     return this.costCenters().find(cc => cc.id === costCenterId) ?? null;
   });
 
@@ -79,8 +86,9 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   });
 
   selectedArea = computed(() => {
-    const areaId = this.form?.get('areaId')?.value;
-    return this.areas().find(a => a.id === areaId) ?? null;
+    const areaId = this.areaIdValue();
+    if (areaId === null) return null;
+    return this.areas().find(a => Number(a.id) === areaId) ?? null;
   });
 
   totalAcquisitionValue = computed(() => 
@@ -133,12 +141,18 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     this.buildDisposeForm();
     this.buildDepreciationForm();
 
-    this.form.get('groupNumber')?.valueChanges.subscribe(() => {
-      this.form.patchValue({ subgroup: '' });
+    this.form.get('groupNumber')?.valueChanges.subscribe((value) => {
+      this.groupNumberValue.set(value === null || value === '' ? null : Number(value));
+      this.form.patchValue({ subgroup: '' }, { emitEvent: false });
       this.updateFormControlsState();
     });
 
+    this.form.get('areaId')?.valueChanges.subscribe((value) => {
+      this.areaIdValue.set(value === null || value === '' ? null : Number(value));
+    });
+
     this.form.get('costCenterId')?.valueChanges.subscribe((value) => {
+      this.costCenterIdValue.set(value || '');
       const cc = this.costCenters().find(c => c.id === value);
       this.form.patchValue({ responsiblePerson: cc?.expenseAccountCode || '' }, { emitEvent: false });
     });
@@ -477,7 +491,16 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   // ── ÁREAS ──
   // ══════════════════════════════════════════════════════════
 
-  openAreaModal(area?: FixedAssetArea) {
+  openAreaModal() {
+    this.showAreaModal.set(true);
+  }
+
+  closeAreaModal() {
+    this.showAreaModal.set(false);
+    this.closeAreaForm();
+  }
+
+  openAreaForm(area?: FixedAssetArea) {
     this.editingArea = area || null;
     if (area) {
       this.areaForm.patchValue({
@@ -488,11 +511,11 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     } else {
       this.areaForm.reset({ name: '', description: '', isActive: true });
     }
-    this.showAreaModal.set(true);
+    this.showAreaForm.set(true);
   }
 
-  closeAreaModal() {
-    this.showAreaModal.set(false);
+  closeAreaForm() {
+    this.showAreaForm.set(false);
     this.editingArea = null;
   }
 
@@ -510,7 +533,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         this.showToast('Área creada correctamente', 'success');
       }
       await this.loadAreas();
-      this.closeAreaModal();
+      this.closeAreaForm();
     } catch (error) {
       this.showToast('Error al guardar el área', 'error');
     } finally {

@@ -317,14 +317,12 @@
   title="Áreas"
   iconEmoji="🗂️"
   iconBgClass="bg-emerald-50"
-  (closeEvent)="closeAreaModal()">
+  confirmText="Nueva área"
+  confirmButtonClass="bg-emerald-600 hover:bg-emerald-700"
+  maxWidthClass="max-w-2xl"
+  (closeEvent)="closeAreaModal()"
+  (confirmEvent)="openAreaForm()">
   <div class="space-y-4 max-h-[70vh] overflow-y-auto">
-    <div class="flex justify-end">
-      <button (click)="openAreaModal()"
-              class="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors">
-        + Nueva área
-      </button>
-    </div>
     @if (areas().length === 0) {
       <p class="text-sm text-slate-500 text-center py-6">No hay áreas registradas.</p>
     } @else {
@@ -342,7 +340,7 @@
               <td class="px-3 py-2">{{ area.name }}</td>
               <td class="px-3 py-2 text-slate-500">{{ area.description }}</td>
               <td class="px-3 py-2 text-center">
-                <button (click)="openAreaModal(area)" class="text-blue-600 hover:underline mr-2">Editar</button>
+                <button (click)="openAreaForm(area)" class="text-blue-600 hover:underline mr-2">Editar</button>
                 <button (click)="deleteArea(area)" class="text-red-600 hover:underline">Eliminar</button>
               </td>
             </tr>
@@ -350,36 +348,33 @@
         </tbody>
       </table>
     }
-
-    @if (editingArea || !showAreaModal() === false) {
-      <form [formGroup]="areaForm" class="border-t border-slate-200 pt-4 space-y-3">
-        <h4 class="text-sm font-semibold text-slate-700">{{ editingArea ? 'Editar área' : 'Nueva área' }}</h4>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Nombre *</label>
-          <input formControlName="name"
-                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                 placeholder="Nombre del área">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Descripción</label>
-          <textarea formControlName="description" rows="2"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Detalles..."></textarea>
-        </div>
-        <div class="flex justify-end gap-2">
-          <button (click)="editingArea = null; areaForm.reset({ isActive: true })"
-                  class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-            Cancelar
-          </button>
-          <button (click)="onAreaSubmit()"
-                  [disabled]="areaForm.invalid"
-                  class="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">
-            Guardar
-          </button>
-        </div>
-      </form>
-    }
   </div>
+</app-modal>
+
+<!-- Modal Formulario de Área -->
+<app-modal
+  [isOpen]="showAreaForm()"
+  [title]="editingArea ? 'Editar área' : 'Nueva área'"
+  iconEmoji="🗂️"
+  iconBgClass="bg-emerald-50"
+  confirmText="Guardar"
+  confirmButtonClass="bg-emerald-600 hover:bg-emerald-700"
+  (closeEvent)="closeAreaForm()"
+  (confirmEvent)="onAreaSubmit()">
+  <form [formGroup]="areaForm" class="space-y-3">
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Nombre *</label>
+      <input formControlName="name"
+             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+             placeholder="Nombre del área">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Descripción</label>
+      <textarea formControlName="description" rows="2"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Detalles..."></textarea>
+    </div>
+  </form>
 </app-modal>
 
 <!-- Modal Procesar Depreciación -->
