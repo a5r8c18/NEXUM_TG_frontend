@@ -10,7 +10,10 @@ import {
   UpdateFixedAssetDto, 
   DepreciationGroup,
   FixedAssetFilters,
-  DisposeAssetDto
+  DisposeAssetDto,
+  RevalueAssetDto,
+  AcquisitionConcept,
+  DisposalConcept
 } from '../../models/fixed-assets.models';
 
 @Injectable({
@@ -56,6 +59,10 @@ export class FixedAssetsService {
     return this.http.post(`${this.apiUrl}/${id}/dispose`, data);
   }
 
+  revalueAsset(id: string, data: RevalueAssetDto): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/revalue`, data);
+  }
+
   processDepreciation(year: number, month: number): Observable<any> {
     return this.http.post(`${this.apiUrl}/depreciation/process`, { year, month });
   }
@@ -94,4 +101,4 @@ export class FixedAssetsService {
   }
 }
 
-export type { FixedAsset, FixedAssetArea, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters, DisposeAssetDto };
+export type { FixedAsset, FixedAssetArea, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters, DisposeAssetDto, RevalueAssetDto, AcquisitionConcept, DisposalConcept };

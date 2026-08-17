@@ -9,6 +9,17 @@ export interface DepreciationGroup {
   subgroups: DepreciationSubgroup[];
 }
 
+export type AcquisitionConcept = 'compra' | 'donacion' | 'sobrante';
+
+export type DisposalConcept =
+  | 'faltante'
+  | 'deterioro'
+  | 'venta'
+  | 'devolucion_compra'
+  | 'obsolescencia'
+  | 'rotura'
+  | 'donacion';
+
 export interface FixedAssetArea {
   id: number;
   companyId: number;
@@ -27,6 +38,10 @@ export interface FixedAsset {
   subgroupDetail?: string;
   acquisitionValue: number;
   acquisitionDate: string;
+  acquisitionType?: AcquisitionConcept;
+  disposalType?: DisposalConcept | null;
+  disposalDate?: string | null;
+  disposalReason?: string | null;
   location?: string;
   areaId?: number;
   area?: FixedAssetArea;
@@ -51,6 +66,7 @@ export interface CreateFixedAssetDto {
   subgroupDetail?: string;
   acquisitionValue: number;
   acquisitionDate: string;
+  acquisitionType?: AcquisitionConcept;
   location?: string;
   areaId?: number;
   employeeId?: string;
@@ -89,8 +105,15 @@ export interface FixedAssetsResponse {
 
 export interface DisposeAssetDto {
   reason: string;
-  disposalType: 'deterioro' | 'obsolescencia' | 'rotura' | 'faltante' | 'venta' | 'donacion';
+  disposalType: DisposalConcept;
   disposalDate?: string;
   bankAccountId?: string;
   saleAmount?: number;
+}
+
+export interface RevalueAssetDto {
+  newValue: number;
+  reason: string;
+  revaluationDate: string;
+  appraisalReference?: string;
 }

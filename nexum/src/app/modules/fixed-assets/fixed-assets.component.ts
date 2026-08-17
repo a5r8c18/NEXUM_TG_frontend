@@ -10,7 +10,10 @@ import {
   CreateFixedAssetDto, 
   UpdateFixedAssetDto, 
   DepreciationGroup,
-  DisposeAssetDto
+  DisposeAssetDto,
+  RevalueAssetDto,
+  AcquisitionConcept,
+  DisposalConcept
 } from '../../core/services/fixed-assets.service';
 import { HrService, Employee } from '../../core/services/hr.service';
 import { AccountingService, CostCenter } from '../../core/services/accounting.service';
@@ -67,6 +70,28 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   disposeForm!: FormGroup;
   showDepreciationModal = signal(false);
   depreciationForm!: FormGroup;
+
+  // ── Conceptos de gestión de AFT ──
+  openMenu = signal<'altas' | 'bajas' | 'internos' | null>(null);
+  acquisitionConcept = signal<AcquisitionConcept>('compra');
+  disposalConcept = signal<DisposalConcept>('deterioro');
+  showRevalueModal = signal(false);
+  revalueForm!: FormGroup;
+
+  readonly acquisitionConcepts: { value: AcquisitionConcept; label: string }[] = [
+    { value: 'compra', label: 'Compra de AFT' },
+    { value: 'donacion', label: 'Alta de AFT por donación' },
+    { value: 'sobrante', label: 'Alta de AFT por sobrante' },
+  ];
+
+  readonly disposalConcepts: { value: DisposalConcept; label: string }[] = [
+    { value: 'faltante', label: 'Baja por faltante' },
+    { value: 'deterioro', label: 'Baja por deterioro' },
+    { value: 'venta', label: 'Venta de AFT' },
+    { value: 'devolucion_compra', label: 'Devolución de compra de AFT' },
+  ];
+
+  activeAssets = computed(() => this.assets().filter(a => a.status === 'active'));
 
   // Computed
   selectedGroup = computed(() => {
@@ -168,9 +193,23 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   buildDisposeForm() {
     this.disposeForm = this.fb.group({
+      assetId: ['', Validators.required],
       reason: ['', Validators.required],
       disposalType: ['deterioro', Validators.required],
       disposalDate: [''],
+      saleAmount: [null],
+    });
+
+    this.buildRevalueForm();
+  }
+
+  buildRevalueForm() {
+    this.revalueForm = this.fb.group({
+      assetId: ['', Validators.required],
+      newValue: [null, [Validators.required, Validators.min(0.01)]],
+      revaluationDate: ['', Validators.required],
+      reason: ['', Validators.required],
+      appraisalReference: [''],
     });
   }
 
@@ -259,8 +298,18 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     }
   }
 
-  openCreate() {
+  toggleMenu(menu: 'altas' | 'bajas' | 'internos') {
+    this.openMenu.update(current => (current === menu ? null : menu));
+  }
+
+  closeMenus() {
+    this.openMenu.set(null);
+  }
+
+  openCreate(concept: AcquisitionConcept = 'compra') {
+    this.closeMenus();
     this.editingAsset = null;
+    this.acquisitionConcept.set(concept);
     this.form.reset();
     this.updateFormControlsState();
     this.showForm.set(true);
@@ -312,6 +361,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           subgroupDetail: this.form.value.subgroupDetail || undefined,
           acquisitionValue: +this.form.value.acquisitionValue,
           acquisitionDate: this.form.value.acquisitionDate,
+          acquisitionType: this.acquisitionConcept(),
           location: this.form.value.location || undefined,
           areaId: this.form.value.areaId ? +this.form.value.areaId : undefined,
           employeeId: this.form.value.employeeId || undefined,
@@ -348,39 +398,102 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     }
   }
 
-  openDispose(asset: FixedAsset) {
-    this.disposeAsset = asset;
+  openDispose(asset?: FixedAsset, concept?: DisposalConcept) {
+    this.closeMenus();
+    this.disposeAsset = asset || null;
+    this.disposalConcept.set(concept || 'deterioro');
     this.disposeForm.reset({
+      assetId: asset?.id || '',
       reason: '',
-      disposalType: 'deterioro',
+      disposalType: concept || 'deterioro',
       disposalDate: new Date().toISOString().split('T')[0],
+      saleAmount: null,
     });
     this.showDisposeModal.set(true);
   }
 
   async disposeSubmit() {
-    if (!this.disposeAsset || this.disposeForm.invalid) return;
+    if (this.disposeForm.invalid) return;
+
+    const assetId = this.disposeForm.value.assetId;
+    if (!assetId) return;
 
     this.isLoading.set(true);
     try {
+      const concept = this.disposalConcept();
       const dto: DisposeAssetDto = {
         reason: this.disposeForm.value.reason,
-        disposalType: this.disposeForm.value.disposalType,
+        disposalType: concept,
         disposalDate: this.disposeForm.value.disposalDate,
       };
-      await this.fixedAssetsService.disposeAsset(this.disposeAsset.id, dto).toPromise();
-      this.showToast('Activo dado de baja correctamente', 'success');
+      if (concept === 'venta' && this.disposeForm.value.saleAmount) {
+        dto.saleAmount = +this.disposeForm.value.saleAmount;
+      }
+      await this.fixedAssetsService.disposeAsset(assetId, dto).toPromise();
+      this.showToast(`${this.getDisposalConceptLabel(concept)} registrada correctamente`, 'success');
       await this.loadAll();
       this.showDisposeModal.set(false);
       this.disposeAsset = null;
     } catch (error) {
-      this.showToast('Error al dar de baja activo', 'error');
+      this.showToast('Error al registrar la baja del activo', 'error');
     } finally {
       this.isLoading.set(false);
     }
   }
 
+  openRevalueModal(asset?: FixedAsset) {
+    this.closeMenus();
+    this.revalueForm.reset({
+      assetId: asset?.id || '',
+      newValue: asset ? asset.currentValue : null,
+      revaluationDate: new Date().toISOString().split('T')[0],
+      reason: '',
+      appraisalReference: '',
+    });
+    this.showRevalueModal.set(true);
+  }
+
+  async revalueSubmit() {
+    if (this.revalueForm.invalid) return;
+
+    this.isLoading.set(true);
+    try {
+      const dto: RevalueAssetDto = {
+        newValue: +this.revalueForm.value.newValue,
+        reason: this.revalueForm.value.reason,
+        revaluationDate: this.revalueForm.value.revaluationDate,
+        appraisalReference: this.revalueForm.value.appraisalReference || undefined,
+      };
+      await this.fixedAssetsService.revalueAsset(this.revalueForm.value.assetId, dto).toPromise();
+      this.showToast('Avalúo registrado correctamente', 'success');
+      await this.loadAll();
+      this.showRevalueModal.set(false);
+    } catch (error) {
+      this.showToast('Error al registrar el avalúo', 'error');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  getAcquisitionConceptLabel(concept?: string | null): string {
+    return this.acquisitionConcepts.find(c => c.value === concept)?.label ?? 'Compra de AFT';
+  }
+
+  getDisposalConceptLabel(concept?: string | null): string {
+    const legacy: Record<string, string> = {
+      obsolescencia: 'Baja por obsolescencia',
+      rotura: 'Baja por rotura',
+      donacion: 'Baja por donación entregada',
+    };
+    return (
+      this.disposalConcepts.find(c => c.value === concept)?.label ??
+      legacy[concept || ''] ??
+      'Baja de AFT'
+    );
+  }
+
   openDepreciationModal() {
+    this.closeMenus();
     const currentDate = new Date();
     this.depreciationForm.patchValue({
       year: currentDate.getFullYear(),

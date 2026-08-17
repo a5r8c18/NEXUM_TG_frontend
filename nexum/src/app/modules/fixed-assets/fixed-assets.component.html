@@ -27,6 +27,9 @@
         <p class="text-xs text-slate-500">Gestión y depreciación de activos de la empresa</p>
       </div>
     </div>
+    @if (openMenu()) {
+      <div class="fixed inset-0 z-30" (click)="closeMenus()"></div>
+    }
     <div class="flex items-center gap-3">
       <button (click)="openDepreciationModal()"
               class="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-xl hover:bg-amber-700 transition-colors shadow-sm">
@@ -36,14 +39,76 @@
         </svg>
         Procesar Depreciación
       </button>
-      <button (click)="openCreate()"
-              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 4v16m8-8H4"/>
-        </svg>
-        Nuevo Activo
-      </button>
+
+      <!-- Altas -->
+      <div class="relative">
+        <button (click)="toggleMenu('altas')"
+                class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Altas
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        @if (openMenu() === 'altas') {
+          <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40">
+            @for (concept of acquisitionConcepts; track concept.value) {
+              <button (click)="openCreate(concept.value)"
+                      class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors">
+                {{ concept.label }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Bajas -->
+      <div class="relative">
+        <button (click)="toggleMenu('bajas')"
+                class="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-xl hover:bg-orange-700 transition-colors shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+          </svg>
+          Bajas
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        @if (openMenu() === 'bajas') {
+          <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40">
+            @for (concept of disposalConcepts; track concept.value) {
+              <button (click)="openDispose(undefined, concept.value)"
+                      class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-orange-50 transition-colors">
+                {{ concept.label }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Movimientos internos -->
+      <div class="relative">
+        <button (click)="toggleMenu('internos')"
+                class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-xl hover:bg-purple-700 transition-colors shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          </svg>
+          Movimientos internos
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        @if (openMenu() === 'internos') {
+          <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40">
+            <button (click)="openRevalueModal()"
+                    class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-purple-50 transition-colors">
+              Avalúo de AFT
+            </button>
+          </div>
+        }
+      </div>
     </div>
   </div>
 
@@ -115,7 +180,7 @@
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
         </svg>
         <p class="text-lg font-medium">No hay activos fijos registrados</p>
-        <p class="text-sm mt-1">Haz clic en "Nuevo Activo" para agregar uno</p>
+        <p class="text-sm mt-1">Use el menú "Altas" para registrar una compra, donación o sobrante de AFT</p>
       </div>
     } @else {
       <div class="overflow-x-auto">
@@ -126,6 +191,7 @@
               <th class="text-left px-4 py-3 font-semibold text-slate-600">Nombre</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600">Grupo</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600">Subgrupo</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600">Concepto</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600">Tasa</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600">V. Adquisición</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600">Dep. Mensual</th>
@@ -146,6 +212,13 @@
                 </td>
                 <td class="px-4 py-3 text-slate-600 text-xs">{{ getGroupName(asset.groupNumber) }}</td>
                 <td class="px-4 py-3 text-slate-600 text-xs">{{ asset.subgroup }}</td>
+                <td class="px-4 py-3 text-xs">
+                  @if (asset.status === 'disposed' && asset.disposalType) {
+                    <span class="text-orange-700">{{ getDisposalConceptLabel(asset.disposalType) }}</span>
+                  } @else {
+                    <span class="text-slate-600">{{ getAcquisitionConceptLabel(asset.acquisitionType) }}</span>
+                  }
+                </td>
                 <td class="px-4 py-3 text-right font-semibold text-amber-700">{{ getDepreciationRate(asset) }}</td>
                 <td class="px-4 py-3 text-right text-slate-700">{{ asset.acquisitionValue | number:'1.2-2' }}</td>
                 <td class="px-4 py-3 text-right text-blue-600 font-medium">{{ getMonthlyDepreciation(asset) }}</td>
@@ -162,15 +235,6 @@
                 </td>
                 <td class="px-4 py-3">
                   <div class="flex items-center justify-center gap-1">
-                    @if (asset.status === 'active') {
-                      <button (click)="openDispose(asset)" title="Dar de Baja"
-                              class="p-1.5 hover:bg-orange-100 rounded-lg text-orange-600 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M18 12H6m6 6v-6m0 0V6m0 6h6M6 6v6"/>
-                        </svg>
-                      </button>
-                    }
                     <button (click)="openEdit(asset)" title="Editar"
                             class="p-1.5 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +264,7 @@
 <!-- Modal Formulario -->
 <app-modal
   [isOpen]="showForm()"
-  [title]="editingAsset ? 'Editar Activo Fijo' : 'Nuevo Activo Fijo'"
+  [title]="editingAsset ? 'Editar Activo Fijo' : getAcquisitionConceptLabel(acquisitionConcept())"
   confirmText="Guardar"
   iconEmoji="🏢"
   iconBgClass="bg-blue-50"
@@ -209,6 +273,22 @@
   (closeEvent)="showForm.set(false)"
   (confirmEvent)="onSubmit()">
   <form [formGroup]="form" class="space-y-4">
+    @if (!editingAsset) {
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p class="text-sm text-blue-700">
+          <strong>Concepto de alta:</strong> {{ getAcquisitionConceptLabel(acquisitionConcept()) }}
+        </p>
+        <p class="text-xs text-blue-600 mt-1">
+          @if (acquisitionConcept() === 'compra') {
+            Genera obligación con el proveedor (Cuentas por Pagar).
+          } @else if (acquisitionConcept() === 'donacion') {
+            Se acredita a Donaciones Recibidas; no genera Cuentas por Pagar.
+          } @else {
+            Se acredita a Sobrantes en Investigación; no genera Cuentas por Pagar.
+          }
+        </p>
+      </div>
+    }
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label class="block text-xs font-semibold text-slate-600 mb-1">Código *</label>
@@ -425,8 +505,8 @@
 <!-- Modal Baja de Activo -->
 <app-modal
   [isOpen]="showDisposeModal()"
-  title="Baja de Activo Fijo"
-  confirmText="Dar de Baja"
+  [title]="getDisposalConceptLabel(disposalConcept())"
+  confirmText="Registrar"
   iconEmoji="🗑️"
   iconBgClass="bg-red-50"
   confirmButtonClass="bg-red-600 hover:bg-red-700"
@@ -434,27 +514,36 @@
   (closeEvent)="showDisposeModal.set(false)"
   (confirmEvent)="disposeSubmit()">
   <form [formGroup]="disposeForm" class="space-y-4">
-    <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
       <p class="text-sm text-red-700">
-        <strong>Activo:</strong> {{ disposeAsset?.name }} ({{ disposeAsset?.assetCode }})
-      </p>
-      <p class="text-sm text-red-600 mt-1">
-        Valor actual: ${{ disposeAsset?.currentValue?.toFixed(2) }}
+        <strong>Concepto:</strong> {{ getDisposalConceptLabel(disposalConcept()) }}
       </p>
     </div>
 
     <div>
-      <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de baja *</label>
-      <select formControlName="disposalType"
+      <label class="block text-xs font-semibold text-slate-600 mb-1">Activo fijo *</label>
+      <select formControlName="assetId"
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-        <option value="deterioro">Deterioro</option>
-        <option value="obsolescencia">Obsolescencia</option>
-        <option value="rotura">Rotura</option>
-        <option value="faltante">Faltante</option>
-        <option value="venta">Venta</option>
-        <option value="donacion">Donación</option>
+        <option value="">Seleccionar activo...</option>
+        @for (asset of activeAssets(); track asset.id) {
+          <option [value]="asset.id">
+            {{ asset.assetCode }} — {{ asset.name }} (valor neto: {{ asset.currentValue | number:'1.2-2' }})
+          </option>
+        }
       </select>
+      @if (activeAssets().length === 0) {
+        <p class="text-xs text-slate-500 mt-1">No hay activos fijos activos disponibles.</p>
+      }
     </div>
+
+    @if (disposalConcept() === 'venta') {
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Importe de venta</label>
+        <input formControlName="saleAmount" type="number" min="0" step="0.01"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Si se omite, se usa el valor neto contable">
+      </div>
+    }
 
     <div>
       <label class="block text-xs font-semibold text-slate-600 mb-1">Motivo de la baja *</label>
@@ -467,6 +556,65 @@
       <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de baja</label>
       <input formControlName="disposalDate" type="date"
             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+    </div>
+  </form>
+</app-modal>
+
+<!-- Modal Avalúo (Movimiento interno) -->
+<app-modal
+  [isOpen]="showRevalueModal()"
+  title="Avalúo de Activo Fijo"
+  confirmText="Registrar avalúo"
+  iconEmoji="⚖️"
+  iconBgClass="bg-purple-50"
+  confirmButtonClass="bg-purple-600 hover:bg-purple-700"
+  maxWidthClass="max-w-lg"
+  (closeEvent)="showRevalueModal.set(false)"
+  (confirmEvent)="revalueSubmit()">
+  <form [formGroup]="revalueForm" class="space-y-4">
+    <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+      <p class="text-sm text-purple-700">
+        El avalúo ajusta el valor contable del activo y genera el comprobante de superávit o déficit de revalorización.
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">Activo fijo *</label>
+      <select formControlName="assetId"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+        <option value="">Seleccionar activo...</option>
+        @for (asset of activeAssets(); track asset.id) {
+          <option [value]="asset.id">
+            {{ asset.assetCode }} — {{ asset.name }} (valor neto: {{ asset.currentValue | number:'1.2-2' }})
+          </option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">Nuevo valor tasado *</label>
+      <input formControlName="newValue" type="number" min="0.01" step="0.01"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha del avalúo *</label>
+      <input formControlName="revaluationDate" type="date"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">Referencia de tasación</label>
+      <input formControlName="appraisalReference"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="No. de dictamen o peritaje">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">Motivo del avalúo *</label>
+      <textarea formControlName="reason" rows="3"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Describa el fundamento del avalúo..."></textarea>
     </div>
   </form>
 </app-modal>
