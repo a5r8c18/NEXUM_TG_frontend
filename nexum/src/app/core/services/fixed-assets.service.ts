@@ -13,7 +13,11 @@ import {
   DisposeAssetDto,
   RevalueAssetDto,
   AcquisitionConcept,
-  DisposalConcept
+  DisposalConcept,
+  PendingInvestigation,
+  ResolveInvestigationDto,
+  AddImprovementDto,
+  TransferAssetDto
 } from '../../models/fixed-assets.models';
 
 @Injectable({
@@ -63,6 +67,28 @@ export class FixedAssetsService {
     return this.http.post(`${this.apiUrl}/${id}/revalue`, data);
   }
 
+  getPendingInvestigations(): Observable<PendingInvestigation[]> {
+    return this.http
+      .get<{ investigations: PendingInvestigation[] }>(`${this.apiUrl}/investigations`)
+      .pipe(map(response => response.investigations || []));
+  }
+
+  resolveInvestigation(id: string | number, data: ResolveInvestigationDto): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/resolve-investigation`, data);
+  }
+
+  addImprovement(id: string, data: AddImprovementDto): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/improvement`, data);
+  }
+
+  transferAsset(id: string, data: TransferAssetDto): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/transfer`, data);
+  }
+
+  downloadActa(id: string, type: 'baja' | 'recepcion'): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/acta/${type}`, { responseType: 'blob' });
+  }
+
   processDepreciation(year: number, month: number): Observable<any> {
     return this.http.post(`${this.apiUrl}/depreciation/process`, { year, month });
   }
@@ -101,4 +127,4 @@ export class FixedAssetsService {
   }
 }
 
-export type { FixedAsset, FixedAssetArea, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters, DisposeAssetDto, RevalueAssetDto, AcquisitionConcept, DisposalConcept };
+export type { FixedAsset, FixedAssetArea, CreateFixedAssetDto, UpdateFixedAssetDto, DepreciationGroup, FixedAssetFilters, DisposeAssetDto, RevalueAssetDto, AcquisitionConcept, DisposalConcept, PendingInvestigation, ResolveInvestigationDto, AddImprovementDto, TransferAssetDto };

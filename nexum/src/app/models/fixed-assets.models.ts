@@ -42,6 +42,10 @@ export interface FixedAsset {
   disposalType?: DisposalConcept | null;
   disposalDate?: string | null;
   disposalReason?: string | null;
+  investigationType?: 'shortage' | 'surplus' | null;
+  investigationStatus?: 'pending' | 'resolved' | null;
+  investigationAmount?: number | null;
+  appraisalReference?: string | null;
   location?: string;
   areaId?: number;
   area?: FixedAssetArea;
@@ -51,7 +55,7 @@ export interface FixedAsset {
   costCenter?: { id: string; name: string; expenseAccountCode?: string };
   depreciationRate: number;
   currentValue: number;
-  status: 'active' | 'disposed' | 'transferred';
+  status: 'active' | 'disposed' | 'transferred' | 'fully_depreciated';
   created_at: string;
   updated_at: string;
   companyId?: number;
@@ -82,7 +86,7 @@ export interface UpdateFixedAssetDto {
   employeeId?: string;
   costCenterId?: string;
   responsiblePerson?: string;
-  status?: 'active' | 'disposed' | 'transferred';
+  status?: 'active' | 'disposed' | 'transferred' | 'fully_depreciated';
 }
 
 export interface FixedAssetFilters {
@@ -116,4 +120,40 @@ export interface RevalueAssetDto {
   reason: string;
   revaluationDate: string;
   appraisalReference?: string;
+}
+
+export interface PendingInvestigation {
+  assetId: number;
+  assetCode: string;
+  name: string;
+  type: 'shortage' | 'surplus' | null;
+  amount: number;
+  responsiblePerson?: string | null;
+  date?: string | null;
+  reason?: string | null;
+}
+
+export interface ResolveInvestigationDto {
+  resolution: 'responsible' | 'loss' | 'income';
+  resolutionDate?: string;
+  notes?: string;
+  responsibleName?: string;
+  amount?: number;
+}
+
+export interface AddImprovementDto {
+  amount: number;
+  description: string;
+  improvementDate: string;
+  supplierId?: string;
+  bankAccountId?: string;
+}
+
+export interface TransferAssetDto {
+  targetCompanyId: number;
+  reason: string;
+  transferDate: string;
+  newLocation?: string;
+  newResponsiblePerson?: string;
+  newEmployeeId?: string;
 }

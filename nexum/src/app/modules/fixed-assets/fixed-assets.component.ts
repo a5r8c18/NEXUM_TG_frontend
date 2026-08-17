@@ -13,8 +13,13 @@ import {
   DisposeAssetDto,
   RevalueAssetDto,
   AcquisitionConcept,
-  DisposalConcept
+  DisposalConcept,
+  PendingInvestigation,
+  ResolveInvestigationDto,
+  AddImprovementDto,
+  TransferAssetDto
 } from '../../core/services/fixed-assets.service';
+import { CompanyService, Company } from '../../core/services/company.service';
 import { HrService, Employee } from '../../core/services/hr.service';
 import { AccountingService, CostCenter } from '../../core/services/accounting.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -33,6 +38,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   private fixedAssetsService = inject(FixedAssetsService);
   private hrService = inject(HrService);
   private accountingService = inject(AccountingService);
+  private companyService = inject(CompanyService);
   private notificationService = inject(NotificationService);
   private fb = inject(FormBuilder);
   private confirmDialog = inject(ConfirmDialogService);
@@ -78,6 +84,22 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   showRevalueModal = signal(false);
   revalueForm!: FormGroup;
 
+  // ── Investigaciones (faltantes/sobrantes) ──
+  investigations = signal<PendingInvestigation[]>([]);
+  showInvestigationModal = signal(false);
+  showResolveModal = signal(false);
+  selectedInvestigation: PendingInvestigation | null = null;
+  resolveForm!: FormGroup;
+
+  // ── Mejora capitalizable ──
+  showImprovementModal = signal(false);
+  improvementForm!: FormGroup;
+
+  // ── Traspaso entre dependencias ──
+  showTransferModal = signal(false);
+  transferForm!: FormGroup;
+  companies = signal<Company[]>([]);
+
   readonly acquisitionConcepts: { value: AcquisitionConcept; label: string }[] = [
     { value: 'compra', label: 'Compra de AFT' },
     { value: 'donacion', label: 'Alta de AFT por donación' },
@@ -87,11 +109,15 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   readonly disposalConcepts: { value: DisposalConcept; label: string }[] = [
     { value: 'faltante', label: 'Baja por faltante' },
     { value: 'deterioro', label: 'Baja por deterioro' },
-    { value: 'venta', label: 'Venta de AFT' },
+    { value: 'venta', label: 'Venta de AFT (factura manual)' },
     { value: 'devolucion_compra', label: 'Devolución de compra de AFT' },
+    { value: 'obsolescencia', label: 'Baja por obsolescencia' },
+    { value: 'rotura', label: 'Baja por rotura' },
+    { value: 'donacion', label: 'Baja por donación entregada' },
   ];
 
-  activeAssets = computed(() => this.assets().filter(a => a.status === 'active'));
+  activeAssets = computed(() => this.assets().filter(a => a.status === 'active' || a.status === 'fully_depreciated'));
+  pendingInvestigationCount = computed(() => this.investigations().length);
 
   // Computed
   selectedGroup = computed(() => {
@@ -136,6 +162,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     this.loadEmployees();
     this.loadAreas();
     this.loadCostCenters();
+    this.loadInvestigations();
     if (this.view() === 'areas') {
       this.showAreaModal.set(true);
     }
@@ -210,6 +237,30 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       revaluationDate: ['', Validators.required],
       reason: ['', Validators.required],
       appraisalReference: [''],
+    });
+
+    this.resolveForm = this.fb.group({
+      resolution: ['', Validators.required],
+      amount: [null, [Validators.required, Validators.min(0.01)]],
+      resolutionDate: ['', Validators.required],
+      responsibleName: [''],
+      notes: [''],
+    });
+
+    this.improvementForm = this.fb.group({
+      assetId: ['', Validators.required],
+      amount: [null, [Validators.required, Validators.min(0.01)]],
+      description: ['', Validators.required],
+      improvementDate: ['', Validators.required],
+    });
+
+    this.transferForm = this.fb.group({
+      assetId: ['', Validators.required],
+      targetCompanyId: [null, Validators.required],
+      transferDate: ['', Validators.required],
+      reason: ['', Validators.required],
+      newLocation: [''],
+      newResponsiblePerson: [''],
     });
   }
 
@@ -296,6 +347,23 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         .then(centers => this.costCenters.set(centers || []))
         .catch(() => this.costCenters.set([]));
     }
+  }
+
+  loadInvestigations() {
+    if (this.networkStatus.isOnline()) {
+      this.fixedAssetsService.getPendingInvestigations()
+        .toPromise()
+        .then(list => this.investigations.set(list || []))
+        .catch(() => this.investigations.set([]));
+    }
+  }
+
+  loadCompanies() {
+    if (this.companies().length > 0) return;
+    this.companyService.getCompanies()
+      .toPromise()
+      .then(list => this.companies.set(list || []))
+      .catch(() => this.companies.set([]));
   }
 
   toggleMenu(menu: 'altas' | 'bajas' | 'internos') {
@@ -429,9 +497,16 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       if (concept === 'venta' && this.disposeForm.value.saleAmount) {
         dto.saleAmount = +this.disposeForm.value.saleAmount;
       }
-      await this.fixedAssetsService.disposeAsset(assetId, dto).toPromise();
-      this.showToast(`${this.getDisposalConceptLabel(concept)} registrada correctamente`, 'success');
+      const result: any = await this.fixedAssetsService.disposeAsset(assetId, dto).toPromise();
+      const notes: string[] = result?.pendingActions || [];
+      this.showToast(
+        notes.length > 0
+          ? `${this.getDisposalConceptLabel(concept)} registrada. ${notes[0]}`
+          : `${this.getDisposalConceptLabel(concept)} registrada correctamente`,
+        notes.length > 0 ? 'info' : 'success',
+      );
       await this.loadAll();
+      this.loadInvestigations();
       this.showDisposeModal.set(false);
       this.disposeAsset = null;
     } catch (error) {
@@ -472,6 +547,164 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       this.showToast('Error al registrar el avalúo', 'error');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ── Investigaciones de faltantes / sobrantes ──
+  // ══════════════════════════════════════════════════════════
+
+  openInvestigationsModal() {
+    this.closeMenus();
+    this.loadInvestigations();
+    this.showInvestigationModal.set(true);
+  }
+
+  openResolveModal(investigation: PendingInvestigation) {
+    this.selectedInvestigation = investigation;
+    this.resolveForm.reset({
+      resolution: investigation.type === 'surplus' ? 'income' : '',
+      amount: investigation.amount,
+      resolutionDate: new Date().toISOString().split('T')[0],
+      responsibleName: investigation.responsiblePerson || '',
+      notes: '',
+    });
+    this.showResolveModal.set(true);
+  }
+
+  async resolveInvestigationSubmit() {
+    if (!this.selectedInvestigation || this.resolveForm.invalid) return;
+
+    this.isLoading.set(true);
+    try {
+      const dto: ResolveInvestigationDto = {
+        resolution: this.resolveForm.value.resolution,
+        amount: +this.resolveForm.value.amount,
+        resolutionDate: this.resolveForm.value.resolutionDate,
+        responsibleName: this.resolveForm.value.responsibleName || undefined,
+        notes: this.resolveForm.value.notes || undefined,
+      };
+      await this.fixedAssetsService
+        .resolveInvestigation(this.selectedInvestigation.assetId, dto)
+        .toPromise();
+      this.showToast('Investigación resuelta correctamente', 'success');
+      this.loadInvestigations();
+      await this.loadAll();
+      this.showResolveModal.set(false);
+      this.selectedInvestigation = null;
+    } catch (error) {
+      this.showToast('Error al resolver la investigación', 'error');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  getInvestigationTypeLabel(type?: string | null): string {
+    return type === 'shortage' ? 'Faltante' : 'Sobrante';
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ── Mejora capitalizable ──
+  // ══════════════════════════════════════════════════════════
+
+  openImprovementModal(asset?: FixedAsset) {
+    this.closeMenus();
+    this.improvementForm.reset({
+      assetId: asset?.id || '',
+      amount: null,
+      description: '',
+      improvementDate: new Date().toISOString().split('T')[0],
+    });
+    this.showImprovementModal.set(true);
+  }
+
+  async improvementSubmit() {
+    if (this.improvementForm.invalid) return;
+
+    this.isLoading.set(true);
+    try {
+      const dto: AddImprovementDto = {
+        amount: +this.improvementForm.value.amount,
+        description: this.improvementForm.value.description,
+        improvementDate: this.improvementForm.value.improvementDate,
+      };
+      await this.fixedAssetsService
+        .addImprovement(this.improvementForm.value.assetId, dto)
+        .toPromise();
+      this.showToast('Mejora capitalizada correctamente', 'success');
+      await this.loadAll();
+      this.showImprovementModal.set(false);
+    } catch (error) {
+      this.showToast('Error al capitalizar la mejora', 'error');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ── Traspaso entre dependencias ──
+  // ══════════════════════════════════════════════════════════
+
+  openTransferModal(asset?: FixedAsset) {
+    this.closeMenus();
+    this.loadCompanies();
+    this.transferForm.reset({
+      assetId: asset?.id || '',
+      targetCompanyId: null,
+      transferDate: new Date().toISOString().split('T')[0],
+      reason: '',
+      newLocation: '',
+      newResponsiblePerson: '',
+    });
+    this.showTransferModal.set(true);
+  }
+
+  async transferSubmit() {
+    if (this.transferForm.invalid) return;
+
+    this.isLoading.set(true);
+    try {
+      const dto: TransferAssetDto = {
+        targetCompanyId: +this.transferForm.value.targetCompanyId,
+        transferDate: this.transferForm.value.transferDate,
+        reason: this.transferForm.value.reason,
+        newLocation: this.transferForm.value.newLocation || undefined,
+        newResponsiblePerson: this.transferForm.value.newResponsiblePerson || undefined,
+      };
+      await this.fixedAssetsService
+        .transferAsset(this.transferForm.value.assetId, dto)
+        .toPromise();
+      this.showToast('Traspaso registrado correctamente', 'success');
+      await this.loadAll();
+      this.showTransferModal.set(false);
+    } catch (error) {
+      this.showToast('Error al registrar el traspaso', 'error');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ── Actas oficiales ──
+  // ══════════════════════════════════════════════════════════
+
+  async downloadActa(asset: FixedAsset, type: 'baja' | 'recepcion') {
+    try {
+      const blob = await this.fixedAssetsService.downloadActa(asset.id, type).toPromise();
+      if (!blob) throw new Error('No se pudo generar el acta');
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `acta-${type}-${asset.assetCode}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      this.showToast('Acta generada correctamente', 'success');
+    } catch (error) {
+      this.showToast('Error al generar el acta', 'error');
     }
   }
 
