@@ -145,15 +145,15 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   });
 
   assetAccounts = computed(() =>
-    this.accounts().filter(a => a.allowsMovements && a.code.startsWith('24'))
+    this.accounts().filter(a => a.level === 3 && a.code.startsWith('24'))
   );
 
   transferAccounts = computed(() =>
-    this.accounts().filter(a => a.allowsMovements && a.code.startsWith('696'))
+    this.accounts().filter(a => a.level === 3 && a.code.startsWith('696'))
   );
 
   movementAccounts = computed(() =>
-    this.accounts().filter(a => a.allowsMovements)
+    this.accounts().filter(a => a.level === 3 && !a.code.includes('.'))
   );
 
   totalAcquisitionValue = computed(() => 
@@ -373,7 +373,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   loadAccounts() {
     if (this.networkStatus.isOnline()) {
-      this.accountingService.getAccounts({ allowsMovements: 'true' })
+      this.accountingService.getAccounts()
         .toPromise()
         .then(list => this.accounts.set(list || []))
         .catch(() => this.accounts.set([]));
