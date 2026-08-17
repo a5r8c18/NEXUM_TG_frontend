@@ -76,6 +76,8 @@ export interface CreateFixedAssetDto {
   employeeId?: string;
   costCenterId?: string;
   responsiblePerson?: string;
+  assetAccountCode?: string;
+  counterpartAccountCode?: string;
 }
 
 export interface UpdateFixedAssetDto {
@@ -113,6 +115,9 @@ export interface DisposeAssetDto {
   disposalDate?: string;
   bankAccountId?: string;
   saleAmount?: number;
+  assetAccountCode?: string;
+  counterpartAccountCode?: string;
+  proceedsAccountCode?: string;
 }
 
 export interface RevalueAssetDto {
@@ -156,4 +161,6 @@ export interface TransferAssetDto {
   newLocation?: string;
   newResponsiblePerson?: string;
   newEmployeeId?: string;
+  assetAccountCode?: string;
+  transferAccountCode?: string;
 }

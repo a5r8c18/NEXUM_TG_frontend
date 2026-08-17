@@ -106,13 +106,9 @@
                     class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-purple-50 transition-colors">
               Avalúo de AFT
             </button>
-            <button (click)="openImprovementModal()"
-                    class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-purple-50 transition-colors">
-              Mejora capitalizable
-            </button>
             <button (click)="openTransferModal()"
                     class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-purple-50 transition-colors">
-              Traspaso entre dependencias
+              Traspasos
             </button>
           </div>
         }
@@ -467,6 +463,28 @@
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Se autocompleta según el centro de costo">
       </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta del activo fijo *</label>
+        <select formControlName="assetAccountCode"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Seleccionar cuenta de AFT...</option>
+          @for (a of assetAccounts(); track a.id) {
+            <option [value]="a.code">{{ a.code }} — {{ a.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta de contrapartida *</label>
+        <select formControlName="counterpartAccountCode"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Seleccionar cuenta...</option>
+          @for (a of movementAccounts(); track a.id) {
+            <option [value]="a.code">{{ a.code }} — {{ a.name }}</option>
+          }
+        </select>
+      </div>
     </div>
   </form>
 </app-modal>
@@ -642,6 +660,44 @@
       <input formControlName="disposalDate" type="date"
             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
     </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta del activo fijo *</label>
+      <select formControlName="assetAccountCode"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+        <option value="">Seleccionar cuenta de AFT...</option>
+        @for (a of assetAccounts(); track a.id) {
+          <option [value]="a.code">{{ a.code }} — {{ a.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">
+        Cuenta de contrapartida *
+        <span class="text-slate-400 font-normal">(pérdida, donación, faltante, etc.)</span>
+      </label>
+      <select formControlName="counterpartAccountCode"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+        <option value="">Seleccionar cuenta...</option>
+        @for (a of movementAccounts(); track a.id) {
+          <option [value]="a.code">{{ a.code }} — {{ a.name }}</option>
+        }
+      </select>
+    </div>
+
+    @if (disposalConcept() === 'venta' || disposalConcept() === 'devolucion_compra') {
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta de cobro/pago</label>
+        <select formControlName="proceedsAccountCode"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+          <option value="">Seleccionar cuenta de cobro/pago...</option>
+          @for (a of movementAccounts(); track a.id) {
+            <option [value]="a.code">{{ a.code }} — {{ a.name }}</option>
+          }
+        </select>
+      </div>
+    }
   </form>
 </app-modal>
 
@@ -760,7 +816,7 @@
 <!-- Modal Traspaso entre dependencias -->
 <app-modal
   [isOpen]="showTransferModal()"
-  title="Traspaso de AFT entre dependencias"
+  title="Traspaso de AFT"
   confirmText="Registrar traspaso"
   iconEmoji="🔁"
   iconBgClass="bg-purple-50"
@@ -820,6 +876,29 @@
       <label class="block text-xs font-semibold text-slate-600 mb-1">Motivo del traspaso *</label>
       <textarea formControlName="reason" rows="3"
                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta del activo fijo *</label>
+        <select formControlName="assetAccountCode"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+          <option value="">Seleccionar cuenta de AFT...</option>
+          @for (a of assetAccounts(); track a.id) {
+            <option [value]="a.code">{{ a.code }} — {{ a.name }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Cuenta de traspaso *</label>
+        <select formControlName="transferAccountCode"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+          <option value="">Seleccionar cuenta de traspaso...</option>
+          @for (a of transferAccounts(); track a.id) {
+            <option [value]="a.code">{{ a.code }} — {{ a.name }}</option>
+          }
+        </select>
+      </div>
     </div>
   </form>
 </app-modal>

@@ -22,7 +22,7 @@ import {
 import { CompanyService } from '../../core/services/company.service';
 import { Company } from '../../models/company.models';
 import { HrService, Employee } from '../../core/services/hr.service';
-import { AccountingService, CostCenter } from '../../core/services/accounting.service';
+import { AccountingService, CostCenter, Account } from '../../core/services/accounting.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../core/offline/offline-first.service';
@@ -52,6 +52,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   assets = signal<FixedAsset[]>([]);
   employees = signal<Employee[]>([]);
   areas = signal<FixedAssetArea[]>([]);
+  accounts = signal<Account[]>([]);
   costCenters = signal<CostCenter[]>([]);
   catalog = signal<DepreciationGroup[]>([]);
   isLoading = signal(false);
@@ -143,6 +144,18 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     return this.areas().find(a => Number(a.id) === areaId) ?? null;
   });
 
+  assetAccounts = computed(() =>
+    this.accounts().filter(a => a.allowsMovements && a.code.startsWith('24'))
+  );
+
+  transferAccounts = computed(() =>
+    this.accounts().filter(a => a.allowsMovements && a.code.startsWith('696'))
+  );
+
+  movementAccounts = computed(() =>
+    this.accounts().filter(a => a.allowsMovements)
+  );
+
   totalAcquisitionValue = computed(() => 
     this.assets().reduce((sum, asset) => sum + asset.acquisitionValue, 0)
   );
@@ -188,11 +201,14 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       employeeId: [''],
       costCenterId: [''],
       responsiblePerson: [''],
+      assetAccountCode: ['', Validators.required],
+      counterpartAccountCode: ['', Validators.required],
     });
 
     this.buildAreaForm();
     this.buildDisposeForm();
     this.buildDepreciationForm();
+    this.loadAccounts();
 
     this.form.get('groupNumber')?.valueChanges.subscribe((value) => {
       this.groupNumberValue.set(value === null || value === '' ? null : Number(value));
@@ -226,6 +242,9 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       disposalType: ['deterioro', Validators.required],
       disposalDate: [''],
       saleAmount: [null],
+      assetAccountCode: ['', Validators.required],
+      counterpartAccountCode: ['', Validators.required],
+      proceedsAccountCode: [''],
     });
 
     this.buildRevalueForm();
@@ -262,6 +281,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       reason: ['', Validators.required],
       newLocation: [''],
       newResponsiblePerson: [''],
+      assetAccountCode: ['', Validators.required],
+      transferAccountCode: ['', Validators.required],
     });
   }
 
@@ -347,6 +368,15 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         .toPromise()
         .then(centers => this.costCenters.set(centers || []))
         .catch(() => this.costCenters.set([]));
+    }
+  }
+
+  loadAccounts() {
+    if (this.networkStatus.isOnline()) {
+      this.accountingService.getAccounts({ allowsMovements: 'true' })
+        .toPromise()
+        .then(list => this.accounts.set(list || []))
+        .catch(() => this.accounts.set([]));
     }
   }
 
@@ -436,6 +466,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           employeeId: this.form.value.employeeId || undefined,
           costCenterId: this.form.value.costCenterId || undefined,
           responsiblePerson: this.form.value.responsiblePerson || undefined,
+          assetAccountCode: this.form.value.assetAccountCode || undefined,
+          counterpartAccountCode: this.form.value.counterpartAccountCode || undefined,
         };
         await this.fixedAssetsService.createFixedAsset(dto).toPromise();
         this.showToast('Activo creado correctamente', 'success');
@@ -494,9 +526,14 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         reason: this.disposeForm.value.reason,
         disposalType: concept,
         disposalDate: this.disposeForm.value.disposalDate,
+        assetAccountCode: this.disposeForm.value.assetAccountCode || undefined,
+        counterpartAccountCode: this.disposeForm.value.counterpartAccountCode || undefined,
       };
       if (concept === 'venta' && this.disposeForm.value.saleAmount) {
         dto.saleAmount = +this.disposeForm.value.saleAmount;
+      }
+      if (this.disposeForm.value.proceedsAccountCode) {
+        dto.proceedsAccountCode = this.disposeForm.value.proceedsAccountCode;
       }
       const result: any = await this.fixedAssetsService.disposeAsset(assetId, dto).toPromise();
       const notes: string[] = result?.pendingActions || [];
@@ -671,6 +708,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         reason: this.transferForm.value.reason,
         newLocation: this.transferForm.value.newLocation || undefined,
         newResponsiblePerson: this.transferForm.value.newResponsiblePerson || undefined,
+        assetAccountCode: this.transferForm.value.assetAccountCode || undefined,
+        transferAccountCode: this.transferForm.value.transferAccountCode || undefined,
       };
       await this.fixedAssetsService
         .transferAsset(this.transferForm.value.assetId, dto)
