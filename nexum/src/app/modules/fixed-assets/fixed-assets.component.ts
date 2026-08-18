@@ -113,8 +113,6 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     { value: 'deterioro', label: 'Baja por deterioro' },
     { value: 'venta', label: 'Venta de AFT (factura manual)' },
     { value: 'devolucion_compra', label: 'Devolución de compra de AFT' },
-    { value: 'obsolescencia', label: 'Baja por obsolescencia' },
-    { value: 'rotura', label: 'Baja por rotura' },
     { value: 'donacion', label: 'Baja por donación entregada' },
   ];
 
