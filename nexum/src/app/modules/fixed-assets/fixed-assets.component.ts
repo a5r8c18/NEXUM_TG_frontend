@@ -467,22 +467,38 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           assetAccountCode: this.form.value.assetAccountCode || undefined,
           counterpartAccountCode: this.form.value.counterpartAccountCode || undefined,
         };
-        await this.fixedAssetsService.createFixedAsset(dto).toPromise();
-        this.showToast('Activo creado correctamente', 'success');
+        const result = await this.fixedAssetsService.createFixedAsset(dto).toPromise();
+        // El backend puede devolver un aviso contable no bloqueante (p. ej.
+        // proveedor inexistente, que deriva la CxP a un proveedor genérico).
+        const warning = result?.accountingWarning;
+        this.showToast(
+          warning ? `Activo creado. ${warning}` : 'Activo creado correctamente',
+          warning ? 'info' : 'success',
+        );
       }
       await this.loadAll();
       this.showForm.set(false);
     } catch (error) {
-      this.showToast('Error al guardar activo', 'error');
+      this.showToast(this.getErrorMessage(error, 'Error al guardar activo'), 'error');
     } finally {
       this.isLoading.set(false);
     }
   }
 
+  /** Extrae el mensaje de la excepción de negocio del backend, si lo hay. */
+  private getErrorMessage(error: unknown, fallback: string): string {
+    const message = (error as { error?: { message?: string | string[] } })?.error?.message;
+    if (Array.isArray(message)) return message[0] || fallback;
+    return message || fallback;
+  }
+
   async deleteAsset(asset: FixedAsset) {
     const confirmed = await this.confirmDialog.confirm({
       title: 'Eliminar activo fijo',
-      message: `¿Eliminar el activo "${asset.name}"?`,
+      message:
+        `¿Eliminar el activo "${asset.name}"? ` +
+        'Solo es posible si aún no tiene comprobantes contables ni depreciación registrada; ' +
+        'en caso contrario debe registrarse la baja.',
       confirmText: 'Eliminar',
       type: 'danger'
     });
@@ -493,7 +509,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       this.showToast('Activo eliminado correctamente', 'success');
       await this.loadAll();
     } catch (error) {
-      this.showToast('Error al eliminar activo', 'error');
+      this.showToast(this.getErrorMessage(error, 'Error al eliminar activo'), 'error');
     }
   }
 
@@ -546,7 +562,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       this.showDisposeModal.set(false);
       this.disposeAsset = null;
     } catch (error) {
-      this.showToast('Error al registrar la baja del activo', 'error');
+      this.showToast(this.getErrorMessage(error, 'Error al registrar la baja del activo'), 'error');
     } finally {
       this.isLoading.set(false);
     }
@@ -575,12 +591,20 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         revaluationDate: this.revalueForm.value.revaluationDate,
         appraisalReference: this.revalueForm.value.appraisalReference || undefined,
       };
-      await this.fixedAssetsService.revalueAsset(this.revalueForm.value.assetId, dto).toPromise();
-      this.showToast('Avalúo registrado correctamente', 'success');
+      const result: any = await this.fixedAssetsService
+        .revalueAsset(this.revalueForm.value.assetId, dto)
+        .toPromise();
+      const notes: string[] = result?.pendingActions || [];
+      this.showToast(
+        notes.length > 0
+          ? `Avalúo registrado. ${notes[0]}`
+          : 'Avalúo registrado correctamente',
+        notes.length > 0 ? 'info' : 'success',
+      );
       await this.loadAll();
       this.showRevalueModal.set(false);
     } catch (error) {
-      this.showToast('Error al registrar el avalúo', 'error');
+      this.showToast(this.getErrorMessage(error, 'Error al registrar el avalúo'), 'error');
     } finally {
       this.isLoading.set(false);
     }
@@ -664,14 +688,20 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         description: this.improvementForm.value.description,
         improvementDate: this.improvementForm.value.improvementDate,
       };
-      await this.fixedAssetsService
+      const result: any = await this.fixedAssetsService
         .addImprovement(this.improvementForm.value.assetId, dto)
         .toPromise();
-      this.showToast('Mejora capitalizada correctamente', 'success');
+      const notes: string[] = result?.pendingActions || [];
+      this.showToast(
+        notes.length > 0
+          ? `Mejora capitalizada. ${notes[0]}`
+          : 'Mejora capitalizada correctamente',
+        notes.length > 0 ? 'info' : 'success',
+      );
       await this.loadAll();
       this.showImprovementModal.set(false);
     } catch (error) {
-      this.showToast('Error al capitalizar la mejora', 'error');
+      this.showToast(this.getErrorMessage(error, 'Error al capitalizar la mejora'), 'error');
     } finally {
       this.isLoading.set(false);
     }

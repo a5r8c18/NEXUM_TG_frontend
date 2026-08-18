@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, forkJoin, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { 
   FixedAsset, 
@@ -20,24 +20,65 @@ import {
   TransferAssetDto
 } from '../../models/fixed-assets.models';
 
+interface FixedAssetPage {
+  assets: FixedAsset[];
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export interface CreateFixedAssetResult {
+  asset: FixedAsset;
+  /** Aviso contable no bloqueante devuelto por el backend (p. ej. proveedor inexistente). */
+  accountingWarning?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class FixedAssetsService {
   private readonly apiUrl = `${environment.apiUrl}/fixed-assets`;
 
+  /** Tamaño de página solicitado al backend, que pagina el listado siempre. */
+  private static readonly PAGE_SIZE = 200;
+
   constructor(private http: HttpClient) {}
 
-  getFixedAssets(filters?: FixedAssetFilters): Observable<FixedAsset[]> {
-    let params = new URLSearchParams();
+  private getFixedAssetsPage(
+    page: number,
+    filters?: FixedAssetFilters,
+  ): Observable<FixedAssetPage> {
+    const params = new URLSearchParams();
     if (filters) {
       if (filters.status) params.set('status', filters.status);
       if (filters.groupNumber) params.set('group_number', filters.groupNumber.toString());
       if (filters.search) params.set('search', filters.search);
     }
-    const url = params.toString() ? `${this.apiUrl}?${params}` : this.apiUrl;
-    return this.http.get<{ assets: FixedAsset[] }>(url)
-      .pipe(map(response => response.assets || []));
+    params.set('page', String(page));
+    params.set('limit', String(FixedAssetsService.PAGE_SIZE));
+    return this.http.get<FixedAssetPage>(`${this.apiUrl}?${params}`);
+  }
+
+  /**
+   * Listado completo de activos fijos.
+   *
+   * El backend pagina siempre (50 registros por omisión), por lo que se
+   * recorren todas las páginas: los totales y las exportaciones del módulo se
+   * calculan sobre el universo completo y no sobre la primera página.
+   */
+  getFixedAssets(filters?: FixedAssetFilters): Observable<FixedAsset[]> {
+    return this.getFixedAssetsPage(1, filters).pipe(
+      switchMap(first => {
+        const assets = first.assets || [];
+        const totalPages = first.pagination?.totalPages ?? 1;
+        if (totalPages <= 1) return of(assets);
+        const remaining: Observable<FixedAssetPage>[] = [];
+        for (let page = 2; page <= totalPages; page++) {
+          remaining.push(this.getFixedAssetsPage(page, filters));
+        }
+        return forkJoin(remaining).pipe(
+          map(pages => assets.concat(...pages.map(p => p.assets || []))),
+        );
+      }),
+    );
   }
 
   getFixedAssetById(id: string): Observable<FixedAsset> {
@@ -45,9 +86,8 @@ export class FixedAssetsService {
       .pipe(map(response => response.asset));
   }
 
-  createFixedAsset(asset: CreateFixedAssetDto): Observable<FixedAsset> {
-    return this.http.post<{ asset: FixedAsset }>(this.apiUrl, asset)
-      .pipe(map(response => response.asset));
+  createFixedAsset(asset: CreateFixedAssetDto): Observable<CreateFixedAssetResult> {
+    return this.http.post<CreateFixedAssetResult>(this.apiUrl, asset);
   }
 
   updateFixedAsset(id: string, data: UpdateFixedAssetDto): Observable<FixedAsset> {

@@ -301,9 +301,12 @@ describe('Fixed Assets - Activos Fijos', () => {
 
   it('should handle empty data gracefully', () => {
     // Mock empty fixed assets
-    cy.intercept('GET', '**/fixed-assets', {
+    cy.intercept('GET', '**/fixed-assets*', {
       statusCode: 200,
-      body: []
+      body: {
+        assets: [],
+        pagination: { page: 1, limit: 200, total: 0, totalPages: 0 }
+      }
     }).as('emptyFixedAssetsRequest');
 
     cy.visit('/billing/fixed-assets');
@@ -315,7 +318,7 @@ describe('Fixed Assets - Activos Fijos', () => {
 
   it('should handle API errors gracefully', () => {
     // Mock error response
-    cy.intercept('GET', '**/fixed-assets', {
+    cy.intercept('GET', '**/fixed-assets*', {
       statusCode: 500,
       body: { message: 'Internal Server Error' }
     }).as('fixedAssetsError');
@@ -404,9 +407,12 @@ describe('Fixed Assets - Activos Fijos', () => {
       status: 'active'
     }));
 
-    cy.intercept('GET', '**/fixed-assets', {
+    cy.intercept('GET', '**/fixed-assets*', {
       statusCode: 200,
-      body: { data: manyFixedAssets, total: 50 }
+      body: {
+        assets: manyFixedAssets,
+        pagination: { page: 1, limit: 200, total: manyFixedAssets.length, totalPages: 1 }
+      }
     }).as('manyFixedAssetsRequest');
 
     cy.visit('/billing/fixed-assets');

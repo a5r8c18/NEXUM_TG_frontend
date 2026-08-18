@@ -667,8 +667,19 @@ Cypress.Commands.add('mockFixedAssetsApi', (fixedAssets?: any[]) => {
     }
   ];
 
+  const assets = fixedAssets || defaultFixedAssets;
+
+  // El endpoint real devuelve siempre { assets, pagination }.
   cy.intercept('GET', '**/fixed-assets**', {
     statusCode: 200,
-    body: fixedAssets || defaultFixedAssets,
+    body: {
+      assets,
+      pagination: {
+        page: 1,
+        limit: 200,
+        total: assets.length,
+        totalPages: 1,
+      },
+    },
   }).as('fixedAssetsRequest');
 });
