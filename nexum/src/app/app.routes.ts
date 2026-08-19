@@ -188,8 +188,7 @@ export const routes: Routes = [
       },
       {
         path: 'billing/fixed-assets/areas',
-        loadComponent: () => import('./modules/fixed-assets/fixed-assets.component').then(m => m.FixedAssetsComponent),
-        data: { tab: 'areas' }
+        loadComponent: () => import('./modules/fixed-assets/submodules/areas/areas.component').then(m => m.AreasComponent)
       },
       // Accounting Module
       {
