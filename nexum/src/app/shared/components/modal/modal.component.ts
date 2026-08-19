@@ -19,7 +19,7 @@ import { CommonModule } from '@angular/common';
       <!-- Panel -->
       <div
         [ngClass]="maxWidthClass"
-        class="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full mx-4 p-6 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
+        class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 w-full mx-4 p-6 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
       >
         <!-- Header -->
         <div class="flex items-center gap-3 mb-5">
@@ -28,10 +28,10 @@ import { CommonModule } from '@angular/common';
               <span [ngClass]="iconClass" class="text-xl">{{ iconEmoji }}</span>
             </div>
           }
-          <h3 class="text-lg font-semibold text-slate-800">{{ title }}</h3>
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-white">{{ title }}</h3>
           <button
             (click)="onClose()"
-            class="ml-auto text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+            class="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -50,7 +50,7 @@ import { CommonModule } from '@angular/common';
           <div class="flex-1"></div>
           <button
             (click)="onClose()"
-            class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+            class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
           >
             Cancelar
           </button>
