@@ -184,6 +184,7 @@ export const routes: Routes = [
       {
         path: 'billing/fixed-assets',
         loadComponent: () => import('./modules/fixed-assets/fixed-assets.component').then(m => m.FixedAssetsComponent),
+        resolve: { fixedAssetsData: () => import('./modules/fixed-assets/fixed-assets.resolver').then(m => m.fixedAssetsResolver) },
         data: { tab: 'assets' }
       },
       {

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { 
   FixedAsset, 
@@ -40,6 +40,9 @@ export class FixedAssetsService {
   /** Tamaño de página solicitado al backend, que pagina el listado siempre. */
   private static readonly PAGE_SIZE = 200;
 
+  private cachedAssets: FixedAsset[] | null = null;
+  private cachedCatalog: DepreciationGroup[] | null = null;
+
   constructor(private http: HttpClient) {}
 
   private getFixedAssetsPage(
@@ -63,22 +66,40 @@ export class FixedAssetsService {
    * El backend pagina siempre (50 registros por omisión), por lo que se
    * recorren todas las páginas: los totales y las exportaciones del módulo se
    * calculan sobre el universo completo y no sobre la primera página.
+   *
+   * Se cachea en memoria para evitar recargas innecesarias al navegar entre
+   * submódulos. Use `refreshFixedAssets()` para forzar recarga.
    */
-  getFixedAssets(filters?: FixedAssetFilters): Observable<FixedAsset[]> {
+  getFixedAssets(filters?: FixedAssetFilters, useCache = true): Observable<FixedAsset[]> {
+    if (useCache && this.cachedAssets && !filters) {
+      return of(this.cachedAssets);
+    }
     return this.getFixedAssetsPage(1, filters).pipe(
       switchMap(first => {
         const assets = first.assets || [];
         const totalPages = first.pagination?.totalPages ?? 1;
-        if (totalPages <= 1) return of(assets);
+        if (totalPages <= 1) {
+          if (!filters) this.cachedAssets = assets;
+          return of(assets);
+        }
         const remaining: Observable<FixedAssetPage>[] = [];
         for (let page = 2; page <= totalPages; page++) {
           remaining.push(this.getFixedAssetsPage(page, filters));
         }
         return forkJoin(remaining).pipe(
-          map(pages => assets.concat(...pages.map(p => p.assets || []))),
+          map(pages => {
+            const all = assets.concat(...pages.map(p => p.assets || []));
+            if (!filters) this.cachedAssets = all;
+            return all;
+          }),
         );
       }),
     );
+  }
+
+  refreshFixedAssets(): Observable<FixedAsset[]> {
+    this.cachedAssets = null;
+    return this.getFixedAssets(undefined, false);
   }
 
   getFixedAssetById(id: string): Observable<FixedAsset> {
@@ -87,16 +108,23 @@ export class FixedAssetsService {
   }
 
   createFixedAsset(asset: CreateFixedAssetDto): Observable<CreateFixedAssetResult> {
-    return this.http.post<CreateFixedAssetResult>(this.apiUrl, asset);
+    return this.http.post<CreateFixedAssetResult>(this.apiUrl, asset).pipe(
+      tap(() => this.cachedAssets = null)
+    );
   }
 
   updateFixedAsset(id: string, data: UpdateFixedAssetDto): Observable<FixedAsset> {
     return this.http.put<{ asset: FixedAsset }>(`${this.apiUrl}/${id}`, data)
-      .pipe(map(response => response.asset));
+      .pipe(
+        map(response => response.asset),
+        tap(() => this.cachedAssets = null)
+      );
   }
 
   deleteFixedAsset(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
+      tap(() => this.cachedAssets = null)
+    );
   }
 
   disposeAsset(id: string, data: DisposeAssetDto): Observable<any> {
@@ -133,9 +161,18 @@ export class FixedAssetsService {
     return this.http.post(`${this.apiUrl}/depreciation/process`, { year, month });
   }
 
-  getDepreciationCatalog(): Observable<DepreciationGroup[]> {
+  getDepreciationCatalog(useCache = true): Observable<DepreciationGroup[]> {
+    if (useCache && this.cachedCatalog) {
+      return of(this.cachedCatalog);
+    }
     return this.http.get<{ catalog: DepreciationGroup[] }>(`${this.apiUrl}/depreciation-catalog`)
-      .pipe(map(response => response.catalog || []));
+      .pipe(
+        map(response => {
+          const catalog = response.catalog || [];
+          this.cachedCatalog = catalog;
+          return catalog;
+        })
+      );
   }
 
   getAreas(): Observable<FixedAssetArea[]> {
