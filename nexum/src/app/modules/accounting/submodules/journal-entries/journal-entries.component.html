@@ -178,20 +178,15 @@
                   }
                   
                   <td class="px-6 py-4">
-                    <div class="space-y-1">
-                      <div class="font-mono text-sm text-slate-900">{{ line.accountCode || '-' }}</div>
-                      <div class="text-xs text-slate-500 truncate max-w-xs" title="{{ line.accountName || '' }}">
-                        {{ line.accountName || '' }}
-                      </div>
-                    </div>
+                    <div class="font-mono text-sm text-slate-900">{{ line.accountCode || '-' }}</div>
                   </td>
                   
                   <td class="px-6 py-4">
-                    <div class="text-sm text-slate-900">{{ line.costCenter?.name || '-' }}</div>
+                    <div class="text-sm text-slate-900">{{ line.costCenter?.code || line.costCenterId || '-' }}</div>
                   </td>
 
                   <td class="px-6 py-4">
-                    <div class="text-sm text-slate-900">{{ line.area?.name || '-' }}</div>
+                    <div class="text-sm text-slate-900">{{ line.area?.name || line.areaId || '-' }}</div>
                   </td>
 
                   <td class="px-6 py-4 text-right">
@@ -448,32 +443,19 @@
               <tr class="hover:bg-slate-50/50">
                 <td class="px-3 py-2 text-xs text-slate-400">{{ line.lineOrder }}</td>
                 <td class="px-3 py-2">
-                  <div class="text-xs font-mono text-slate-900">{{ line.accountCode }}</div>
-                  <div class="text-xs text-slate-500">{{ line.accountName }}</div>
+                  <div class="text-xs font-mono text-slate-900">{{ line.accountCode || '-' }}</div>
                 </td>
                 <td class="px-3 py-2">
-                  @if (line.subaccountCode) {
-                    <div class="text-xs font-mono text-slate-900">{{ line.subaccountCode }}</div>
-                    <div class="text-xs text-slate-500">{{ line.subaccountName || '' }}</div>
-                  } @else {
-                    <span class="text-xs text-slate-300">-</span>
-                  }
+                  <div class="text-xs font-mono text-slate-900">{{ line.subaccountCode || '-' }}</div>
                 </td>
                 <td class="px-3 py-2">
-                  @if (line.element) {
-                    <div class="text-xs font-mono text-slate-900">{{ line.element }}</div>
-                    <div class="text-xs text-slate-500">{{ line.elementName || '' }}</div>
-                  } @else {
-                    <span class="text-xs text-slate-300">-</span>
-                  }
+                  <div class="text-xs font-mono text-slate-900">{{ line.subelement || line.element || '-' }}</div>
                 </td>
                 <td class="px-3 py-2">
-                  <div class="text-xs font-mono text-slate-900">{{ line.costCenter?.code || '-' }}</div>
-                  <div class="text-xs text-slate-500">{{ line.costCenter?.name || '' }}</div>
+                  <div class="text-xs font-mono text-slate-900">{{ line.costCenter?.code || line.costCenterId || '-' }}</div>
                 </td>
                 <td class="px-3 py-2">
-                  <div class="text-xs font-mono text-slate-900">{{ line.area?.id || '-' }}</div>
-                  <div class="text-xs text-slate-500">{{ line.area?.name || '' }}</div>
+                  <div class="text-xs font-mono text-slate-900">{{ line.area?.name || line.areaId || '-' }}</div>
                 </td>
                 <td class="px-3 py-2 text-right">
                   @if (+line.debit > 0) {
