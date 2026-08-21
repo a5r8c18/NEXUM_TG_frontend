@@ -83,8 +83,10 @@ export interface Subaccount {
   companyId: number;
   accountId: string;
   account?: Account;
-  subaccountCode: string;
-  subaccountName: string;
+  code: string;
+  name: string;
+  subaccountCode?: string;
+  subaccountName?: string;
   description: string | null;
   type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
   nature: 'deudora' | 'acreedora';
@@ -183,6 +185,8 @@ export interface VoucherLineItem {
   description: string | null;
   costCenterId: string | null;
   costCenter?: CostCenter;
+  areaId?: number | null;
+  area?: { id: number; name: string } | null;
   reference: string | null;
   lineOrder: number;
   voucher?: Voucher;

@@ -7,6 +7,7 @@ export interface Company {
   phone?: string;
   email?: string;
   logo_path?: string;
+  tenant_type?: string;
   is_active: boolean;
   created_at: string;
   updated_at?: string;
@@ -19,6 +20,7 @@ export interface CreateCompanyDto {
   phone?: string;
   email?: string;
   logo_path?: string;
+  tenant_type?: string;
 }
 
 export interface UpdateCompanyDto {
@@ -28,4 +30,5 @@ export interface UpdateCompanyDto {
   phone?: string;
   email?: string;
   logo_path?: string;
+  tenant_type?: string;
 }

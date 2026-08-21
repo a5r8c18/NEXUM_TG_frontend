@@ -155,12 +155,8 @@ export interface AddImprovementDto {
 }
 
 export interface TransferAssetDto {
-  targetCompanyId: number;
+  targetAreaId?: number;
+  targetCostCenterId?: string;
   reason: string;
   transferDate: string;
-  newLocation?: string;
-  newResponsiblePerson?: string;
-  newEmployeeId?: string;
-  assetAccountCode?: string;
-  transferAccountCode?: string;
 }

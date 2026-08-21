@@ -181,6 +181,16 @@ export class AccountsComponent implements OnInit {
     return this.sortHierarchically(filtered);
   });
 
+  /** Cuenta de mayor: código numérico de 3 dígitos (240, 405, 600, 696...). */
+  private isLedgerCode(code: string): boolean {
+    return /^\d{3}$/.test(code);
+  }
+
+  /** Subcuenta analítica: código con sufijo separado por guion (405-0010). */
+  private isSubaccountCode(code: string): boolean {
+    return /^\d{3}-\w+$/.test(code);
+  }
+
   tableAccounts = computed(() => {
     let filtered = this.accounts();
     const term = this.searchTerm().toLowerCase();
@@ -205,22 +215,29 @@ export class AccountsComponent implements OnInit {
       filtered = filtered.filter((a) => a.isActive);
     }
 
-    // Mostrar cuentas nivel 3 y subcuentas nivel 4 juntas, ordenadas jerárquicamente
-    const accounts3 = filtered.filter((a) => a.level === 3).sort((a, b) => a.code.localeCompare(b.code));
-    const accounts4 = filtered.filter((a) => a.level === 4);
+    // Mostrar cuentas de mayor y sus subcuentas juntas, ordenadas jerárquicamente.
+    // No basta con filtrar por `level`: el nomenclador cubano ubica el grupo 30
+    // (Patrimonio Neto / Capital Contable) en nivel 2, por lo que las cuentas
+    // 600-699 quedaban fuera de la tabla. Se reconocen por la forma del código.
+    const ledgerAccounts = filtered
+      .filter((a) => a.level === 3 || this.isLedgerCode(a.code))
+      .sort((a, b) => a.code.localeCompare(b.code));
+    const subaccounts = filtered.filter(
+      (a) => a.level === 4 || this.isSubaccountCode(a.code)
+    );
 
     // Intercalar subcuentas debajo de su cuenta padre
     const result: Account[] = [];
-    for (const acc of accounts3) {
+    for (const acc of ledgerAccounts) {
       result.push(acc);
-      const children = accounts4
+      const children = subaccounts
         .filter((s) => s.parentCode === acc.code)
         .sort((a, b) => a.code.localeCompare(b.code));
       result.push(...children);
     }
-    // Subcuentas huérfanas (padre no en nivel 3 del filtro actual) al final
-    const parentCodes = new Set(accounts3.map((a) => a.code));
-    const orphans = accounts4.filter((s) => !parentCodes.has(s.parentCode ?? ''));
+    // Subcuentas huérfanas (padre no presente en el filtro actual) al final
+    const parentCodes = new Set(ledgerAccounts.map((a) => a.code));
+    const orphans = subaccounts.filter((s) => !parentCodes.has(s.parentCode ?? ''));
     result.push(...orphans.sort((a, b) => a.code.localeCompare(b.code)));
 
     return result;

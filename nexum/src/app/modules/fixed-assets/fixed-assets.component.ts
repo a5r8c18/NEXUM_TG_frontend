@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { CodeComboboxComponent } from '../../shared/components/code-combobox/code-combobox.component';
 import { 
   FixedAssetsService, 
   FixedAsset, 
@@ -22,7 +23,7 @@ import {
 import { CompanyService } from '../../core/services/company.service';
 import { Company } from '../../models/company.models';
 import { HrService, Employee } from '../../core/services/hr.service';
-import { AccountingService, CostCenter, Account } from '../../core/services/accounting.service';
+import { AccountingService, CostCenter, Account, Subaccount } from '../../core/services/accounting.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../core/offline/offline-first.service';
@@ -32,7 +33,7 @@ import { signal, computed } from '@angular/core';
 @Component({
   selector: 'app-fixed-assets',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, ModalComponent, CodeComboboxComponent],
   templateUrl: './fixed-assets.component.html'
 })
 export class FixedAssetsComponent implements OnInit, OnDestroy {
@@ -101,6 +102,7 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   showTransferModal = signal(false);
   transferForm!: FormGroup;
   companies = signal<Company[]>([]);
+  subaccountsMap = signal<Record<string, Subaccount[]>>({});
 
   readonly acquisitionConcepts: { value: AcquisitionConcept; label: string }[] = [
     { value: 'compra', label: 'Compra de AFT' },
@@ -142,17 +144,37 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     return this.areas().find(a => Number(a.id) === areaId) ?? null;
   });
 
+  /**
+   * Una cuenta "de mayor" es la de código numérico de 3 dígitos (240, 405, 696...).
+   * Se excluyen los grupos/subgrupos (10, 10.3) y las subcuentas (405-0010),
+   * que se resuelven aparte. No se filtra por `level` porque el nomenclador
+   * ubica el grupo 30 (Capital Contable) en nivel 2 y el resto en nivel 3.
+   */
+  private isLedgerAccount(code: string) {
+    return /^\d{3}$/.test(code);
+  }
+
   assetAccounts = computed(() =>
-    this.accounts().filter(a => a.level === 3 && a.code.startsWith('24'))
+    this.accounts().filter(a => this.isLedgerAccount(a.code) && a.code.startsWith('24'))
   );
 
   transferAccounts = computed(() =>
-    this.accounts().filter(a => a.level === 3 && a.code.startsWith('696'))
+    this.accounts().filter(a => a.code === '696')
   );
 
   movementAccounts = computed(() =>
-    this.accounts().filter(a => a.level === 3 && !a.code.includes('.'))
+    this.accounts().filter(a => this.isLedgerAccount(a.code))
   );
+
+  private static readonly NO_SUBACCOUNTS: Subaccount[] = [];
+
+  subaccountsFor(code: string) {
+    return this.subaccountsMap()[code] ?? FixedAssetsComponent.NO_SUBACCOUNTS;
+  }
+
+  hasSubaccounts(code: string) {
+    return this.subaccountsFor(code).length > 0;
+  }
 
   totalAcquisitionValue = computed(() => 
     this.assets().reduce((sum, asset) => sum + asset.acquisitionValue, 0)
@@ -200,12 +222,16 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       costCenterId: [''],
       responsiblePerson: [''],
       assetAccountCode: ['', Validators.required],
+      assetSubaccountCode: [''],
       counterpartAccountCode: ['', Validators.required],
+      counterpartSubaccountCode: [''],
     });
 
     this.buildAreaForm();
     this.buildDisposeForm();
     this.buildDepreciationForm();
+    this.setupSubaccountWatch(this.form, 'assetAccountCode', 'assetSubaccountCode');
+    this.setupSubaccountWatch(this.form, 'counterpartAccountCode', 'counterpartSubaccountCode');
     this.loadAccounts();
 
     this.form.get('groupNumber')?.valueChanges.subscribe((value) => {
@@ -241,10 +267,16 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       disposalDate: [''],
       saleAmount: [null],
       assetAccountCode: ['', Validators.required],
+      assetSubaccountCode: [''],
       counterpartAccountCode: ['', Validators.required],
+      counterpartSubaccountCode: [''],
       proceedsAccountCode: [''],
+      proceedsSubaccountCode: [''],
     });
 
+    this.setupSubaccountWatch(this.disposeForm, 'assetAccountCode', 'assetSubaccountCode');
+    this.setupSubaccountWatch(this.disposeForm, 'counterpartAccountCode', 'counterpartSubaccountCode');
+    this.setupSubaccountWatch(this.disposeForm, 'proceedsAccountCode', 'proceedsSubaccountCode');
     this.buildRevalueForm();
   }
 
@@ -274,13 +306,10 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
     this.transferForm = this.fb.group({
       assetId: ['', Validators.required],
-      targetCompanyId: [null, Validators.required],
+      targetAreaId: [null, Validators.required],
+      targetCostCenterId: [''],
       transferDate: ['', Validators.required],
       reason: ['', Validators.required],
-      newLocation: [''],
-      newResponsiblePerson: [''],
-      assetAccountCode: ['', Validators.required],
-      transferAccountCode: ['', Validators.required],
     });
   }
 
@@ -378,6 +407,28 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async loadSubaccounts(accountCode: string) {
+    if (!accountCode || this.subaccountsMap()[accountCode]?.length > 0) return;
+    const account = this.accounts().find(a => a.code === accountCode);
+    if (!account) return;
+
+    if (this.networkStatus.isOnline()) {
+      try {
+        const list = await this.accountingService.getSubaccountsByAccount(account.id).toPromise();
+        this.subaccountsMap.update(map => ({ ...map, [accountCode]: list || [] }));
+      } catch {
+        this.subaccountsMap.update(map => ({ ...map, [accountCode]: [] }));
+      }
+    }
+  }
+
+  private setupSubaccountWatch(form: FormGroup, accountControl: string, subaccountControl: string) {
+    form.get(accountControl)?.valueChanges.subscribe(accountCode => {
+      this.loadSubaccounts(accountCode);
+      form.get(subaccountControl)?.setValue('');
+    });
+  }
+
   loadInvestigations() {
     if (this.networkStatus.isOnline()) {
       this.fixedAssetsService.getPendingInvestigations()
@@ -464,8 +515,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           employeeId: this.form.value.employeeId || undefined,
           costCenterId: this.form.value.costCenterId || undefined,
           responsiblePerson: this.form.value.responsiblePerson || undefined,
-          assetAccountCode: this.form.value.assetAccountCode || undefined,
-          counterpartAccountCode: this.form.value.counterpartAccountCode || undefined,
+          assetAccountCode: this.form.value.assetSubaccountCode || this.form.value.assetAccountCode || undefined,
+          counterpartAccountCode: this.form.value.counterpartSubaccountCode || this.form.value.counterpartAccountCode || undefined,
         };
         const result = await this.fixedAssetsService.createFixedAsset(dto).toPromise();
         // El backend puede devolver un aviso contable no bloqueante (p. ej.
@@ -540,14 +591,14 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
         reason: this.disposeForm.value.reason,
         disposalType: concept,
         disposalDate: this.disposeForm.value.disposalDate,
-        assetAccountCode: this.disposeForm.value.assetAccountCode || undefined,
-        counterpartAccountCode: this.disposeForm.value.counterpartAccountCode || undefined,
+        assetAccountCode: this.disposeForm.value.assetSubaccountCode || this.disposeForm.value.assetAccountCode || undefined,
+        counterpartAccountCode: this.disposeForm.value.counterpartSubaccountCode || this.disposeForm.value.counterpartAccountCode || undefined,
       };
       if (concept === 'venta' && this.disposeForm.value.saleAmount) {
         dto.saleAmount = +this.disposeForm.value.saleAmount;
       }
       if (this.disposeForm.value.proceedsAccountCode) {
-        dto.proceedsAccountCode = this.disposeForm.value.proceedsAccountCode;
+        dto.proceedsAccountCode = this.disposeForm.value.proceedsSubaccountCode || this.disposeForm.value.proceedsAccountCode;
       }
       const result: any = await this.fixedAssetsService.disposeAsset(assetId, dto).toPromise();
       const notes: string[] = result?.pendingActions || [];
@@ -713,14 +764,14 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   openTransferModal(asset?: FixedAsset) {
     this.closeMenus();
-    this.loadCompanies();
+    this.loadAreas();
+    this.loadCostCenters();
     this.transferForm.reset({
       assetId: asset?.id || '',
-      targetCompanyId: null,
+      targetAreaId: null,
+      targetCostCenterId: '',
       transferDate: new Date().toISOString().split('T')[0],
       reason: '',
-      newLocation: '',
-      newResponsiblePerson: '',
     });
     this.showTransferModal.set(true);
   }
@@ -731,13 +782,10 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
     try {
       const dto: TransferAssetDto = {
-        targetCompanyId: +this.transferForm.value.targetCompanyId,
+        targetAreaId: this.transferForm.value.targetAreaId ? +this.transferForm.value.targetAreaId : undefined,
+        targetCostCenterId: this.transferForm.value.targetCostCenterId || undefined,
         transferDate: this.transferForm.value.transferDate,
         reason: this.transferForm.value.reason,
-        newLocation: this.transferForm.value.newLocation || undefined,
-        newResponsiblePerson: this.transferForm.value.newResponsiblePerson || undefined,
-        assetAccountCode: this.transferForm.value.assetAccountCode || undefined,
-        transferAccountCode: this.transferForm.value.transferAccountCode || undefined,
       };
       await this.fixedAssetsService
         .transferAsset(this.transferForm.value.assetId, dto)

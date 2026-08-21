@@ -2,6 +2,10 @@
 
 @import "tailwindcss";
 
+/* La variante 'dark' se activa con la clase .dark en un ancestro.
+   Así ThemeService controla todo el tema desde <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Responsive adjustments for mobile */
 @media (max-width: 768px) {
   .main-content {

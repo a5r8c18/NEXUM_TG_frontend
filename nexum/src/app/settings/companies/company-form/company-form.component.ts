@@ -34,7 +34,13 @@ export class CompanyFormComponent implements OnInit, OnDestroy {
     phone: '',
     email: '',
     logo_path: '',
+    tenant_type: 'state',
   });
+
+  tenantOptions = [
+    { value: 'state', label: 'Entidad Estatal' },
+    { value: 'non-state', label: 'Entidad No Estatal' },
+  ];
 
   companyId = signal<string | null>(null);
   errorMessage = signal('');
@@ -80,6 +86,7 @@ export class CompanyFormComponent implements OnInit, OnDestroy {
           phone: company.phone ?? '',
           email: company.email ?? '',
           logo_path: company.logo_path ?? '',
+          tenant_type: company.tenant_type ?? 'state',
         });
         this.isLoading.set(false);
       },

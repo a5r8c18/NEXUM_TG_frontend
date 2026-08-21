@@ -143,6 +143,7 @@
               <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Origen</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Cuenta Contable</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Centro de Costo</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Área</th>
               <th class="px-6 py-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Débito</th>
               <th class="px-6 py-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Crédito</th>
               <th class="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Estado</th>
@@ -188,7 +189,11 @@
                   <td class="px-6 py-4">
                     <div class="text-sm text-slate-900">{{ line.costCenter?.name || '-' }}</div>
                   </td>
-                  
+
+                  <td class="px-6 py-4">
+                    <div class="text-sm text-slate-900">{{ line.area?.name || '-' }}</div>
+                  </td>
+
                   <td class="px-6 py-4 text-right">
                     @if (line.debit && line.debit > 0) {
                       <div class="font-semibold text-blue-700">${{ (+line.debit).toFixed(2) }}</div>
@@ -262,7 +267,7 @@
               <!-- Voucher Total Row -->
               @if (comprobante.lines && comprobante.lines.length > 0) {
                 <tr class="bg-slate-100 border-t-2 border-slate-300 font-semibold">
-                  <td colspan="5" class="px-6 py-4 text-right text-sm text-slate-700">
+                  <td colspan="6" class="px-6 py-4 text-right text-sm text-slate-700">
                     TOTAL {{ comprobante.voucherNumber }}
                   </td>
                   <td class="px-6 py-4 text-right text-sm text-blue-700">
@@ -433,6 +438,7 @@
               <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Subcuenta</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Subelemento</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Centro Costo</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">Área</th>
               <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">Débito</th>
               <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">Crédito</th>
             </tr>
@@ -465,6 +471,10 @@
                   <div class="text-xs font-mono text-slate-900">{{ line.costCenter?.code || '-' }}</div>
                   <div class="text-xs text-slate-500">{{ line.costCenter?.name || '' }}</div>
                 </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs font-mono text-slate-900">{{ line.area?.id || '-' }}</div>
+                  <div class="text-xs text-slate-500">{{ line.area?.name || '' }}</div>
+                </td>
                 <td class="px-3 py-2 text-right">
                   @if (+line.debit > 0) {
                     <span class="text-xs font-semibold text-blue-700">${{ (+line.debit).toFixed(2) }}</span>
@@ -484,7 +494,7 @@
           </tbody>
           <tfoot class="border-t-2 border-slate-300 font-bold">
             <tr>
-              <td colspan="4" class="px-3 py-3 text-right text-xs text-slate-700 uppercase">Totales</td>
+              <td colspan="6" class="px-3 py-3 text-right text-xs text-slate-700 uppercase">Totales</td>
               <td class="px-3 py-3 text-right text-sm text-blue-700">
                 ${{ (selectedComprobante()!.lines || []).reduce((sum, line) => sum + (+line.debit || 0), 0).toFixed(2) }}
               </td>
