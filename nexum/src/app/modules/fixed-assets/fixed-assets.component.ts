@@ -191,21 +191,12 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     const tab = this.route.snapshot.data?.['tab'] as 'assets' | 'areas';
     this.view.set(tab || 'assets');
-
-    const resolved = this.route.snapshot.data?.['fixedAssetsData'] as { assets: FixedAsset[]; catalog: DepreciationGroup[] } | undefined;
-    if (resolved) {
-      this.assets.set(resolved.assets || []);
-      this.catalog.set(resolved.catalog || []);
-      this.isLoading.set(false);
-      this.hasError.set(false);
-    }
-
     this.buildForm();
+    this.loadAll();
     this.loadEmployees();
     this.loadAreas();
     this.loadCostCenters();
     this.loadInvestigations();
-
     if (this.view() === 'areas') {
       this.showAreaModal.set(true);
     }
