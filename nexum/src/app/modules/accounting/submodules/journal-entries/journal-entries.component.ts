@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { Subject } from 'rxjs';
-import { AccountingService, Voucher, Account, ExpenseType, CostCenter } from '../../../../core/services/accounting.service';
+import { AccountingService, Voucher, VoucherLineItem, Account, ExpenseType, CostCenter } from '../../../../core/services/accounting.service';
 import { SubelementsService, Subelement } from '../../../../core/services/subelements.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
@@ -674,6 +674,15 @@ export class JournalEntriesComponent implements OnInit {
   closeEntriesDetail() {
     this.showEntriesDetail.set(false);
     this.selectedComprobante.set(null);
+  }
+
+  /** Devuelve el código de subcuenta sin el prefijo de la cuenta principal. */
+  subaccountDisplay(line: VoucherLineItem): string {
+    if (!line.subaccountCode) return '-';
+    if (line.accountCode && line.subaccountCode.startsWith(line.accountCode + '-')) {
+      return line.subaccountCode.slice(line.accountCode.length + 1);
+    }
+    return line.subaccountCode;
   }
 
   // Computed totals for validation display
