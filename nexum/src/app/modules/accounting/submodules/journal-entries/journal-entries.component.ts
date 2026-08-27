@@ -133,7 +133,21 @@ export class JournalEntriesComponent implements OnInit {
     };
   });
 
-  // No longer using line-based totals; single debit/credit fields in form
+  // █████████████████████████████████████████████████████████████
+  // NUEVAS COMPUTADAS PARA COLUMNA ÁREA (SOLO ACTIVOS FIJOS)
+  // █████████████████████████████████████████████████████████████
+
+  areaColumnVisible = computed(() => {
+    return this.pagedComprobantes().some(c => c.sourceModule === 'fixed-assets');
+  });
+
+  totalColspan = computed(() => this.areaColumnVisible() ? 6 : 5);
+  emptyColspan = computed(() => this.areaColumnVisible() ? 10 : 9);
+
+  detailAreaVisible = computed(() => this.selectedComprobante()?.sourceModule === 'fixed-assets');
+  detailTotalColspan = computed(() => this.detailAreaVisible() ? 6 : 5);
+
+  // █████████████████████████████████████████████████████████████
 
   constructor() {
     this.filterForm = this.fb.group({
