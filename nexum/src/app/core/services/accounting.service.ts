@@ -3,6 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 
+/** Opciones comunes a todos los informes contables. */
+export interface ReportOptions {
+  /** Incluye comprobantes en borrador (sin contabilizar). */
+  includeDrafts?: boolean;
+  /** Excluye los asientos de cierre del ejercicio. */
+  beforeClosing?: boolean;
+}
+
 export interface Elemento {
   id: string;
   companyId: number;
@@ -504,31 +512,54 @@ export class AccountingService {
 
   // ── Reports (Informes Contables) ──
 
-  getTrialBalance(fromDate?: string, toDate?: string) {
+  /** Construye los query params comunes de los informes contables. */
+  private reportParams(
+    dates: { fromDate?: string; toDate?: string; asOfDate?: string },
+    options?: ReportOptions,
+  ) {
     const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
-    return this.http.get<any[]>(`${this.baseUrl}/reports/trial-balance`, { params });
+    if (dates.fromDate) params.fromDate = dates.fromDate;
+    if (dates.toDate) params.toDate = dates.toDate;
+    if (dates.asOfDate) params.asOfDate = dates.asOfDate;
+    if (options?.includeDrafts) params.includeDrafts = 'true';
+    if (options?.beforeClosing) params.beforeClosing = 'true';
+    return params;
   }
 
-  getBalanceSheet(asOfDate?: string) {
-    const params: any = {};
-    if (asOfDate) params.asOfDate = asOfDate;
-    return this.http.get<any>(`${this.baseUrl}/reports/balance-sheet`, { params });
+  getTrialBalance(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.http.get<any[]>(`${this.baseUrl}/reports/trial-balance`, {
+      params: this.reportParams({ fromDate, toDate }, options),
+    });
   }
 
-  getIncomeStatement(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
-    return this.http.get<any>(`${this.baseUrl}/reports/income-statement`, { params });
+  getBalanceSheet(asOfDate?: string, options?: ReportOptions) {
+    return this.http.get<any>(`${this.baseUrl}/reports/balance-sheet`, {
+      params: this.reportParams({ asOfDate }, options),
+    });
   }
 
-  getExpenseBreakdown(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
-    return this.http.get<any>(`${this.baseUrl}/reports/expense-breakdown`, { params });
+  getIncomeStatement(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.http.get<any>(`${this.baseUrl}/reports/income-statement`, {
+      params: this.reportParams({ fromDate, toDate }, options),
+    });
+  }
+
+  getExpenseBreakdown(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.http.get<any>(`${this.baseUrl}/reports/expense-breakdown`, {
+      params: this.reportParams({ fromDate, toDate }, options),
+    });
   }
 
   getGeneralLedger(accountCode: string, fromDate?: string, toDate?: string) {
@@ -625,41 +656,82 @@ export class AccountingService {
     });
   }
 
-  exportTrialBalanceExcel(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
+  exportTrialBalanceExcel(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
     return this.http.get(`${this.baseUrl}/reports/trial-balance/export/excel`, {
-      params,
+      params: this.reportParams({ fromDate, toDate }, options),
       responseType: 'blob',
     });
   }
 
-  exportBalanceSheetExcel(asOfDate?: string) {
-    const params: any = {};
-    if (asOfDate) params.asOfDate = asOfDate;
+  exportTrialBalancePdf(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.http.get(`${this.baseUrl}/reports/trial-balance/export/pdf`, {
+      params: this.reportParams({ fromDate, toDate }, options),
+      responseType: 'blob',
+    });
+  }
+
+  exportBalanceSheetExcel(asOfDate?: string, options?: ReportOptions) {
     return this.http.get(`${this.baseUrl}/reports/balance-sheet/export/excel`, {
-      params,
+      params: this.reportParams({ asOfDate }, options),
       responseType: 'blob',
     });
   }
 
-  exportIncomeStatementExcel(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
+  exportBalanceSheetPdf(asOfDate?: string, options?: ReportOptions) {
+    return this.http.get(`${this.baseUrl}/reports/balance-sheet/export/pdf`, {
+      params: this.reportParams({ asOfDate }, options),
+      responseType: 'blob',
+    });
+  }
+
+  exportIncomeStatementExcel(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
     return this.http.get(`${this.baseUrl}/reports/income-statement/export/excel`, {
-      params,
+      params: this.reportParams({ fromDate, toDate }, options),
       responseType: 'blob',
     });
   }
 
-  exportExpenseBreakdownExcel(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
+  exportIncomeStatementPdf(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.http.get(`${this.baseUrl}/reports/income-statement/export/pdf`, {
+      params: this.reportParams({ fromDate, toDate }, options),
+      responseType: 'blob',
+    });
+  }
+
+  exportExpenseBreakdownExcel(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
     return this.http.get(`${this.baseUrl}/reports/expense-breakdown/export/excel`, {
-      params,
+      params: this.reportParams({ fromDate, toDate }, options),
+      responseType: 'blob',
+    });
+  }
+
+  exportExpenseBreakdownPdf(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.http.get(`${this.baseUrl}/reports/expense-breakdown/export/pdf`, {
+      params: this.reportParams({ fromDate, toDate }, options),
       responseType: 'blob',
     });
   }

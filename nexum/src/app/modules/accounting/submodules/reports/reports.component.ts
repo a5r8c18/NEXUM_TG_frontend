@@ -2,7 +2,10 @@ import { Component, inject, signal, HostListener, computed, OnInit } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
-import { AccountingService } from '../../../../core/services/accounting.service';
+import {
+  AccountingService,
+  ReportOptions,
+} from '../../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 export interface GeneratedReport {
@@ -23,7 +26,6 @@ export interface GeneratedReport {
   options?: {
     includeDraftEntries?: boolean;
     beforeClosing?: boolean;
-    fullReport?: boolean;
     modelo5920?: boolean;
     modelo5921?: boolean;
     modelo5924?: boolean;
@@ -83,9 +85,6 @@ export class ReportsComponent implements OnInit {
   // Shared filter signals
   includeDraftEntries = signal(false);
   beforeClosing = signal(false);
-
-  // Shared
-  fullReport = signal(false);
 
   // Estado de Situación specific
   modelo5920 = signal(false);
@@ -155,6 +154,22 @@ export class ReportsComponent implements OnInit {
     pageSize: this.pageSize,
     itemsPerPage: this.pageSize
   }));
+
+  /** Opciones actualmente marcadas en los filtros. */
+  private currentOptions(): ReportOptions {
+    return {
+      includeDrafts: this.includeDraftEntries(),
+      beforeClosing: this.beforeClosing(),
+    };
+  }
+
+  /** Opciones con las que se generó un informe ya guardado. */
+  private savedOptions(report: GeneratedReport): ReportOptions {
+    return {
+      includeDrafts: report.options?.includeDraftEntries ?? false,
+      beforeClosing: report.options?.beforeClosing ?? false,
+    };
+  }
 
   generateReport() {
     const type = this.activeTab();
@@ -241,7 +256,11 @@ export class ReportsComponent implements OnInit {
         } else if (tbYear) {
           title += ` (${tbYear})`;
         }
-        request$ = this.accountingService.getTrialBalance(fromDate, toDate || today);
+        request$ = this.accountingService.getTrialBalance(
+          fromDate,
+          toDate || today,
+          this.currentOptions(),
+        );
         break;
       }
       case 'balance-sheet': {
@@ -256,7 +275,10 @@ export class ReportsComponent implements OnInit {
         } else if (bsYear) {
           title += ` (${bsYear})`;
         }
-        request$ = this.accountingService.getBalanceSheet(toDate || today);
+        request$ = this.accountingService.getBalanceSheet(
+          toDate || today,
+          this.currentOptions(),
+        );
         break;
       }
       case 'income-statement': {
@@ -271,7 +293,11 @@ export class ReportsComponent implements OnInit {
         } else if (isYear) {
           title += ` (${isYear})`;
         }
-        request$ = this.accountingService.getIncomeStatement(fromDate, toDate || today);
+        request$ = this.accountingService.getIncomeStatement(
+          fromDate,
+          toDate || today,
+          this.currentOptions(),
+        );
         break;
       }
       case 'expense-breakdown': {
@@ -286,7 +312,11 @@ export class ReportsComponent implements OnInit {
         } else if (ebYear) {
           title += ` (${ebYear})`;
         }
-        request$ = this.accountingService.getExpenseBreakdown(fromDate, toDate || today);
+        request$ = this.accountingService.getExpenseBreakdown(
+          fromDate,
+          toDate || today,
+          this.currentOptions(),
+        );
         break;
       }
       default:
@@ -308,6 +338,8 @@ export class ReportsComponent implements OnInit {
           data,
           period: { year: this.getActiveYear(), month: this.getActiveMonth(), fromDate, toDate },
           options: {
+            includeDraftEntries: this.includeDraftEntries(),
+            beforeClosing: this.beforeClosing(),
             modelo5920: this.modelo5920(),
             modelo5921: this.modelo5921(),
             modelo5924: this.modelo5924(),
@@ -382,16 +414,16 @@ export class ReportsComponent implements OnInit {
   }
 
   exportExcel(report: GeneratedReport) {
-    this.isLoading.set(true);
     const fd = report.period?.fromDate;
     const td = report.period?.toDate || report.date;
+    const opts = this.savedOptions(report);
 
     let export$: any;
     let filename = '';
 
     switch (report.type) {
       case 'trial-balance':
-        export$ = this.accountingService.exportTrialBalanceExcel(fd, td);
+        export$ = this.accountingService.exportTrialBalanceExcel(fd, td, opts);
         filename = `balance-comprobacion-${report.date}.xlsx`;
         break;
       case 'balance-sheet':
@@ -399,7 +431,7 @@ export class ReportsComponent implements OnInit {
           export$ = this.accountingService.exportModelo5920Excel(td);
           filename = `Modelo_5920-04-${report.date}.xlsx`;
         } else {
-          export$ = this.accountingService.exportBalanceSheetExcel(td);
+          export$ = this.accountingService.exportBalanceSheetExcel(td, opts);
           filename = `estado-situacion-${report.date}.xlsx`;
         }
         break;
@@ -408,7 +440,11 @@ export class ReportsComponent implements OnInit {
           export$ = this.accountingService.exportModelo5921Excel(fd, td);
           filename = `Modelo_5921-04-${report.date}.xlsx`;
         } else {
-          export$ = this.accountingService.exportIncomeStatementExcel(fd, td);
+          export$ = this.accountingService.exportIncomeStatementExcel(
+            fd,
+            td,
+            opts,
+          );
           filename = `estado-rendimiento-${report.date}.xlsx`;
         }
         break;
@@ -417,88 +453,119 @@ export class ReportsComponent implements OnInit {
           export$ = this.accountingService.exportModelo5924Excel(fd, td);
           filename = `Modelo_5924-${report.date}.xlsx`;
         } else {
-          export$ = this.accountingService.exportExpenseBreakdownExcel(fd, td);
+          export$ = this.accountingService.exportExpenseBreakdownExcel(
+            fd,
+            td,
+            opts,
+          );
           filename = `gastos-subelementos-${report.date}.xlsx`;
         }
         break;
       default:
-        this.isLoading.set(false);
         return;
     }
 
+    this.isLoading.set(true);
     export$.subscribe({
       next: (blob: Blob) => {
         this.downloadBlob(blob, filename);
         this.showToast('Excel exportado correctamente', 'success');
         this.isLoading.set(false);
       },
-      error: () => {
-        this.showToast('Error al exportar Excel', 'error');
+      error: async (err: any) => {
         this.isLoading.set(false);
+        this.showToast(
+          await this.readBlobError(err, 'Error al exportar Excel'),
+          'error',
+        );
       },
     });
   }
 
   exportPdf(report: GeneratedReport) {
-    console.log('🔍 Frontend PDF - exportPdf called');
-    console.log('🔍 Frontend PDF - report:', report);
-    console.log('🔍 Frontend PDF - report.type:', report.type);
-    console.log('🔍 Frontend PDF - report.options:', report.options);
-    console.log('🔍 Frontend PDF - modelo5920:', report.options?.modelo5920);
-    
-    this.isLoading.set(true);
-    
-    // Use backend PDF generation for all modelos
-    if (report.type === 'balance-sheet' && report.options?.modelo5920) {
-      console.log('🔍 Frontend PDF - Calling exportModelo5920Pdf');
-      const asOfDate = report.date;
-      console.log('🔍 Frontend PDF - asOfDate:', asOfDate);
-      this.accountingService.exportModelo5920Pdf(asOfDate).subscribe({
-        next: (blob: Blob) => {
-          this.downloadBlob(blob, `Modelo_5920-${report.date}.pdf`);
-          this.isLoading.set(false);
-          this.showToast('PDF exportado correctamente', 'success');
-        },
-        error: () => {
-          this.isLoading.set(false);
-          this.showToast('Error al generar PDF', 'error');
-        },
-      });
-    } else if (report.type === 'income-statement' && report.options?.modelo5921) {
-      const fromDate = report.period?.fromDate || report.date;
-      const toDate = report.period?.toDate || report.date;
-      this.accountingService.exportModelo5921Pdf(fromDate, toDate).subscribe({
-        next: (blob: Blob) => {
-          this.downloadBlob(blob, `Modelo_5921-${report.date}.pdf`);
-          this.isLoading.set(false);
-          this.showToast('PDF exportado correctamente', 'success');
-        },
-        error: () => {
-          this.isLoading.set(false);
-          this.showToast('Error al generar PDF', 'error');
-        },
-      });
-    } else if (report.type === 'expense-breakdown' && report.options?.modelo5924) {
-      const fromDate = report.period?.fromDate || report.date;
-      const toDate = report.period?.toDate || report.date;
-      this.accountingService.exportModelo5924Pdf(fromDate, toDate).subscribe({
-        next: (blob: Blob) => {
-          this.downloadBlob(blob, `Modelo_5924-${report.date}.pdf`);
-          this.isLoading.set(false);
-          this.showToast('PDF exportado correctamente', 'success');
-        },
-        error: () => {
-          this.isLoading.set(false);
-          this.showToast('Error al generar PDF', 'error');
-        },
-      });
-    } else {
-      // For other reports, show message that PDF is not available yet
-      console.log('🔍 Frontend PDF - No matching PDF endpoint found');
-      console.log('🔍 Frontend PDF - Falling back to info message');
-      this.isLoading.set(false);
-      this.showToast('PDF no disponible para este tipo de informe', 'info');
+    const fd = report.period?.fromDate || report.date;
+    const td = report.period?.toDate || report.date;
+    const opts = this.savedOptions(report);
+
+    let export$: any;
+    let filename = '';
+
+    switch (report.type) {
+      case 'trial-balance':
+        export$ = this.accountingService.exportTrialBalancePdf(fd, td, opts);
+        filename = `balance-comprobacion-${report.date}.pdf`;
+        break;
+      case 'balance-sheet':
+        if (report.options?.modelo5920) {
+          export$ = this.accountingService.exportModelo5920Pdf(td);
+          filename = `Modelo_5920-${report.date}.pdf`;
+        } else {
+          export$ = this.accountingService.exportBalanceSheetPdf(td, opts);
+          filename = `estado-situacion-${report.date}.pdf`;
+        }
+        break;
+      case 'income-statement':
+        if (report.options?.modelo5921) {
+          export$ = this.accountingService.exportModelo5921Pdf(fd, td);
+          filename = `Modelo_5921-${report.date}.pdf`;
+        } else {
+          export$ = this.accountingService.exportIncomeStatementPdf(
+            fd,
+            td,
+            opts,
+          );
+          filename = `estado-rendimiento-${report.date}.pdf`;
+        }
+        break;
+      case 'expense-breakdown':
+        if (report.options?.modelo5924) {
+          export$ = this.accountingService.exportModelo5924Pdf(fd, td);
+          filename = `Modelo_5924-${report.date}.pdf`;
+        } else {
+          export$ = this.accountingService.exportExpenseBreakdownPdf(
+            fd,
+            td,
+            opts,
+          );
+          filename = `gastos-subelementos-${report.date}.pdf`;
+        }
+        break;
+      default:
+        this.showToast('PDF no disponible para este tipo de informe', 'info');
+        return;
     }
+
+    this.isLoading.set(true);
+    export$.subscribe({
+      next: (blob: Blob) => {
+        this.downloadBlob(blob, filename);
+        this.isLoading.set(false);
+        this.showToast('PDF exportado correctamente', 'success');
+      },
+      error: async (err: any) => {
+        this.isLoading.set(false);
+        this.showToast(
+          await this.readBlobError(err, 'Error al generar PDF'),
+          'error',
+        );
+      },
+    });
+  }
+
+  /** Extrae el mensaje de error de una respuesta con responseType 'blob'. */
+  private async readBlobError(
+    err: any,
+    fallback: string,
+  ): Promise<string> {
+    try {
+      if (err?.error instanceof Blob) {
+        const parsed = JSON.parse(await err.error.text());
+        if (parsed?.message) return parsed.message;
+      }
+    } catch {
+      // Sin cuerpo JSON: se usa el mensaje genérico.
+    }
+    return fallback;
   }
 
   getReportTypeLabel(type: string): string {
