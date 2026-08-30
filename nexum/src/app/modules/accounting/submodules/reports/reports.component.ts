@@ -5,6 +5,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 import {
   AccountingService,
   ReportOptions,
+  ReportOrientation,
 } from '../../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
@@ -26,6 +27,7 @@ export interface GeneratedReport {
   options?: {
     includeDraftEntries?: boolean;
     beforeClosing?: boolean;
+    accountsOnly?: boolean;
     modelo5920?: boolean;
     modelo5921?: boolean;
     modelo5924?: boolean;
@@ -85,6 +87,10 @@ export class ReportsComponent implements OnInit {
   // Shared filter signals
   includeDraftEntries = signal(false);
   beforeClosing = signal(false);
+  /** true = solo cuentas de mayor; false = cuenta-subcuenta. */
+  accountsOnly = signal(false);
+  /** Orientación con la que se exportarán los PDF. */
+  pdfOrientation = signal<ReportOrientation>('portrait');
 
   // Estado de Situación specific
   modelo5920 = signal(false);
@@ -160,14 +166,20 @@ export class ReportsComponent implements OnInit {
     return {
       includeDrafts: this.includeDraftEntries(),
       beforeClosing: this.beforeClosing(),
+      accountsOnly: this.accountsOnly(),
     };
   }
 
-  /** Opciones con las que se generó un informe ya guardado. */
+  /**
+   * Opciones con las que se generó un informe ya guardado. La orientación no
+   * se guarda: se toma siempre la seleccionada en el momento de exportar.
+   */
   private savedOptions(report: GeneratedReport): ReportOptions {
     return {
       includeDrafts: report.options?.includeDraftEntries ?? false,
       beforeClosing: report.options?.beforeClosing ?? false,
+      accountsOnly: report.options?.accountsOnly ?? false,
+      orientation: this.pdfOrientation(),
     };
   }
 
@@ -327,6 +339,7 @@ export class ReportsComponent implements OnInit {
     const desc: string[] = [];
     if (this.includeDraftEntries()) desc.push('Incluye borradores');
     if (this.beforeClosing()) desc.push('Antes de cierre');
+    if (this.accountsOnly()) desc.push('Solo cuentas');
 
     request$.subscribe({
       next: (data: any) => {
@@ -340,6 +353,7 @@ export class ReportsComponent implements OnInit {
           options: {
             includeDraftEntries: this.includeDraftEntries(),
             beforeClosing: this.beforeClosing(),
+            accountsOnly: this.accountsOnly(),
             modelo5920: this.modelo5920(),
             modelo5921: this.modelo5921(),
             modelo5924: this.modelo5924(),

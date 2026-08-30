@@ -3,12 +3,19 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 
+/** Orientación del papel en los informes exportados a PDF. */
+export type ReportOrientation = 'portrait' | 'landscape';
+
 /** Opciones comunes a todos los informes contables. */
 export interface ReportOptions {
   /** Incluye comprobantes en borrador (sin contabilizar). */
   includeDrafts?: boolean;
   /** Excluye los asientos de cierre del ejercicio. */
   beforeClosing?: boolean;
+  /** Agrupa por cuenta de mayor, sin desglosar subcuentas. */
+  accountsOnly?: boolean;
+  /** Orientación del PDF generado. Por defecto vertical. */
+  orientation?: ReportOrientation;
 }
 
 export interface Elemento {
@@ -523,6 +530,8 @@ export class AccountingService {
     if (dates.asOfDate) params.asOfDate = dates.asOfDate;
     if (options?.includeDrafts) params.includeDrafts = 'true';
     if (options?.beforeClosing) params.beforeClosing = 'true';
+    if (options?.accountsOnly) params.accountsOnly = 'true';
+    if (options?.orientation) params.orientation = options.orientation;
     return params;
   }
 
