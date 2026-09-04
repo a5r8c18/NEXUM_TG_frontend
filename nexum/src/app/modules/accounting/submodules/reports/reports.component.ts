@@ -442,7 +442,7 @@ export class ReportsComponent implements OnInit {
         break;
       case 'balance-sheet':
         if (report.options?.modelo5920) {
-          export$ = this.accountingService.exportModelo5920Excel(td);
+          export$ = this.accountingService.exportModelo5920Excel(td, opts);
           filename = `Modelo_5920-04-${report.date}.xlsx`;
         } else {
           export$ = this.accountingService.exportBalanceSheetExcel(td, opts);
@@ -451,7 +451,7 @@ export class ReportsComponent implements OnInit {
         break;
       case 'income-statement':
         if (report.options?.modelo5921) {
-          export$ = this.accountingService.exportModelo5921Excel(fd, td);
+          export$ = this.accountingService.exportModelo5921Excel(fd, td, opts);
           filename = `Modelo_5921-04-${report.date}.xlsx`;
         } else {
           export$ = this.accountingService.exportIncomeStatementExcel(
@@ -464,7 +464,7 @@ export class ReportsComponent implements OnInit {
         break;
       case 'expense-breakdown':
         if (report.options?.modelo5924) {
-          export$ = this.accountingService.exportModelo5924Excel(fd, td);
+          export$ = this.accountingService.exportModelo5924Excel(fd, td, opts);
           filename = `Modelo_5924-${report.date}.xlsx`;
         } else {
           export$ = this.accountingService.exportExpenseBreakdownExcel(
@@ -511,7 +511,7 @@ export class ReportsComponent implements OnInit {
         break;
       case 'balance-sheet':
         if (report.options?.modelo5920) {
-          export$ = this.accountingService.exportModelo5920Pdf(td);
+          export$ = this.accountingService.exportModelo5920Pdf(td, opts);
           filename = `Modelo_5920-${report.date}.pdf`;
         } else {
           export$ = this.accountingService.exportBalanceSheetPdf(td, opts);
@@ -520,7 +520,7 @@ export class ReportsComponent implements OnInit {
         break;
       case 'income-statement':
         if (report.options?.modelo5921) {
-          export$ = this.accountingService.exportModelo5921Pdf(fd, td);
+          export$ = this.accountingService.exportModelo5921Pdf(fd, td, opts);
           filename = `Modelo_5921-${report.date}.pdf`;
         } else {
           export$ = this.accountingService.exportIncomeStatementPdf(
@@ -533,7 +533,7 @@ export class ReportsComponent implements OnInit {
         break;
       case 'expense-breakdown':
         if (report.options?.modelo5924) {
-          export$ = this.accountingService.exportModelo5924Pdf(fd, td);
+          export$ = this.accountingService.exportModelo5924Pdf(fd, td, opts);
           filename = `Modelo_5924-${report.date}.pdf`;
         } else {
           export$ = this.accountingService.exportExpenseBreakdownPdf(

@@ -596,73 +596,87 @@ export class AccountingService {
     return this.http.get<any>(`${this.baseUrl}/kpis`);
   }
 
-  // ── Modelos SIEN (5920 / 5921) ──
+  // ── Modelos SIEN (5920 … 5924 y flujo de efectivo) ──
 
-  exportModelo5920Excel(asOfDate?: string) {
-    const params: any = {};
-    if (asOfDate) params.asOfDate = asOfDate;
-    return this.http.get(`${this.baseUrl}/reports/modelo-5920/export/excel`, {
-      params,
-      responseType: 'blob',
-    });
+  /** Descarga un modelo SIEN aplicando los filtros activos del informe. */
+  private exportSien(
+    modelo: string,
+    formato: 'pdf' | 'excel',
+    dates: { fromDate?: string; toDate?: string; asOfDate?: string },
+    options?: ReportOptions,
+  ) {
+    return this.http.get(
+      `${this.baseUrl}/reports/${modelo}/export/${formato}`,
+      {
+        params: this.reportParams(dates, options),
+        responseType: 'blob',
+      },
+    );
   }
 
-  exportModelo5920Pdf(asOfDate?: string) {
-    console.log('🔍 AccountingService - exportModelo5920Pdf called');
-    console.log('🔍 AccountingService - asOfDate:', asOfDate);
-    console.log('🔍 AccountingService - baseUrl:', this.baseUrl);
-    
-    const params: any = {};
-    if (asOfDate) params.asOfDate = asOfDate;
-    
-    const url = `${this.baseUrl}/reports/modelo-5920/export/pdf`;
-    console.log('🔍 AccountingService - Final URL:', url);
-    console.log('🔍 AccountingService - Params:', params);
-    
-    return this.http.get(url, {
-      params,
-      responseType: 'blob',
-    });
+  exportModelo5920Excel(asOfDate?: string, options?: ReportOptions) {
+    return this.exportSien('modelo-5920', 'excel', { asOfDate }, options);
   }
 
-  exportModelo5921Excel(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
-    return this.http.get(`${this.baseUrl}/reports/modelo-5921/export/excel`, {
-      params,
-      responseType: 'blob',
-    });
+  exportModelo5920Pdf(asOfDate?: string, options?: ReportOptions) {
+    return this.exportSien('modelo-5920', 'pdf', { asOfDate }, options);
   }
 
-  exportModelo5921Pdf(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
-    return this.http.get(`${this.baseUrl}/reports/modelo-5921/export/pdf`, {
-      params,
-      responseType: 'blob',
-    });
+  exportModelo5921Excel(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.exportSien('modelo-5921', 'excel', { fromDate, toDate }, options);
   }
 
-  exportModelo5924Pdf(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
-    return this.http.get(`${this.baseUrl}/reports/modelo-5924/export/pdf`, {
-      params,
-      responseType: 'blob',
-    });
+  exportModelo5921Pdf(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.exportSien('modelo-5921', 'pdf', { fromDate, toDate }, options);
   }
 
-  exportModelo5924Excel(fromDate?: string, toDate?: string) {
-    const params: any = {};
-    if (fromDate) params.fromDate = fromDate;
-    if (toDate) params.toDate = toDate;
-    return this.http.get(`${this.baseUrl}/reports/modelo-5924/export/excel`, {
-      params,
-      responseType: 'blob',
-    });
+  exportModelo5922Pdf(asOfDate?: string, options?: ReportOptions) {
+    return this.exportSien('modelo-5922', 'pdf', { asOfDate }, options);
+  }
+
+  exportModelo5923Pdf(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.exportSien('modelo-5923', 'pdf', { fromDate, toDate }, options);
+  }
+
+  exportModelo5924Pdf(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.exportSien('modelo-5924', 'pdf', { fromDate, toDate }, options);
+  }
+
+  exportModelo5924Excel(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.exportSien('modelo-5924', 'excel', { fromDate, toDate }, options);
+  }
+
+  exportFlujoEfectivoPdf(
+    fromDate?: string,
+    toDate?: string,
+    options?: ReportOptions,
+  ) {
+    return this.exportSien(
+      'flujo-efectivo',
+      'pdf',
+      { fromDate, toDate },
+      options,
+    );
   }
 
   exportTrialBalanceExcel(
