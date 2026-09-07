@@ -273,6 +273,45 @@
           }
         </div>
         <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Cuenta de gasto (nómina)</label>
+          <input type="text" [(ngModel)]="form.expenseAccountCode" placeholder="Ej. 822, 700-0020"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
+          <p class="text-xs text-slate-400">Si se indica, tiene prioridad sobre la del centro de costo.</p>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Categoría ocupacional</label>
+          <select [(ngModel)]="form.occupationalCategory"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+            <option [ngValue]="null">Sin asignar</option>
+            <option value="0010">0010 — Directivos</option>
+            <option value="0020">0020 — Técnicos</option>
+            <option value="0030">0030 — Operarios</option>
+            <option value="0040">0040 — Servicios</option>
+            <option value="0050">0050 — Administrativos</option>
+          </select>
+          <p class="text-xs text-slate-400">Determina la subcuenta 455-00X0 de Nóminas por Pagar.</p>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Sector de empleo</label>
+          <select [(ngModel)]="form.employmentSector"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+            <option value="state">Estatal</option>
+            <option value="non_state">No estatal</option>
+          </select>
+          <p class="text-xs text-slate-400">En maternidad, el sector no estatal lo paga la Filial INSS.</p>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Término del contrato</label>
+          <select [(ngModel)]="form.contractTerm"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+            <option [ngValue]="null">Sin asignar</option>
+            <option value="indefinite">Por tiempo indeterminado</option>
+            <option value="fixed_term">Por tiempo determinado</option>
+            <option value="work">A destajo / por obra</option>
+            <option value="home_based">A domicilio</option>
+          </select>
+        </div>
+        <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Fecha de ingreso</label>
           <input type="date" [(ngModel)]="form.hireDate"
                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>

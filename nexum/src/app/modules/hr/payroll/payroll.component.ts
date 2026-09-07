@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PayrollService } from '../../../core/services/payroll.service';
+import { HrService, Employee } from '../../../core/services/hr.service';
 import { AccountingService, CostCenter } from '../../../core/services/accounting.service';
 import { FinanceService } from '../../../core/services/finance.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
@@ -32,6 +33,12 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
       </div>
 
       <div class="flex gap-3 mb-4">
+        <select [(ngModel)]="conceptFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
+          <option value="">Todos los conceptos</option>
+          @for (c of concepts; track c.value) {
+            <option [value]="c.value">{{ c.label }}</option>
+          }
+        </select>
         <select [(ngModel)]="statusFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
           <option value="">Todos los estados</option>
           <option value="draft">Borrador</option>
@@ -65,6 +72,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
             <thead class="bg-slate-50 dark:bg-slate-900/50">
               <tr>
                 <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">ID</th>
+                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Concepto</th>
                 <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Período</th>
                 <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Fecha Pago</th>
                 <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Total Bruto</th>
@@ -78,6 +86,11 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
               @for (payroll of pagedItems(); track payroll.id) {
                 <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ payroll.id }}</td>
+                  <td class="px-4 py-3">
+                    <span [class]="getConceptClass(payroll.concept)" class="px-2 py-1 rounded-full text-xs font-medium">
+                      {{ getConceptLabel(payroll.concept) }}{{ payroll.installment ? ' · Plazo ' + payroll.installment : '' }}
+                    </span>
+                  </td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ payroll.period }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ payroll.paidAt || '—' }}</td>
                   <td class="px-4 py-3 text-right dark:text-slate-300">{{ payroll.totalGross | number:'1.2-2' }}</td>
@@ -100,7 +113,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay nóminas</td></tr>
+                <tr><td colspan="9" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay nóminas</td></tr>
               }
             </tbody>
           </table>
@@ -121,7 +134,46 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                    confirmButtonClass="bg-blue-600 hover:bg-blue-700"
                    maxWidthClass="max-w-md">
           <div class="space-y-4">
-            <p class="text-xs text-slate-500">Se generará un borrador con todos los empleados activos, tomando su salario contractual y aplicando la Contribución Especial a la Seguridad Social (5%).</p>
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600">Concepto <span class="text-red-500">*</span></label>
+              <select [(ngModel)]="genForm.concept" (ngModelChange)="onConceptChange()"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                @for (c of concepts; track c.value) {
+                  <option [value]="c.value">{{ c.label }}</option>
+                }
+              </select>
+            </div>
+            <p class="text-xs text-slate-500">{{ conceptHint() }}</p>
+            @if (genForm.concept === 'maternidad') {
+              <div class="space-y-1">
+                <label class="text-xs font-medium text-slate-600">Plazo de pago <span class="text-red-500">*</span></label>
+                <select [(ngModel)]="genForm.installment"
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option [ngValue]="1">1 — Prenatal (semanas 34-38/42)</option>
+                  <option [ngValue]="2">2 — Postnatal (semanas 1-6)</option>
+                  <option [ngValue]="3">3 — Postnatal (semanas 7-12)</option>
+                </select>
+              </div>
+            }
+            @if (genForm.concept === 'libre') {
+              <div class="space-y-2">
+                <label class="text-xs font-medium text-slate-600">Líneas del concepto libre <span class="text-red-500">*</span></label>
+                @for (line of freeItems; track $index) {
+                  <div class="flex gap-2 items-center">
+                    <select [(ngModel)]="line.employeeId" class="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs">
+                      <option value="">— Empleado —</option>
+                      @for (e of employees(); track e.id) {
+                        <option [value]="e.id">{{ e.lastName }}, {{ e.firstName }}</option>
+                      }
+                    </select>
+                    <input type="number" [(ngModel)]="line.amount" placeholder="Importe" class="w-24 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-right"/>
+                    <input type="text" [(ngModel)]="line.description" placeholder="Concepto" class="w-28 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"/>
+                    <button (click)="freeItems.splice($index, 1)" class="text-red-500 text-xs px-1">✕</button>
+                  </div>
+                }
+                <button (click)="freeItems.push({ employeeId: '', amount: 0, description: '' })" class="text-blue-600 text-xs hover:underline">+ Añadir línea</button>
+              </div>
+            }
             <div class="space-y-1">
               <label class="text-xs font-medium text-slate-600">Período <span class="text-red-500">*</span></label>
               <input type="month" [(ngModel)]="genForm.period"
@@ -160,6 +212,10 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                   <th class="text-right px-3 py-2 font-medium text-slate-700">Imp.</th>
                   <th class="text-right px-3 py-2 font-medium text-slate-700">Pens.</th>
                   <th class="text-right px-3 py-2 font-medium text-slate-700">Sind.</th>
+                  @if (isConceptPayroll()) {
+                    <th class="text-right px-3 py-2 font-medium text-slate-700">Unid.</th>
+                    <th class="text-right px-3 py-2 font-medium text-slate-700">Tasa</th>
+                  }
                   <th class="text-right px-3 py-2 font-medium text-slate-700">Otras ret.</th>
                   <th class="text-right px-3 py-2 font-medium text-slate-700">Prov. Vac.</th>
                   <th class="text-right px-3 py-2 font-medium text-slate-700">Neto</th>
@@ -175,7 +231,11 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                       <td class="px-3 py-2"><input type="number" [(ngModel)]="item.socialSecurity" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
                       <td class="px-3 py-2"><input type="number" [(ngModel)]="item.taxWithholding" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
                       <td class="px-3 py-2"><input type="number" [(ngModel)]="item.pension" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.healthInsurance" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.unionDues" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
+                      @if (isConceptPayroll()) {
+                        <td class="px-3 py-2 text-right text-xs text-slate-500">{{ item.paidUnits || '—' }}</td>
+                        <td class="px-3 py-2 text-right text-xs text-slate-500">{{ item.appliedRate ? (item.appliedRate * 100) + '%' : '—' }}</td>
+                      }
                       <td class="px-3 py-2"><input type="number" [(ngModel)]="item.otherDeductions" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
                       <td class="px-3 py-2 text-right text-xs text-slate-500">{{ item.vacationProvision | number:'1.2-2' }}</td>
                       <td class="px-3 py-2 text-right font-semibold text-xs">{{ item.netSalary | number:'1.2-2' }}</td>
@@ -205,7 +265,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
             <p><strong>Seguridad Social (5%):</strong> {{ receiptItem()?.socialSecurity | number:'1.2-2' }}</p>
             <p><strong>Impuesto sobre ingresos:</strong> {{ receiptItem()?.taxWithholding | number:'1.2-2' }}</p>
             <p><strong>Pensión:</strong> {{ receiptItem()?.pension | number:'1.2-2' }}</p>
-            <p><strong>Sindicato:</strong> {{ receiptItem()?.healthInsurance | number:'1.2-2' }}</p>
+            <p><strong>Sindicato:</strong> {{ receiptItem()?.unionDues | number:'1.2-2' }}</p>
             <p><strong>Otras retenciones:</strong> {{ receiptItem()?.otherDeductions | number:'1.2-2' }}</p>
             <p><strong>Provisión vacaciones:</strong> {{ receiptItem()?.vacationProvision | number:'1.2-2' }}</p>
             <p class="text-lg font-bold text-right border-t pt-2">NETO: {{ receiptItem()?.netSalary | number:'1.2-2' }}</p>
@@ -264,6 +324,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
 })
 export class PayrollComponent implements OnInit {
   private payrollService = inject(PayrollService);
+  private hrService = inject(HrService);
   private accountingService = inject(AccountingService);
   private financeService = inject(FinanceService);
   private confirmDialog = inject(ConfirmDialogService);
@@ -286,9 +347,21 @@ export class PayrollComponent implements OnInit {
   receiptItem = signal<any>(null);
 
   statusFilter = '';
+  conceptFilter = '';
   periodFilter = '';
   fromDate = '';
   toDate = '';
+
+  concepts = [
+    { value: 'salario', label: 'Salario' },
+    { value: 'vacaciones', label: 'Vacaciones' },
+    { value: 'subsidio', label: 'Subsidio' },
+    { value: 'maternidad', label: 'Maternidad' },
+    { value: 'paternidad', label: 'Paternidad' },
+    { value: 'libre', label: 'Concepto libre' },
+  ];
+  employees = signal<Employee[]>([]);
+  freeItems: { employeeId: string; amount: number; description: string }[] = [];
 
   pagedItems = computed(() => {
     const start = (this.currentPage() - 1) * this.pageSize;
@@ -304,7 +377,8 @@ export class PayrollComponent implements OnInit {
 
   onPageChange(page: number) { this.currentPage.set(page); }
 
-  genForm: { period: string; startDate: string; endDate: string } = { period: '', startDate: '', endDate: '' };
+  genForm: { concept: string; period: string; startDate: string; endDate: string; installment: number } =
+    { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1 };
   processingId: number | null = null;
   selectedCostCenterId: string | null = null;
   payingId: number | null = null;
@@ -326,6 +400,7 @@ export class PayrollComponent implements OnInit {
     this.isLoading.set(true);
     this.payrollService.getAll({
       status: this.statusFilter || undefined,
+      concept: this.conceptFilter || undefined,
       period: this.periodFilter || undefined,
       startDate: this.fromDate || undefined,
       endDate: this.toDate || undefined,
@@ -336,8 +411,35 @@ export class PayrollComponent implements OnInit {
   }
 
   openGenerate() {
-    this.genForm = { period: '', startDate: '', endDate: '' };
+    this.genForm = { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1 };
+    this.freeItems = [];
     this.showGenerate.set(true);
+  }
+
+  onConceptChange() {
+    if (this.genForm.concept === 'libre' && this.employees().length === 0) {
+      this.hrService.getEmployees({ status: 'active' }).subscribe({
+        next: (data) => this.employees.set(data || []),
+        error: () => this.showToast('No se pudieron cargar los empleados', 'error'),
+      });
+    }
+  }
+
+  conceptHint(): string {
+    const hints: Record<string, string> = {
+      salario: 'Borrador con todos los empleados activos: salario contractual, horas extra, ausencias, Contribución Especial (5%), provisión de vacaciones y retención 1,5% para subsidios.',
+      vacaciones: 'Paga las licencias de vacaciones aprobadas que solapen el período. Se carga a la provisión 492, no a gasto.',
+      subsidio: 'Paga las licencias por enfermedad aprobadas con certificado médico. Aplica carencia de 3 días, porcentajes 50-80% y mínimo legal. Se carga a la provisión 500.',
+      maternidad: 'Paga un plazo de la licencia de maternidad según el salario promedio semanal. Sector estatal: recuperable (164-0030). Sector no estatal: paga la Filial INSS.',
+      paternidad: 'Paga la licencia de paternidad aprobada. Se carga a la provisión 500.',
+      libre: 'Nómina de concepto libre: defina manualmente empleado, importe y descripción de cada línea.',
+    };
+    return hints[this.genForm.concept] || '';
+  }
+
+  isConceptPayroll(): boolean {
+    const c = this.detailPayroll()?.concept;
+    return !!c && c !== 'salario';
   }
 
   generate() {
@@ -345,8 +447,34 @@ export class PayrollComponent implements OnInit {
       this.showToast('Período y fechas son obligatorios', 'error');
       return;
     }
+    let request;
+    switch (this.genForm.concept) {
+      case 'vacaciones':
+        request = this.payrollService.generateVacations(this.genForm);
+        break;
+      case 'subsidio':
+        request = this.payrollService.generateSubsidy(this.genForm);
+        break;
+      case 'maternidad':
+        request = this.payrollService.generateMaternity(this.genForm);
+        break;
+      case 'paternidad':
+        request = this.payrollService.generateSubsidy(this.genForm);
+        break;
+      case 'libre': {
+        const items = this.freeItems.filter((i) => i.employeeId && i.amount > 0);
+        if (items.length === 0) {
+          this.showToast('Añada al menos una línea con empleado e importe', 'error');
+          return;
+        }
+        request = this.payrollService.generateFree({ ...this.genForm, items });
+        break;
+      }
+      default:
+        request = this.payrollService.generate(this.genForm);
+    }
     this.isBusy.set(true);
-    this.payrollService.generate(this.genForm).subscribe({
+    request.subscribe({
       next: () => {
         this.isBusy.set(false);
         this.showGenerate.set(false);
@@ -379,13 +507,13 @@ export class PayrollComponent implements OnInit {
     item.commissions = Number(item.commissions) || 0;
     item.allowances = Number(item.allowances) || 0;
     item.socialSecurity = Number(item.socialSecurity) || 0;
-    item.healthInsurance = Number(item.healthInsurance) || 0;
+    item.unionDues = Number(item.unionDues) || 0;
     item.pension = Number(item.pension) || 0;
     item.taxWithholding = Number(item.taxWithholding) || 0;
     item.otherDeductions = Number(item.otherDeductions) || 0;
     item.vacationProvision = Number(item.vacationProvision) || 0;
     item.grossSalary = item.baseSalary + item.overtimePay + item.bonuses + item.commissions + item.allowances;
-    item.totalDeductions = item.socialSecurity + item.healthInsurance + item.pension + item.taxWithholding + item.otherDeductions;
+    item.totalDeductions = item.socialSecurity + item.unionDues + item.pension + item.taxWithholding + item.otherDeductions;
     item.netSalary = item.grossSalary - item.totalDeductions;
     this.detailItems.set([...this.detailItems()]);
   }
@@ -499,5 +627,21 @@ export class PayrollComponent implements OnInit {
       cancelled: 'Cancelada',
     };
     return map[status] || status;
+  }
+
+  getConceptLabel(concept: string): string {
+    return this.concepts.find((c) => c.value === concept)?.label || 'Salario';
+  }
+
+  getConceptClass(concept: string): string {
+    const map: Record<string, string> = {
+      salario: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      vacaciones: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+      subsidio: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+      maternidad: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
+      paternidad: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+      libre: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
+    };
+    return map[concept] || map['salario'];
   }
 }

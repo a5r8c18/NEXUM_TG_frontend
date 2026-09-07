@@ -13,6 +13,7 @@ export class PayrollService {
     let params = new HttpParams();
     if (filters?.period) params = params.set('period', filters.period);
     if (filters?.status) params = params.set('status', filters.status);
+    if (filters?.concept) params = params.set('concept', filters.concept);
     if (filters?.startDate) params = params.set('startDate', filters.startDate);
     if (filters?.endDate) params = params.set('endDate', filters.endDate);
     return this.http.get(this.apiUrl, { params });
@@ -32,6 +33,22 @@ export class PayrollService {
 
   generate(data: { period: string; startDate: string; endDate: string; processedBy?: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/generate`, data);
+  }
+
+  generateVacations(data: { period: string; startDate: string; endDate: string; processedBy?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate/vacaciones`, data);
+  }
+
+  generateSubsidy(data: { period: string; startDate: string; endDate: string; processedBy?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate/subsidio`, data);
+  }
+
+  generateMaternity(data: { period: string; startDate: string; endDate: string; installment: number; processedBy?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate/maternidad`, data);
+  }
+
+  generateFree(data: { period: string; startDate: string; endDate: string; items: { employeeId: string; amount: number; description?: string }[]; processedBy?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate/libre`, data);
   }
 
   process(id: number, processedBy: string, costCenterId?: string): Observable<any> {

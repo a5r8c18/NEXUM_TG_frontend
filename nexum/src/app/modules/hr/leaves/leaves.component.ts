@@ -107,6 +107,61 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
               <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Desde <span class="text-red-500">*</span></label><input type="date" [(ngModel)]="form.startDate" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
               <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Hasta <span class="text-red-500">*</span></label><input type="date" [(ngModel)]="form.endDate" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
             </div>
+            @if (form.type === 'sick') {
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Origen</label>
+                  <select [(ngModel)]="form.origin" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm">
+                    <option value="common">Enfermedad común</option>
+                    <option value="work">Accidente / enfermedad laboral</option>
+                  </select>
+                </div>
+                <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Certificado médico</label>
+                  <input type="text" [(ngModel)]="form.medicalCertificate" placeholder="Nº de certificado" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="checkbox" [(ngModel)]="form.hospitalized" id="hosp" class="rounded"/>
+                <label for="hosp" class="text-xs text-slate-600">Hospitalizado (exime la carencia de 3 días)</label>
+              </div>
+              @if (form.hospitalized) {
+                <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Inicio de hospitalización</label>
+                  <input type="date" [(ngModel)]="form.hospitalizationStart" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/>
+                </div>
+              }
+            }
+            @if (form.type === 'maternity') {
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Inicio prenatal</label>
+                  <input type="date" [(ngModel)]="form.prenatalStart" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/>
+                </div>
+                <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Fecha del parto</label>
+                  <input type="date" [(ngModel)]="form.birthDate" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/>
+                </div>
+              </div>
+              <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Inicio posnatal</label>
+                <input type="date" [(ngModel)]="form.postnatalStart" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="checkbox" [(ngModel)]="form.multiplePregnancy" id="mult" class="rounded"/>
+                <label for="mult" class="text-xs text-slate-600">Embarazo múltiple (8 semanas prenatales)</label>
+              </div>
+              <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Prestación social (Art. 30)</label>
+                <select [(ngModel)]="form.socialBenefitVariant" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm">
+                  <option [ngValue]="null">No aplica</option>
+                  <option value="mother">Madre cuida al menor (60%)</option>
+                  <option value="mother_working">Madre reincorporada + prestación (60%)</option>
+                  <option value="other_worker">Cedida a padre/abuelo trabajador (60% de su salario)</option>
+                </select>
+              </div>
+              @if (form.socialBenefitVariant === 'other_worker') {
+                <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Beneficiario</label>
+                  <select [(ngModel)]="form.beneficiaryEmployeeId" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm">
+                    <option [ngValue]="null">Seleccione...</option>
+                    @for (e of employees(); track e.id) { <option [ngValue]="e.id">{{ e.firstName }} {{ e.lastName }}</option> }
+                  </select>
+                </div>
+              }
+            }
             <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Motivo</label><textarea [(ngModel)]="form.reason" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"></textarea></div>
           </div>
         </app-modal>
@@ -148,7 +203,12 @@ export class LeavesComponent implements OnInit {
   ngOnInit() { this.loadData(); }
 
   private emptyForm() {
-    return { employeeId: '', type: 'vacation', startDate: '', endDate: '', days: 0, reason: '', status: 'pending' };
+    return {
+      employeeId: '', type: 'vacation', startDate: '', endDate: '', days: 0, reason: '', status: 'pending',
+      origin: 'common', hospitalized: false, hospitalizationStart: null, medicalCertificate: null,
+      multiplePregnancy: false, birthDate: null, prenatalStart: null, postnatalStart: null,
+      socialBenefitVariant: null, beneficiaryEmployeeId: null,
+    };
   }
 
   loadData() {

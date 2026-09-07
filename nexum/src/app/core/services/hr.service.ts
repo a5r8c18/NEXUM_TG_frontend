@@ -16,6 +16,9 @@ export interface Employee {
   costCenterId: string | null;
   costCenterName?: string | null;
   expenseAccountCode?: string | null;
+  occupationalCategory?: string | null;
+  employmentSector?: 'state' | 'non_state' | null;
+  contractTerm?: 'indefinite' | 'fixed_term' | 'work' | 'home_based' | null;
   hireDate: string | null;
   salary: number;
   contractType: 'full_time' | 'part_time' | 'contractor' | 'intern';
@@ -78,6 +81,19 @@ export interface LeaveRequest {
   reason: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  // Campos para subsidio por enfermedad (Art. 40-46)
+  origin?: 'common' | 'work' | null;
+  hospitalized?: boolean | null;
+  hospitalizationStart?: string | null;
+  medicalCertificate?: string | null;
+  // Campos para maternidad
+  multiplePregnancy?: boolean | null;
+  birthDate?: string | null;
+  prenatalStart?: string | null;
+  postnatalStart?: string | null;
+  // Prestación social (Art. 30-33)
+  socialBenefitVariant?: 'mother' | 'mother_working' | 'other_worker' | null;
+  beneficiaryEmployeeId?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
