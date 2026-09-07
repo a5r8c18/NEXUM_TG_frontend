@@ -101,6 +101,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                   </td>
                   <td class="px-4 py-3 text-center">
                     <button (click)="openDetail(payroll)" class="bg-slate-600 text-white px-3 py-1 rounded text-xs hover:bg-slate-700 transition-colors mr-1">Detalle</button>
+                    <button (click)="downloadPdf(payroll)" class="bg-violet-600 text-white px-3 py-1 rounded text-xs hover:bg-violet-700 transition-colors mr-1">PDF</button>
                     @if (payroll.status === 'draft') {
                       <button (click)="openProcess(payroll)" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors mr-1">Procesar</button>
                     }
@@ -601,6 +602,20 @@ export class PayrollComponent implements OnInit {
     this.payrollService.cancel(id).subscribe({
       next: () => { this.showToast('Nómina cancelada y comprobantes anulados', 'success'); this.loadData(); },
       error: (err) => this.showToast(err?.error?.message || 'Error al cancelar la nómina', 'error')
+    });
+  }
+
+  downloadPdf(payroll: any) {
+    this.payrollService.exportPdf(payroll.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nomina-sc-4-06-${payroll.id}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.showToast('Error al generar el PDF de la nómina', 'error'),
     });
   }
 

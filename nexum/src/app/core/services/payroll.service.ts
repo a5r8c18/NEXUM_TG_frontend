@@ -66,4 +66,8 @@ export class PayrollService {
   updateItems(id: number, items: any[]): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/items`, { items });
   }
+
+  exportPdf(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/export/pdf`, { responseType: 'blob' });
+  }
 }
