@@ -14,7 +14,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
   standalone: true,
   imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
   template: `
-    <div class="p-6">
+    <div class="p-6 space-y-5">
       @if (toast()) {
         <div class="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border"
              [class.bg-green-50]="toast()?.type === 'success'"
@@ -27,39 +27,83 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
         </div>
       }
 
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold dark:text-white">Nómina</h1>
-        <button (click)="openGenerate()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">+ Generar Nómina</button>
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Nómina</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Devengo, retenciones y pago por concepto, contabilizado automáticamente</p>
+        </div>
+        <button (click)="openGenerate()" class="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Generar Nómina
+        </button>
       </div>
 
-      <div class="flex gap-3 mb-4">
-        <select [(ngModel)]="conceptFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos los conceptos</option>
-          @for (c of concepts; track c.value) {
-            <option [value]="c.value">{{ c.label }}</option>
-          }
-        </select>
-        <select [(ngModel)]="statusFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos los estados</option>
-          <option value="draft">Borrador</option>
-          <option value="processed">Procesada</option>
-          <option value="paid">Pagada</option>
-          <option value="cancelled">Cancelada</option>
-        </select>
-        <select [(ngModel)]="periodFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm">
-          <option value="">Todos los períodos</option>
-          <option value="2026-05">Mayo 2026</option>
-          <option value="2026-04">Abril 2026</option>
-          <option value="2026-03">Marzo 2026</option>
-        </select>
-        <input type="date" [(ngModel)]="fromDate" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm" />
-        <input type="date" [(ngModel)]="toDate" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:text-white text-sm" />
+      <!-- Stats -->
+      @if (stats()) {
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Nóminas</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ stats().totalPayrolls || 0 }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ stats().totalDraft || 0 }} en borrador</p>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Devengado acumulado</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ stats().totalGrossAmount | number:'1.2-2' }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Año en curso: {{ stats().currentYearGross | number:'1.2-2' }}</p>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Neto a pagar</p>
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ stats().totalNetAmount | number:'1.2-2' }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ stats().totalPaid || 0 }} pagadas</p>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pendientes de pago</p>
+            <p class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ stats().totalProcessed || 0 }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Procesadas sin liquidar</p>
+          </div>
+        </div>
+      }
+
+      <!-- Filtros -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <select [(ngModel)]="conceptFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Todos los conceptos</option>
+            @for (c of concepts; track c.value) {
+              <option [value]="c.value">{{ c.label }}</option>
+            }
+          </select>
+          <select [(ngModel)]="statusFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Todos los estados</option>
+            <option value="draft">Borrador</option>
+            <option value="processed">Procesada</option>
+            <option value="paid">Pagada</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+          <select [(ngModel)]="periodFilter" (ngModelChange)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Todos los períodos</option>
+            @for (p of periodOptions; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
+            }
+          </select>
+          <input type="date" [(ngModel)]="fromDate" (ngModelChange)="loadData()" title="Desde" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="date" [(ngModel)]="toDate" (ngModelChange)="loadData()" title="Hasta" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        @if (hasActiveFilters()) {
+          <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+            <span class="text-xs text-slate-500 dark:text-slate-400">{{ items().length }} nómina(s) coinciden con los filtros</span>
+            <button (click)="resetFilters()" class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">Limpiar filtros</button>
+          </div>
+        }
       </div>
 
+      <!-- Tabla -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       @if (isLoading()) {
         <div class="flex items-center justify-center py-20">
           <div class="flex flex-col items-center gap-3 text-slate-500">
-            <svg class="w-8 h-8 animate-spin text-violet-500" fill="none" viewBox="0 0 24 24">
+            <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
             </svg>
@@ -67,31 +111,34 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
           </div>
         </div>
       } @else {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-900/50">
               <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">ID</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Concepto</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Período</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Fecha Pago</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Total Bruto</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Total Neto</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Empleados</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Estado</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Acciones</th>
+                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">No.</th>
+                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Concepto</th>
+                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Período</th>
+                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fecha Pago</th>
+                <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Total Bruto</th>
+                <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Total Neto</th>
+                <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Empleados</th>
+                <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
+                <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               @for (payroll of pagedItems(); track payroll.id) {
-                <tr class="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ payroll.id }}</td>
                   <td class="px-4 py-3">
                     <span [class]="getConceptClass(payroll.concept)" class="px-2 py-1 rounded-full text-xs font-medium">
                       {{ getConceptLabel(payroll.concept) }}{{ payroll.installment ? ' · Plazo ' + payroll.installment : '' }}
                     </span>
                   </td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ payroll.period }}</td>
+                  <td class="px-4 py-3">
+                    <div class="font-medium text-slate-900 dark:text-white">{{ payroll.period }}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ payroll.startDate }} → {{ payroll.endDate }}</div>
+                  </td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ payroll.paidAt || '—' }}</td>
                   <td class="px-4 py-3 text-right dark:text-slate-300">{{ payroll.totalGross | number:'1.2-2' }}</td>
                   <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ payroll.totalNet | number:'1.2-2' }}</td>
@@ -99,32 +146,45 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                   <td class="px-4 py-3 text-center">
                     <span [class]="getStatusClass(payroll.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(payroll.status) }}</span>
                   </td>
-                  <td class="px-4 py-3 text-center">
-                    <button (click)="openDetail(payroll)" class="bg-slate-600 text-white px-3 py-1 rounded text-xs hover:bg-slate-700 transition-colors mr-1">Detalle</button>
-                    <button (click)="downloadPdf(payroll)" class="bg-violet-600 text-white px-3 py-1 rounded text-xs hover:bg-violet-700 transition-colors mr-1">PDF</button>
-                    @if (payroll.status === 'draft') {
-                      <button (click)="openProcess(payroll)" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors mr-1">Procesar</button>
-                    }
-                    @if (payroll.status === 'processed') {
-                      <button (click)="openPay(payroll.id)" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors mr-1">Marcar Pagada</button>
-                    }
-                    @if (['draft', 'processed'].includes(payroll.status)) {
-                      <button (click)="cancel(payroll.id)" class="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors">Cancelar</button>
-                    }
+                  <td class="px-4 py-3">
+                    <div class="flex items-center justify-center gap-1">
+                      <button (click)="openDetail(payroll)" title="Ver líneas" class="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                      </button>
+                      <button (click)="downloadPdf(payroll)" title="Descargar Modelo SC-4-06" class="p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h5.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                      </button>
+                      @if (payroll.status === 'draft') {
+                        <button (click)="openProcess(payroll)" class="px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">Procesar</button>
+                      }
+                      @if (payroll.status === 'processed') {
+                        <button (click)="openPay(payroll.id)" class="px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors">Pagar</button>
+                      }
+                      @if (['draft', 'processed'].includes(payroll.status)) {
+                        <button (click)="cancel(payroll.id)" title="Cancelar y anular comprobantes" class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </button>
+                      }
+                    </div>
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="9" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay nóminas</td></tr>
+                <tr>
+                  <td colspan="9" class="px-4 py-16 text-center">
+                    <svg class="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">No hay nóminas</p>
+                    <p class="text-xs text-slate-400 dark:text-slate-500">Genere una nómina por concepto para comenzar</p>
+                  </td>
+                </tr>
               }
             </tbody>
           </table>
         </div>
+      }
+      </div>
 
-        @if (paginationConfig().totalPages > 1) {
-          <div class="mt-6">
-            <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
-          </div>
-        }
+      @if (!isLoading() && paginationConfig().totalPages > 1) {
+        <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
       }
 
       <!-- Modal Generar Nómina -->
@@ -331,6 +391,7 @@ export class PayrollComponent implements OnInit {
   private confirmDialog = inject(ConfirmDialogService);
 
   items = signal<any[]>([]);
+  stats = signal<any>(null);
   currentPage = signal(1);
   pageSize = 10;
   isLoading = signal(false);
@@ -364,6 +425,34 @@ export class PayrollComponent implements OnInit {
   employees = signal<Employee[]>([]);
   freeItems: { employeeId: string; amount: number; description: string }[] = [];
 
+  /** Últimos 12 meses naturales, para no depender de períodos escritos a mano. */
+  periodOptions = PayrollComponent.buildPeriodOptions();
+
+  private static buildPeriodOptions(): { value: string; label: string }[] {
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const options: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      options.push({ value: `${d.getFullYear()}-${month}`, label: `${months[d.getMonth()]} ${d.getFullYear()}` });
+    }
+    return options;
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.conceptFilter || this.statusFilter || this.periodFilter || this.fromDate || this.toDate);
+  }
+
+  resetFilters() {
+    this.conceptFilter = '';
+    this.statusFilter = '';
+    this.periodFilter = '';
+    this.fromDate = '';
+    this.toDate = '';
+    this.loadData();
+  }
+
   pagedItems = computed(() => {
     const start = (this.currentPage() - 1) * this.pageSize;
     return this.items().slice(start, start + this.pageSize);
@@ -387,6 +476,7 @@ export class PayrollComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    this.loadStats();
     this.accountingService.getCostCenters({ activeOnly: 'true' }).subscribe({
       next: (data) => this.costCenters.set(data),
       error: () => { /* centros de costo opcionales */ }
@@ -408,6 +498,13 @@ export class PayrollComponent implements OnInit {
     }).subscribe({
       next: (data) => { this.items.set(data?.payrolls || []); this.currentPage.set(1); this.isLoading.set(false); },
       error: () => { this.isLoading.set(false); this.showToast('Error al cargar nóminas', 'error'); },
+    });
+  }
+
+  loadStats() {
+    this.payrollService.getStatistics().subscribe({
+      next: (data) => this.stats.set(data),
+      error: () => { /* el resumen es informativo, no bloquea el listado */ },
     });
   }
 
@@ -481,6 +578,7 @@ export class PayrollComponent implements OnInit {
         this.showGenerate.set(false);
         this.showToast('Nómina generada en borrador', 'success');
         this.loadData();
+        this.loadStats();
       },
       error: (err) => {
         this.isBusy.set(false);
@@ -560,6 +658,7 @@ export class PayrollComponent implements OnInit {
         this.showProcess.set(false);
         this.showToast('Nómina procesada y contabilizada', 'success');
         this.loadData();
+        this.loadStats();
       },
       error: (err) => {
         this.isBusy.set(false);
@@ -583,6 +682,7 @@ export class PayrollComponent implements OnInit {
         this.showPay.set(false);
         this.showToast('Nómina marcada como pagada', 'success');
         this.loadData();
+        this.loadStats();
       },
       error: (err) => {
         this.isBusy.set(false);
@@ -600,7 +700,7 @@ export class PayrollComponent implements OnInit {
     });
     if (!confirmed) return;
     this.payrollService.cancel(id).subscribe({
-      next: () => { this.showToast('Nómina cancelada y comprobantes anulados', 'success'); this.loadData(); },
+      next: () => { this.showToast('Nómina cancelada y comprobantes anulados', 'success'); this.loadData(); this.loadStats(); },
       error: (err) => this.showToast(err?.error?.message || 'Error al cancelar la nómina', 'error')
     });
   }

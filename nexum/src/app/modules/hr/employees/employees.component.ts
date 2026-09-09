@@ -129,6 +129,9 @@ export class EmployeesComponent implements OnInit {
     });
   }
 
+  countByStatus(status: string): number { return this.employees().filter(e => e.status === status).length; }
+  activeSalaryTotal(): number { return this.employees().filter(e => e.status === 'active').reduce((sum, e) => sum + Number(e.salary || 0), 0); }
+
   applyFilters() { this.currentPage.set(1); }
   resetFilters() { this.searchTerm.set(''); this.statusFilter.set(''); this.contractFilter.set(''); this.currentPage.set(1); }
   onPageChange(page: number) { this.currentPage.set(page); }

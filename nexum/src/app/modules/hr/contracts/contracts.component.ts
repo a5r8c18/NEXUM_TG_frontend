@@ -11,7 +11,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
   standalone: true,
   imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
   template: `
-    <div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div class="p-6 space-y-5">
       @if (toast()) {
         <div class="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border"
              [class.bg-green-50]="toast()?.type === 'success'" [class.text-green-800]="toast()?.type === 'success'" [class.border-green-200]="toast()?.type === 'success'"
@@ -20,21 +20,40 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
         </div>
       }
 
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-violet-100 rounded-xl">
-            <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-          </div>
-          <div>
-            <h2 class="text-xl font-semibold text-slate-800">Contratos</h2>
-            <p class="text-xs text-slate-500">Historial laboral y vinculos contractuales</p>
-          </div>
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Contratos</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Historial laboral y vínculos contractuales del personal</p>
         </div>
-        <button (click)="openCreate()" class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors shadow-sm">+ Nuevo Contrato</button>
+        <button (click)="openCreate()" class="inline-flex items-center justify-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition-colors text-sm font-medium shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Nuevo Contrato
+        </button>
       </div>
 
+      <!-- Stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Contratos</p>
+          <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ contracts().length }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Activos</p>
+          <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ countByStatus('active') }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Vencidos</p>
+          <p class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ countByStatus('expired') }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Salario contratado</p>
+          <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ activeSalaryTotal() | number:'1.2-2' }}</p>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       @if (isLoading()) {
         <div class="flex items-center justify-center py-20">
           <div class="flex flex-col items-center gap-3 text-slate-500">
@@ -46,45 +65,47 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
           </div>
         </div>
       } @else {
-        <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 overflow-hidden">
+        <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="bg-slate-50 border-b border-slate-200"><tr>
-              <th class="text-left px-5 py-3 font-medium text-slate-700 uppercase text-xs">Empleado</th>
-              <th class="text-left px-5 py-3 font-medium text-slate-700 uppercase text-xs">Tipo</th>
-              <th class="text-left px-5 py-3 font-medium text-slate-700 uppercase text-xs">Inicio</th>
-              <th class="text-left px-5 py-3 font-medium text-slate-700 uppercase text-xs">Fin</th>
-              <th class="text-right px-5 py-3 font-medium text-slate-700 uppercase text-xs">Salario</th>
-              <th class="text-center px-5 py-3 font-medium text-slate-700 uppercase text-xs">Estado</th>
-              <th class="text-center px-5 py-3 font-medium text-slate-700 uppercase text-xs">Acciones</th>
+            <thead class="bg-slate-50 dark:bg-slate-900/50"><tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Empleado</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Tipo</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Inicio</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fin</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Salario</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
             </tr></thead>
-            <tbody class="divide-y divide-slate-200">
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               @for (c of pagedContracts(); track c.id) {
-                <tr class="hover:bg-slate-50/50">
-                  <td class="px-5 py-4 font-medium text-slate-700">{{ c.employeeName }}</td>
-                  <td class="px-5 py-4 text-slate-600">{{ contractTypeLabel(c.contractType) }}</td>
-                  <td class="px-5 py-4 text-slate-600">{{ c.startDate }}</td>
-                  <td class="px-5 py-4 text-slate-600">{{ c.endDate || 'Indefinido' }}</td>
-                  <td class="px-5 py-4 text-right font-semibold text-slate-900">{{ c.salary | number:'1.2-2' }}</td>
-                  <td class="px-5 py-4 text-center"><span class="px-2 py-1 rounded-full text-xs font-medium" [class]="statusClass(c.status)">{{ statusLabel(c.status) }}</span></td>
-                  <td class="px-5 py-4">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                  <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ c.employeeName }}</td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ contractTypeLabel(c.contractType) }}</td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ c.startDate }}</td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ c.endDate || 'Indefinido' }}</td>
+                  <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ c.salary | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded-full text-xs font-medium" [class]="statusClass(c.status)">{{ statusLabel(c.status) }}</span></td>
+                  <td class="px-4 py-3">
                     <div class="flex justify-center gap-1">
-                      <button (click)="openEdit(c)" class="p-1.5 text-violet-600 hover:bg-violet-50 rounded-lg" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
-                      <button (click)="deleteContract(c)" class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                      <button (click)="openEdit(c)" class="p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                      <button (click)="deleteContract(c)" class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                     </div>
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" class="px-5 py-8 text-center text-slate-500">No hay contratos registrados</td></tr>
+                <tr><td colspan="7" class="px-4 py-16 text-center">
+                  <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No hay contratos registrados</p>
+                  <p class="text-xs text-slate-400 dark:text-slate-500">Registre el vínculo contractual de cada trabajador</p>
+                </td></tr>
               }
             </tbody>
           </table>
         </div>
+      }
+      </div>
 
-        @if (paginationConfig().totalPages > 1) {
-          <div class="mt-6">
-            <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
-          </div>
-        }
+      @if (!isLoading() && paginationConfig().totalPages > 1) {
+        <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
       }
 
       @if (isModalOpen()) {
@@ -200,6 +221,9 @@ export class ContractsComponent implements OnInit {
       error: () => this.showToast('error', 'Error cargando empleados')
     });
   }
+
+  countByStatus(status: string): number { return this.contracts().filter(c => c.status === status).length; }
+  activeSalaryTotal(): number { return this.contracts().filter(c => c.status === 'active').reduce((sum, c) => sum + Number(c.salary || 0), 0); }
 
   contractTypeLabel(t: string) {
     return { full_time: 'Tiempo completo', part_time: 'Medio tiempo', contractor: 'Contratista', intern: 'Pasante' }[t] || t;

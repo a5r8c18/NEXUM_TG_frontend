@@ -11,7 +11,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
   standalone: true,
   imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
   template: `
-    <div class="p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div class="p-6 space-y-5">
 
       <!-- Toast -->
       @if (toast()) {
@@ -27,21 +27,13 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
       }
 
       <!-- Header -->
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-violet-100 rounded-xl">
-            <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-            </svg>
-          </div>
-          <div>
-            <h2 class="text-xl font-semibold text-slate-800">Departamentos</h2>
-            <p class="text-xs text-slate-500">Estructura organizativa de la empresa</p>
-          </div>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Departamentos</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Estructura organizativa que agrupa al personal y sus centros de costo</p>
         </div>
         <button (click)="openCreate()"
-           class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors shadow-sm">
+           class="inline-flex items-center justify-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition-colors text-sm font-medium shadow-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -63,24 +55,24 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
       @if (!isLoading()) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           @for (dept of pagedDepartments(); track dept.id) {
-            <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-5 hover:shadow-md transition-shadow">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md transition-shadow">
               <div class="flex items-start justify-between">
                 <div>
-                  <h3 class="text-base font-semibold text-slate-800">{{ dept.name }}</h3>
+                  <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ dept.name }}</h3>
                   @if (dept.description) {
-                    <p class="text-xs text-slate-500 mt-1">{{ dept.description }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ dept.description }}</p>
                   }
                 </div>
                 <div class="flex gap-1">
                   <button (click)="openEdit(dept)"
-                          class="p-1.5 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors" title="Editar">
+                          class="p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors" title="Editar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
                   </button>
                   <button (click)="deleteDepartment(dept)"
-                          class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                          class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -88,7 +80,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
                   </button>
                 </div>
               </div>
-              <div class="mt-4 flex items-center gap-4 text-xs text-slate-500">
+              <div class="mt-4 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                 <span class="inline-flex items-center gap-1">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -103,17 +95,15 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             </div>
           }
           @empty {
-            <div class="col-span-full bg-white/80 rounded-xl border border-slate-200/50 py-16 text-center text-slate-400">
-              <p class="text-sm font-medium">No hay departamentos registrados</p>
-              <p class="text-xs">Crea el primer departamento para organizar tu personal</p>
+            <div class="col-span-full bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 py-16 text-center">
+              <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No hay departamentos registrados</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500">Cree el primer departamento para organizar su personal</p>
             </div>
           }
         </div>
 
         @if (paginationConfig().totalPages > 1) {
-          <div class="mt-6">
-            <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
-          </div>
+          <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
         }
       }
 
