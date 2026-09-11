@@ -45,22 +45,24 @@ import { CommonModule } from '@angular/common';
         </div>
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
           <ng-content select="[modal-actions]"></ng-content>
           <div class="flex-1"></div>
           <button
             (click)="onClose()"
             class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
           >
-            Cancelar
+            {{ showConfirm ? 'Cancelar' : 'Cerrar' }}
           </button>
-          <button
-            (click)="onConfirm()"
-            [ngClass]="confirmButtonClass"
-            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm hover:shadow-md"
-          >
-            {{ confirmText }}
-          </button>
+          @if (showConfirm) {
+            <button
+              (click)="onConfirm()"
+              [ngClass]="confirmButtonClass"
+              class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm hover:shadow-md"
+            >
+              {{ confirmText }}
+            </button>
+          }
         </div>
       </div>
     </div>
@@ -75,6 +77,7 @@ export class ModalComponent {
   @Input() iconBgClass = '';
   @Input() confirmButtonClass = 'bg-blue-600 hover:bg-blue-700';
   @Input() maxWidthClass = 'max-w-md';
+  @Input() showConfirm = true;
 
   @Output() closeEvent = new EventEmitter<void>();
   @Output() confirmEvent = new EventEmitter<void>();

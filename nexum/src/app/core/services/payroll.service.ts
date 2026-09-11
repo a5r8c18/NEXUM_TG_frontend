@@ -67,7 +67,8 @@ export class PayrollService {
     return this.http.put(`${this.apiUrl}/${id}/items`, { items });
   }
 
-  exportPdf(id: number): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${id}/export/pdf`, { responseType: 'blob' });
+  exportPdf(id: number, unit: 'dias' | 'horas' = 'dias'): Observable<Blob> {
+    let params = new HttpParams().set('unit', unit);
+    return this.http.get(`${this.apiUrl}/${id}/export/pdf`, { params, responseType: 'blob' });
   }
 }

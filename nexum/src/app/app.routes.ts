@@ -238,6 +238,10 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/hr/departments/departments.component').then(m => m.DepartmentsComponent)
       },
       {
+        path: 'hr/positions',
+        loadComponent: () => import('./modules/hr/positions/positions.component').then(m => m.PositionsComponent)
+      },
+      {
         path: 'hr/payroll',
         loadComponent: () => import('./modules/hr/payroll/payroll.component').then(m => m.PayrollComponent)
       },

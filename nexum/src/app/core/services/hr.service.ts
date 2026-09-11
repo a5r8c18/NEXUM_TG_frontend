@@ -10,6 +10,7 @@ export interface Employee {
   lastName: string;
   email: string | null;
   phone: string | null;
+  positionId: string | null;
   position: string | null;
   departmentId: string | null;
   departmentName: string | null;
@@ -18,10 +19,11 @@ export interface Employee {
   expenseAccountCode?: string | null;
   occupationalCategory?: string | null;
   employmentSector?: 'state' | 'non_state' | null;
-  contractTerm?: 'indefinite' | 'fixed_term' | 'work' | 'home_based' | null;
+  contractTerm?: 'determinate' | 'indeterminate';
+  activity: 'direct' | 'indirect';
   hireDate: string | null;
   salary: number;
-  contractType: 'full_time' | 'part_time' | 'contractor' | 'intern';
+  contractType: 'trial_period' | 'work_execution';
   status: 'active' | 'inactive' | 'on_leave';
   address: string | null;
   documentId: string | null;
@@ -45,6 +47,7 @@ export interface EmployeeContract {
   employeeId: string;
   employeeName: string;
   contractType: string;
+  positionId: string | null;
   position: string | null;
   startDate: string;
   endDate: string | null;
@@ -52,6 +55,24 @@ export interface EmployeeContract {
   status: 'active' | 'expired' | 'terminated' | 'suspended';
   documentUrl: string | null;
   notes: string | null;
+}
+
+export interface JobPosition {
+  id: string;
+  companyId: number;
+  name: string;
+  description: string | null;
+  baseSalary: number;
+  workingHours: number;
+  timeBank: number;
+  timeUnit: 'hours' | 'days';
+  salaryRate: number;
+  paymentConcept: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  isActive: boolean;
+  employeeCount?: number;
+  createdAt: string;
 }
 
 export interface Attendance {
@@ -101,10 +122,11 @@ export class HrService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/hr`;
 
-  getEmployees(filters?: { status?: string; departmentId?: string; search?: string; contractType?: string }) {
+  getEmployees(filters?: { status?: string; departmentId?: string; positionId?: string; search?: string; contractType?: string }) {
     const params: any = {};
     if (filters?.status) params.status = filters.status;
     if (filters?.departmentId) params.departmentId = filters.departmentId;
+    if (filters?.positionId) params.positionId = filters.positionId;
     if (filters?.search) params.search = filters.search;
     if (filters?.contractType) params.contractType = filters.contractType;
     return this.http.get<Employee[]>(`${this.baseUrl}/employees`, { params });
@@ -143,10 +165,11 @@ export class HrService {
   }
 
   // ── Contratos ──
-  getContracts(filters?: { employeeId?: string; status?: string }) {
+  getContracts(filters?: { employeeId?: string; status?: string; positionId?: string }) {
     const params: any = {};
     if (filters?.employeeId) params.employeeId = filters.employeeId;
     if (filters?.status) params.status = filters.status;
+    if (filters?.positionId) params.positionId = filters.positionId;
     return this.http.get<EmployeeContract[]>(`${this.baseUrl}/contracts`, { params });
   }
   createContract(data: Partial<EmployeeContract>) {
@@ -157,6 +180,22 @@ export class HrService {
   }
   deleteContract(id: string) {
     return this.http.delete(`${this.baseUrl}/contracts/${id}`);
+  }
+
+  // ── Cargos ──
+  getPositions(filters?: { isActive?: boolean }) {
+    const params: any = {};
+    if (filters?.isActive !== undefined) params.isActive = filters.isActive;
+    return this.http.get<JobPosition[]>(`${this.baseUrl}/positions`, { params });
+  }
+  createPosition(data: Partial<JobPosition>) {
+    return this.http.post<JobPosition>(`${this.baseUrl}/positions`, data);
+  }
+  updatePosition(id: string, data: Partial<JobPosition>) {
+    return this.http.put<JobPosition>(`${this.baseUrl}/positions/${id}`, data);
+  }
+  deletePosition(id: string) {
+    return this.http.delete(`${this.baseUrl}/positions/${id}`);
   }
 
   // ── Asistencia ──

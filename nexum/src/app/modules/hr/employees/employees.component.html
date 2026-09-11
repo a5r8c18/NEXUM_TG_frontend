@@ -74,15 +74,24 @@
         </select>
       </div>
       <div class="min-w-[160px] space-y-1">
-        <label class="text-xs font-medium text-slate-600 dark:text-slate-400">Contrato</label>
+        <label class="text-xs font-medium text-slate-600 dark:text-slate-400">Cargo</label>
+        <select [value]="positionFilter()"
+                (change)="positionFilter.set($any($event.target).value); applyFilters()"
+                class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all">
+          <option value="">Todos</option>
+          @for (pos of positions(); track pos.id) {
+            <option [value]="pos.id">{{ pos.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="min-w-[180px] space-y-1">
+        <label class="text-xs font-medium text-slate-600 dark:text-slate-400">Tipo de contrato</label>
         <select [value]="contractFilter()"
                 (change)="contractFilter.set($any($event.target).value); applyFilters()"
                 class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all">
           <option value="">Todos</option>
-          <option value="full_time">Tiempo completo</option>
-          <option value="part_time">Medio tiempo</option>
-          <option value="contractor">Contratista</option>
-          <option value="intern">Pasante</option>
+          <option value="trial_period">Período a pruebas</option>
+          <option value="work_execution">Ejecución de obras</option>
         </select>
       </div>
       <div class="flex gap-2">
@@ -155,7 +164,11 @@
                   <span class="text-sm text-slate-600 dark:text-slate-300">{{ emp.departmentName || '—' }}</span>
                 </td>
                 <td class="px-5 py-4">
-                  <span class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full">{{ getContractLabel(emp.contractType) }}</span>
+                  @if (emp.contractTerm === 'indeterminate') {
+                    <span class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full">{{ getContractTermLabel(emp.contractTerm) }}</span>
+                  } @else {
+                    <span class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full">{{ getContractLabel(emp.contractType) }}</span>
+                  }
                 </td>
                 <td class="px-5 py-4 text-right">
                   <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ emp.salary | number:'1.2-2' }}</span>
@@ -253,8 +266,13 @@
         </div>
         <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Cargo</label>
-          <input type="text" [(ngModel)]="form.position"
-                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
+          <select [(ngModel)]="form.positionId" (ngModelChange)="onPositionSelected()"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+            <option [ngValue]="null">Sin asignar</option>
+            @for (pos of positions(); track pos.id) {
+              <option [ngValue]="pos.id">{{ pos.name }}</option>
+            }
+          </select>
         </div>
         <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Departamento</label>
@@ -288,6 +306,14 @@
           <p class="text-xs text-slate-400">Si se indica, tiene prioridad sobre la del centro de costo.</p>
         </div>
         <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Actividad</label>
+          <select [(ngModel)]="form.activity"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+            <option value="direct">Directo</option>
+            <option value="indirect">Indirecto</option>
+          </select>
+        </div>
+        <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Categoría ocupacional</label>
           <select [(ngModel)]="form.occupationalCategory"
                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
@@ -313,11 +339,8 @@
           <label class="text-xs font-medium text-slate-600">Término del contrato</label>
           <select [(ngModel)]="form.contractTerm"
                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
-            <option [ngValue]="null">Sin asignar</option>
-            <option value="indefinite">Por tiempo indeterminado</option>
-            <option value="fixed_term">Por tiempo determinado</option>
-            <option value="work">A destajo / por obra</option>
-            <option value="home_based">A domicilio</option>
+            <option value="indeterminate">Indeterminado</option>
+            <option value="determinate">Determinado</option>
           </select>
         </div>
         <div class="space-y-1">
@@ -330,16 +353,16 @@
           <input type="number" min="0" step="0.01" [(ngModel)]="form.salary"
                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
         </div>
-        <div class="space-y-1">
-          <label class="text-xs font-medium text-slate-600">Tipo de contrato</label>
-          <select [(ngModel)]="form.contractType"
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
-            <option value="full_time">Tiempo completo</option>
-            <option value="part_time">Medio tiempo</option>
-            <option value="contractor">Contratista</option>
-            <option value="intern">Pasante</option>
-          </select>
-        </div>
+        @if (form.contractTerm !== 'indeterminate') {
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-slate-600">Tipo de contrato</label>
+            <select [(ngModel)]="form.contractType"
+                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+              <option value="trial_period">Período a pruebas</option>
+              <option value="work_execution">Ejecución de obras</option>
+            </select>
+          </div>
+        }
         <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Estado</label>
           <select [(ngModel)]="form.status"

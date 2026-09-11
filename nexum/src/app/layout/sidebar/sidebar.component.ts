@@ -148,6 +148,7 @@ export class SidebarComponent {
       submenu: [
         { icon: 'UserCheck', label: 'Empleados', route: '/hr/employees' },
         { icon: 'Building', label: 'Departamentos', route: '/hr/departments' },
+        { icon: 'UserCheck', label: 'Cargos', route: '/hr/positions' },
         { icon: 'FileText', label: 'Contratos', route: '/hr/contracts' },
         { icon: 'Clock', label: 'Asistencia', route: '/hr/attendance', isComingSoon: true },
         { icon: 'Calendar', label: 'Vacaciones / Licencias', route: '/hr/leaves' },

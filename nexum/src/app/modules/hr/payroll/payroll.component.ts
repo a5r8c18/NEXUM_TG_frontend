@@ -260,55 +260,137 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
       @if (showDetail()) {
         <app-modal [isOpen]="showDetail()" (closeEvent)="showDetail.set(false)" (confirmEvent)="saveItems()"
                    title="Líneas de Nómina" [confirmText]="isBusy() ? 'Guardando...' : 'Guardar cambios'"
-                   confirmButtonClass="bg-blue-600 hover:bg-blue-700" maxWidthClass="max-w-4xl">
+                   [showConfirm]="isDetailEditable()"
+                   confirmButtonClass="bg-blue-600 hover:bg-blue-700" maxWidthClass="max-w-3xl">
           <div class="space-y-4">
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="bg-slate-50 border-b border-slate-200"><tr>
-                  <th class="text-left px-3 py-2 font-medium text-slate-700">Empleado</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Base</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Extra</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Otros ing.</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">SS</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Imp.</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Pens.</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Sind.</th>
-                  @if (isConceptPayroll()) {
-                    <th class="text-right px-3 py-2 font-medium text-slate-700">Unid.</th>
-                    <th class="text-right px-3 py-2 font-medium text-slate-700">Tasa</th>
-                  }
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Otras ret.</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Prov. Vac.</th>
-                  <th class="text-right px-3 py-2 font-medium text-slate-700">Neto</th>
-                  <th class="text-center px-3 py-2 font-medium text-slate-700">Recibo</th>
-                </tr></thead>
-                <tbody class="divide-y divide-slate-200">
-                  @for (item of detailItems(); track item.id) {
-                    <tr>
-                      <td class="px-3 py-2 text-slate-700">{{ item.employeeName }}</td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.baseSalary" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.overtimePay" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.bonuses" (ngModelChange)="recalcItem(item)" class="w-16 px-1 py-1 border rounded text-right text-xs" title="Bonos"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.socialSecurity" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.taxWithholding" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.pension" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.unionDues" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      @if (isConceptPayroll()) {
-                        <td class="px-3 py-2 text-right text-xs text-slate-500">{{ item.paidUnits || '—' }}</td>
-                        <td class="px-3 py-2 text-right text-xs text-slate-500">{{ item.appliedRate ? (item.appliedRate * 100) + '%' : '—' }}</td>
-                      }
-                      <td class="px-3 py-2"><input type="number" [(ngModel)]="item.otherDeductions" (ngModelChange)="recalcItem(item)" class="w-20 px-1 py-1 border rounded text-right text-xs"/></td>
-                      <td class="px-3 py-2 text-right text-xs text-slate-500">{{ item.vacationProvision | number:'1.2-2' }}</td>
-                      <td class="px-3 py-2 text-right font-semibold text-xs">{{ item.netSalary | number:'1.2-2' }}</td>
-                      <td class="px-3 py-2 text-center"><button (click)="openReceipt(item)" class="text-blue-600 hover:text-blue-800 text-xs">🖨️</button></td>
-                    </tr>
-                  } @empty {
-                    <tr><td colspan="8" class="px-3 py-4 text-center text-slate-500">No hay líneas</td></tr>
-                  }
-                </tbody>
-              </table>
+
+            <!-- Resumen de la nómina -->
+            <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4">
+              <div class="flex flex-wrap items-center gap-2">
+                <span [class]="getConceptClass(detailPayroll()?.concept)" class="px-2 py-1 rounded-full text-xs font-medium">
+                  {{ getConceptLabel(detailPayroll()?.concept) }}
+                </span>
+                <span [class]="getStatusClass(detailPayroll()?.status)" class="px-2 py-1 rounded-full text-xs font-medium">
+                  {{ getStatusLabel(detailPayroll()?.status) }}
+                </span>
+                <span class="text-sm text-slate-600 dark:text-slate-300">
+                  {{ detailPayroll()?.period }} · {{ detailItems().length }} empleado(s)
+                </span>
+              </div>
+              <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Devengado</p>
+                  <p class="text-lg font-bold text-slate-900 dark:text-white mt-0.5">{{ detailTotals().gross | number:'1.2-2' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Retenciones</p>
+                  <p class="text-lg font-bold text-red-600 dark:text-red-400 mt-0.5">{{ detailTotals().deductions | number:'1.2-2' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Neto a pagar</p>
+                  <p class="text-lg font-bold text-green-600 dark:text-green-400 mt-0.5">{{ detailTotals().net | number:'1.2-2' }}</p>
+                </div>
+              </div>
             </div>
-            <p class="text-xs text-slate-500">* La edición solo está disponible en estado borrador. En estados procesados/pagados use cancelar.</p>
+
+            @if (!isDetailEditable()) {
+              <div class="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p class="text-xs text-amber-800 dark:text-amber-300">Solo lectura: las líneas se editan únicamente en borrador. Para rectificar una nómina procesada o pagada, cancélela y genérela de nuevo.</p>
+              </div>
+            }
+
+            <!-- Fichas por empleado -->
+            <div class="space-y-3">
+              @for (item of detailItems(); track item.id) {
+                <div class="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+                  <div class="flex items-center justify-between gap-3 bg-white dark:bg-slate-800 px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+                    <div class="min-w-0">
+                      <p class="font-semibold text-slate-900 dark:text-white truncate">{{ item.employeeName }}</p>
+                      @if (isConceptPayroll() && (item.paidUnits || item.appliedRate)) {
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          @if (item.paidUnits) { {{ item.paidUnits }} unidad(es) }
+                          @if (item.paidUnits && item.appliedRate) { · }
+                          @if (item.appliedRate) { tasa {{ item.appliedRate * 100 | number:'1.0-2' }}% }
+                        </p>
+                      }
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                      <div class="text-right">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Neto</p>
+                        <p class="font-bold text-green-600 dark:text-green-400">{{ item.netSalary | number:'1.2-2' }}</p>
+                      </div>
+                      <button (click)="openReceipt(item)" title="Ver recibo de pago"
+                              class="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="px-4 py-3 space-y-3">
+                    <div>
+                      <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Devengos</p>
+                      <div class="grid grid-cols-3 gap-3">
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Salario base</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.baseSalary" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Días trabajados</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.paidUnits" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Horas extra</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.overtimePay" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Bonos</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.bonuses" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Deducciones</p>
+                      <div class="grid grid-cols-3 gap-3">
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Seguridad social</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.socialSecurity" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Impuesto s/ ingresos</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.taxWithholding" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Pensión</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.pension" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Sindicato</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.unionDues" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-600 dark:text-slate-400">Otras retenciones</span>
+                          <input type="number" step="0.01" [(ngModel)]="item.otherDeductions" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-between gap-x-6 gap-y-1 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs">
+                      <span class="text-slate-500 dark:text-slate-400">Devengado <span class="font-semibold text-slate-700 dark:text-slate-200">{{ item.grossSalary | number:'1.2-2' }}</span></span>
+                      <span class="text-slate-500 dark:text-slate-400">Retenciones <span class="font-semibold text-slate-700 dark:text-slate-200">{{ item.totalDeductions | number:'1.2-2' }}</span></span>
+                      <span class="text-slate-500 dark:text-slate-400">Provisión vacaciones <span class="font-semibold text-slate-700 dark:text-slate-200">{{ item.vacationProvision | number:'1.2-2' }}</span></span>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 py-12 text-center">
+                  <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Esta nómina no tiene líneas</p>
+                  <p class="text-xs text-slate-400 dark:text-slate-500">Verifique que existan empleados activos con contrato vigente</p>
+                </div>
+              }
+            </div>
           </div>
         </app-modal>
       }
@@ -540,6 +622,24 @@ export class PayrollComponent implements OnInit {
     return !!c && c !== 'salario';
   }
 
+  /** Las líneas solo se pueden modificar mientras la nómina está en borrador. */
+  isDetailEditable(): boolean {
+    return this.detailPayroll()?.status === 'draft';
+  }
+
+  detailInputClass = 'mt-1 w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed';
+
+  detailTotals = computed(() => {
+    return this.detailItems().reduce(
+      (acc, i) => ({
+        gross: acc.gross + Number(i.grossSalary || 0),
+        deductions: acc.deductions + Number(i.totalDeductions || 0),
+        net: acc.net + Number(i.netSalary || 0),
+      }),
+      { gross: 0, deductions: 0, net: 0 }
+    );
+  });
+
   generate() {
     if (!this.genForm.period || !this.genForm.startDate || !this.genForm.endDate) {
       this.showToast('Período y fechas son obligatorios', 'error');
@@ -595,12 +695,20 @@ export class PayrollComponent implements OnInit {
 
   openDetail(payroll: any) {
     this.detailPayroll.set(payroll);
-    this.detailItems.set((payroll.items || []).map((i: any) => ({ ...i })));
+    // Normalizamos a número para que los totales y el resumen no dependan del tipo que devuelva la API.
+    this.detailItems.set(
+      (payroll.items || []).map((i: any) => {
+        const item = { ...i };
+        this.normalizeItem(item);
+        return item;
+      })
+    );
     this.showDetail.set(true);
   }
 
-  recalcItem(item: any) {
+  private normalizeItem(item: any) {
     item.baseSalary = Number(item.baseSalary) || 0;
+    item.paidUnits = Number(item.paidUnits) || 0;
     item.overtimePay = Number(item.overtimePay) || 0;
     item.bonuses = Number(item.bonuses) || 0;
     item.commissions = Number(item.commissions) || 0;
@@ -610,10 +718,25 @@ export class PayrollComponent implements OnInit {
     item.pension = Number(item.pension) || 0;
     item.taxWithholding = Number(item.taxWithholding) || 0;
     item.otherDeductions = Number(item.otherDeductions) || 0;
-    item.vacationProvision = Number(item.vacationProvision) || 0;
-    item.grossSalary = item.baseSalary + item.overtimePay + item.bonuses + item.commissions + item.allowances;
+
+    const isSalary = this.detailPayroll()?.concept === 'salario';
+    if (isSalary) {
+      const paidUnits = item.paidUnits > 0 ? item.paidUnits : 30;
+      const baseEarnings = Number(((item.baseSalary / 30) * paidUnits).toFixed(2));
+      item.grossSalary = baseEarnings + item.overtimePay + item.bonuses + item.commissions + item.allowances;
+      item.paidUnits = paidUnits;
+      item.vacationProvision = Number((item.baseSalary * 0.0909).toFixed(2));
+    } else {
+      item.grossSalary = Number(item.grossSalary) || 0;
+      item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
+    }
+
     item.totalDeductions = item.socialSecurity + item.unionDues + item.pension + item.taxWithholding + item.otherDeductions;
     item.netSalary = item.grossSalary - item.totalDeductions;
+  }
+
+  recalcItem(item: any) {
+    this.normalizeItem(item);
     this.detailItems.set([...this.detailItems()]);
   }
 
@@ -706,7 +829,9 @@ export class PayrollComponent implements OnInit {
   }
 
   downloadPdf(payroll: any) {
-    this.payrollService.exportPdf(payroll.id).subscribe({
+    const choice = window.prompt('Imprimir nómina por:\n1 = Días\n2 = Horas\n(Cancelar = Días por defecto)', '1');
+    const unit: 'dias' | 'horas' = choice === '2' ? 'horas' : 'dias';
+    this.payrollService.exportPdf(payroll.id, unit).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

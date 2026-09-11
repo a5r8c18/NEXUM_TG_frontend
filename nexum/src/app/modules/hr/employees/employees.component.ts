@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
-import { HrService, Employee, Department } from '../../../core/services/hr.service';
+import { HrService, Employee, Department, JobPosition } from '../../../core/services/hr.service';
 import { AccountingService, CostCenter } from '../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../../core/offline/offline-first.service';
@@ -29,11 +29,13 @@ export class EmployeesComponent implements OnInit {
   pageSize = 10;
   searchTerm = signal('');
   statusFilter = signal('');
+  positionFilter = signal('');
   contractFilter = signal('');
   isCreateOpen = signal(false);
   isSaving = signal(false);
   editingId = signal<string | null>(null);
   departments = signal<Department[]>([]);
+  positions = signal<JobPosition[]>([]);
   costCenters = signal<CostCenter[]>([]);
 
   form: Partial<Employee> = this.emptyForm();
@@ -51,16 +53,18 @@ export class EmployeesComponent implements OnInit {
       lastName: '',
       email: null,
       phone: null,
+      positionId: null,
       position: null,
       departmentId: null,
       costCenterId: null,
       expenseAccountCode: null,
       occupationalCategory: null,
       employmentSector: 'state',
-      contractTerm: null,
+      contractTerm: 'indeterminate',
+      activity: 'direct',
       hireDate: null,
       salary: 0,
-      contractType: 'full_time',
+      contractType: 'work_execution',
       status: 'active',
       documentId: null,
       address: null,
@@ -79,7 +83,10 @@ export class EmployeesComponent implements OnInit {
       );
     }
     if (this.statusFilter()) {
-      filtered = filtered.filter(e => e.status === this.statusFilter());
+      filtered = filtered.filter(e => this.statusFilter().includes(e.status));
+    }
+    if (this.positionFilter()) {
+      filtered = filtered.filter(e => e.positionId === this.positionFilter());
     }
     if (this.contractFilter()) {
       filtered = filtered.filter(e => e.contractType === this.contractFilter());
@@ -103,6 +110,7 @@ export class EmployeesComponent implements OnInit {
   ngOnInit() {
     this.loadEmployees();
     this.loadDepartments();
+    this.loadPositions();
     this.loadCostCenters();
   }
 
@@ -110,6 +118,13 @@ export class EmployeesComponent implements OnInit {
     this.hrService.getDepartments().subscribe({
       next: (data) => this.departments.set(data),
       error: () => { /* departamentos opcionales */ }
+    });
+  }
+
+  loadPositions() {
+    this.hrService.getPositions({ isActive: true }).subscribe({
+      next: (data) => this.positions.set(data),
+      error: () => { /* cargos opcionales */ }
     });
   }
 
@@ -133,7 +148,20 @@ export class EmployeesComponent implements OnInit {
   activeSalaryTotal(): number { return this.employees().filter(e => e.status === 'active').reduce((sum, e) => sum + Number(e.salary || 0), 0); }
 
   applyFilters() { this.currentPage.set(1); }
-  resetFilters() { this.searchTerm.set(''); this.statusFilter.set(''); this.contractFilter.set(''); this.currentPage.set(1); }
+  resetFilters() { this.searchTerm.set(''); this.statusFilter.set(''); this.positionFilter.set(''); this.contractFilter.set(''); this.currentPage.set(1); }
+
+  onPositionSelected() {
+    const id = this.form.positionId;
+    if (id) {
+      const pos = this.positions().find(p => p.id === id);
+      if (pos) {
+        this.form.position = pos.name;
+        this.form.salary = Number(pos.baseSalary || 0);
+      }
+    } else {
+      this.form.position = null;
+    }
+  }
   onPageChange(page: number) { this.currentPage.set(page); }
   openCreate() {
     this.editingId.set(null);
@@ -149,16 +177,18 @@ export class EmployeesComponent implements OnInit {
       lastName: emp.lastName,
       email: emp.email,
       phone: emp.phone,
+      positionId: emp.positionId,
       position: emp.position,
       departmentId: emp.departmentId,
       costCenterId: emp.costCenterId,
       expenseAccountCode: emp.expenseAccountCode ?? null,
       occupationalCategory: emp.occupationalCategory ?? null,
       employmentSector: emp.employmentSector ?? 'state',
-      contractTerm: emp.contractTerm ?? null,
+      contractTerm: emp.contractTerm ?? 'indeterminate',
+      activity: emp.activity ?? 'direct',
       hireDate: emp.hireDate,
       salary: emp.salary,
-      contractType: emp.contractType,
+      contractType: emp.contractType ?? 'work_execution',
       status: emp.status,
       documentId: emp.documentId,
       address: emp.address,
@@ -179,6 +209,8 @@ export class EmployeesComponent implements OnInit {
     } else {
       this.form.departmentName = null;
     }
+    const salary = this.form.salary;
+    if (salary !== undefined) this.form.salary = Number(salary) || 0;
     this.isSaving.set(true);
     const id = this.editingId();
     const request$ = id
@@ -232,11 +264,17 @@ export class EmployeesComponent implements OnInit {
 
   getContractLabel(type: string): string {
     switch (type) {
-      case 'full_time': return 'Tiempo completo';
-      case 'part_time': return 'Medio tiempo';
-      case 'contractor': return 'Contratista';
-      case 'intern': return 'Pasante';
+      case 'trial_period': return 'Período a pruebas';
+      case 'work_execution': return 'Ejecución de obras';
       default: return type;
+    }
+  }
+
+  getContractTermLabel(term: string): string {
+    switch (term) {
+      case 'determinate': return 'Determinado';
+      case 'indeterminate': return 'Indeterminado';
+      default: return term;
     }
   }
 

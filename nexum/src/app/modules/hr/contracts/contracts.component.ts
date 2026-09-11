@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
-import { HrService, EmployeeContract, Employee } from '../../../core/services/hr.service';
+import { HrService, EmployeeContract, Employee, JobPosition } from '../../../core/services/hr.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 
 @Component({
@@ -30,6 +30,29 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Nuevo Contrato
         </button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div class="min-w-[160px] space-y-1">
+            <label class="text-xs font-medium text-slate-600 dark:text-slate-400">Cargo</label>
+            <select [value]="positionFilter()"
+                    (change)="positionFilter.set($any($event.target).value); applyFilters()"
+                    class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+              <option value="">Todos</option>
+              @for (pos of positions(); track pos.id) {
+                <option [value]="pos.id">{{ pos.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button (click)="resetFilters()"
+                    class="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+              Limpiar
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -70,6 +93,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             <thead class="bg-slate-50 dark:bg-slate-900/50"><tr>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Empleado</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Tipo</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Cargo</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Inicio</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fin</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Salario</th>
@@ -81,6 +105,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ c.employeeName }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ contractTypeLabel(c.contractType) }}</td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ c.position || '—' }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ c.startDate }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ c.endDate || 'Indefinido' }}</td>
                   <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ c.salary | number:'1.2-2' }}</td>
@@ -93,7 +118,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" class="px-4 py-16 text-center">
+                <tr><td colspan="8" class="px-4 py-16 text-center">
                   <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No hay contratos registrados</p>
                   <p class="text-xs text-slate-400 dark:text-slate-500">Registre el vínculo contractual de cada trabajador</p>
                 </td></tr>
@@ -146,7 +171,13 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             </div>
             <div class="space-y-1">
               <label class="text-xs font-medium text-slate-600">Cargo</label>
-              <input type="text" [(ngModel)]="form.position" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"/>
+              <select [(ngModel)]="form.positionId" (ngModelChange)="onPositionSelected()"
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500">
+                <option [ngValue]="null">Sin asignar</option>
+                @for (pos of positions(); track pos.id) {
+                  <option [ngValue]="pos.id">{{ pos.name }}</option>
+                }
+              </select>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
@@ -160,7 +191,8 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             </div>
             <div class="space-y-1">
               <label class="text-xs font-medium text-slate-600">Salario <span class="text-red-500">*</span></label>
-              <input type="number" step="0.01" [(ngModel)]="form.salary" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"/>
+              <input type="number" step="0.01" [(ngModel)]="form.salary" (ngModelChange)="onSalaryInput()"
+                     class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 text-right"/>
             </div>
             <div class="space-y-1">
               <label class="text-xs font-medium text-slate-600">Notas</label>
@@ -178,7 +210,9 @@ export class ContractsComponent implements OnInit {
 
   contracts = signal<EmployeeContract[]>([]);
   employees = signal<Employee[]>([]);
+  positions = signal<JobPosition[]>([]);
   currentPage = signal(1);
+  positionFilter = signal('');
   pageSize = 10;
   isLoading = signal(false);
   isSaving = signal(false);
@@ -204,15 +238,18 @@ export class ContractsComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    this.loadPositions();
   }
 
   private emptyForm() {
-    return { employeeId: '', contractType: 'full_time', position: '', startDate: '', endDate: '', salary: 0, status: 'active', notes: '' };
+    return { employeeId: '', contractType: 'full_time', positionId: null, position: null, startDate: '', endDate: '', salary: 0, status: 'active', notes: '' };
   }
 
   loadData() {
     this.isLoading.set(true);
-    this.hrService.getContracts().subscribe({
+    const filters: any = {};
+    if (this.positionFilter()) filters.positionId = this.positionFilter();
+    this.hrService.getContracts(filters).subscribe({
       next: (res: any) => { this.contracts.set(res.contracts || res || []); this.currentPage.set(1); this.isLoading.set(false); },
       error: () => { this.isLoading.set(false); this.showToast('error', 'Error cargando contratos'); }
     });
@@ -221,6 +258,16 @@ export class ContractsComponent implements OnInit {
       error: () => this.showToast('error', 'Error cargando empleados')
     });
   }
+
+  loadPositions() {
+    this.hrService.getPositions({ isActive: true }).subscribe({
+      next: (res: any) => this.positions.set(res),
+      error: () => this.showToast('error', 'Error cargando cargos')
+    });
+  }
+
+  applyFilters() { this.currentPage.set(1); this.loadData(); }
+  resetFilters() { this.positionFilter.set(''); this.currentPage.set(1); this.loadData(); }
 
   countByStatus(status: string): number { return this.contracts().filter(c => c.status === status).length; }
   activeSalaryTotal(): number { return this.contracts().filter(c => c.status === 'active').reduce((sum, c) => sum + Number(c.salary || 0), 0); }
@@ -256,7 +303,28 @@ export class ContractsComponent implements OnInit {
   onEmployeeChange() {
     const empId = String(this.form.employeeId || '');
     const emp = this.employees().find(e => e.id === empId);
-    if (emp) this.form.position = emp.position || this.form.position;
+    if (emp) {
+      this.form.positionId = emp.positionId;
+      this.form.position = emp.position;
+      this.onPositionSelected();
+    }
+  }
+
+  onPositionSelected() {
+    const id = this.form.positionId;
+    if (id) {
+      const pos = this.positions().find(p => p.id === id);
+      if (pos) {
+        this.form.position = pos.name;
+        if (!this.editingId() || !this.form.salary) this.form.salary = Number(pos.baseSalary || 0);
+      }
+    } else {
+      this.form.position = null;
+    }
+  }
+
+  onSalaryInput() {
+    this.form.salary = Number(this.form.salary) || 0;
   }
 
   save() {
@@ -266,7 +334,12 @@ export class ContractsComponent implements OnInit {
     }
     const empId = String(this.form.employeeId);
     const emp = this.employees().find(e => e.id === empId);
-    const payload = { ...this.form, employeeId: empId, employeeName: emp ? `${emp.firstName} ${emp.lastName}` : this.form.employeeName };
+    const payload = {
+      ...this.form,
+      employeeId: empId,
+      employeeName: emp ? `${emp.firstName} ${emp.lastName}` : this.form.employeeName,
+      salary: Number(this.form.salary) || 0,
+    };
     this.isSaving.set(true);
     const obs = this.editingId() ? this.hrService.updateContract(this.editingId()!, payload) : this.hrService.createContract(payload);
     obs.subscribe({
