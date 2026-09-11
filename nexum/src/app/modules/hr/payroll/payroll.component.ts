@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PayrollService } from '../../../core/services/payroll.service';
 import { HrService, Employee } from '../../../core/services/hr.service';
-import { AccountingService, CostCenter } from '../../../core/services/accounting.service';
 import { FinanceService } from '../../../core/services/finance.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
@@ -151,11 +150,11 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                       <button (click)="openDetail(payroll)" title="Ver líneas" class="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                       </button>
-                      <button (click)="downloadPdf(payroll)" title="Descargar Modelo SC-4-06" class="p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors">
+                      <button (click)="openPdfModal(payroll)" title="Descargar Modelo SC-4-06" class="p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h5.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                       </button>
                       @if (payroll.status === 'draft') {
-                        <button (click)="openProcess(payroll)" class="px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">Procesar</button>
+                        <button (click)="processPayroll(payroll)" class="px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">Procesar</button>
                       }
                       @if (payroll.status === 'processed') {
                         <button (click)="openPay(payroll.id)" class="px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors">Pagar</button>
@@ -417,29 +416,6 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
         </app-modal>
       }
 
-      <!-- Modal Procesar Nómina -->
-      @if (showProcess()) {
-        <app-modal [isOpen]="showProcess()" (closeEvent)="showProcess.set(false)" (confirmEvent)="confirmProcess()"
-                   title="Procesar Nómina"
-                   [confirmText]="isBusy() ? 'Procesando...' : 'Procesar'"
-                   confirmButtonClass="bg-blue-600 hover:bg-blue-700"
-                   maxWidthClass="max-w-md">
-          <div class="space-y-4">
-            <p class="text-xs text-slate-500">Al procesar se genera el asiento contable del devengo (gasto de salario contra nóminas por pagar y retenciones).</p>
-            <div class="space-y-1">
-              <label class="text-xs font-medium text-slate-600">Centro de costo (opcional)</label>
-              <select [(ngModel)]="selectedCostCenterId"
-                      class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option [ngValue]="null">Sin centro de costo</option>
-                @for (cc of costCenters(); track cc.id) {
-                  <option [ngValue]="cc.id">{{ cc.code }} - {{ cc.name }}</option>
-                }
-              </select>
-            </div>
-          </div>
-        </app-modal>
-      }
-
       <!-- Modal Pagar Nómina -->
       @if (showPay()) {
         <app-modal [isOpen]="showPay()" (closeEvent)="showPay.set(false)" (confirmEvent)="confirmPay()"
@@ -462,13 +438,55 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
           </div>
         </app-modal>
       }
+
+      <!-- Modal Seleccionar Unidad y Agrupación PDF -->
+      @if (showPdfUnitModal()) {
+        <app-modal [isOpen]="showPdfUnitModal()" (closeEvent)="showPdfUnitModal.set(false)" (confirmEvent)="confirmPdfUnit()"
+                   title="Imprimir Modelo SC-4-06"
+                   confirmText="Generar PDF"
+                   confirmButtonClass="bg-violet-600 hover:bg-violet-700"
+                   maxWidthClass="max-w-md">
+          <div class="space-y-5">
+            <div class="space-y-2">
+              <p class="text-sm text-slate-600 dark:text-slate-300">Unidad de tiempo:</p>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                  <input type="radio" name="pdfUnit" value="dias" [(ngModel)]="pdfUnit" class="accent-violet-600 w-4 h-4">
+                  Días
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                  <input type="radio" name="pdfUnit" value="horas" [(ngModel)]="pdfUnit" class="accent-violet-600 w-4 h-4">
+                  Horas
+                </label>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <p class="text-sm text-slate-600 dark:text-slate-300">Agrupar por:</p>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                  <input type="radio" name="pdfGroupBy" value="area" [(ngModel)]="pdfGroupBy" class="accent-violet-600 w-4 h-4">
+                  Área
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                  <input type="radio" name="pdfGroupBy" value="costCenterAccount" [(ngModel)]="pdfGroupBy" class="accent-violet-600 w-4 h-4">
+                  Centro de costo / Cuenta
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                  <input type="radio" name="pdfGroupBy" value="none" [(ngModel)]="pdfGroupBy" class="accent-violet-600 w-4 h-4">
+                  Sin agrupar
+                </label>
+              </div>
+            </div>
+          </div>
+        </app-modal>
+      }
     </div>
   `
 })
 export class PayrollComponent implements OnInit {
   private payrollService = inject(PayrollService);
   private hrService = inject(HrService);
-  private accountingService = inject(AccountingService);
   private financeService = inject(FinanceService);
   private confirmDialog = inject(ConfirmDialogService);
 
@@ -479,16 +497,18 @@ export class PayrollComponent implements OnInit {
   isLoading = signal(false);
   isBusy = signal(false);
   showGenerate = signal(false);
-  showProcess = signal(false);
   showDetail = signal(false);
   showReceipt = signal(false);
   showPay = signal(false);
-  costCenters = signal<CostCenter[]>([]);
   banks = signal<any[]>([]);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
   detailPayroll = signal<any>(null);
   detailItems = signal<any[]>([]);
   receiptItem = signal<any>(null);
+  showPdfUnitModal = signal(false);
+  pdfPayroll: any = null;
+  pdfUnit: 'dias' | 'horas' = 'dias';
+  pdfGroupBy: 'area' | 'costCenterAccount' | 'none' = 'area';
 
   statusFilter = '';
   conceptFilter = '';
@@ -551,18 +571,12 @@ export class PayrollComponent implements OnInit {
 
   genForm: { concept: string; period: string; startDate: string; endDate: string; installment: number } =
     { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1 };
-  processingId: number | null = null;
-  selectedCostCenterId: string | null = null;
   payingId: number | null = null;
   selectedBankAccountId: string | null = null;
 
   ngOnInit() {
     this.loadData();
     this.loadStats();
-    this.accountingService.getCostCenters({ activeOnly: 'true' }).subscribe({
-      next: (data) => this.costCenters.set(data),
-      error: () => { /* centros de costo opcionales */ }
-    });
     this.financeService.getBanks({ status: 'active' }).subscribe({
       next: (data) => this.banks.set(data || []),
       error: () => { /* cuentas bancarias opcionales */ }
@@ -687,10 +701,20 @@ export class PayrollComponent implements OnInit {
     });
   }
 
-  openProcess(payroll: any) {
-    this.processingId = payroll.id;
-    this.selectedCostCenterId = null;
-    this.showProcess.set(true);
+  processPayroll(payroll: any) {
+    this.isBusy.set(true);
+    this.payrollService.process(payroll.id, 'system').subscribe({
+      next: () => {
+        this.isBusy.set(false);
+        this.showToast('Nómina procesada y contabilizada', 'success');
+        this.loadData();
+        this.loadStats();
+      },
+      error: (err) => {
+        this.isBusy.set(false);
+        this.showToast(err?.error?.message || 'Error al procesar la nómina', 'error');
+      }
+    });
   }
 
   openDetail(payroll: any) {
@@ -772,24 +796,6 @@ export class PayrollComponent implements OnInit {
     }
   }
 
-  confirmProcess() {
-    if (this.processingId == null) return;
-    this.isBusy.set(true);
-    this.payrollService.process(this.processingId, 'system', this.selectedCostCenterId || undefined).subscribe({
-      next: () => {
-        this.isBusy.set(false);
-        this.showProcess.set(false);
-        this.showToast('Nómina procesada y contabilizada', 'success');
-        this.loadData();
-        this.loadStats();
-      },
-      error: (err) => {
-        this.isBusy.set(false);
-        this.showToast(err?.error?.message || 'Error al procesar la nómina', 'error');
-      }
-    });
-  }
-
   openPay(id: number) {
     this.payingId = id;
     this.selectedBankAccountId = null;
@@ -828,15 +834,22 @@ export class PayrollComponent implements OnInit {
     });
   }
 
-  downloadPdf(payroll: any) {
-    const choice = window.prompt('Imprimir nómina por:\n1 = Días\n2 = Horas\n(Cancelar = Días por defecto)', '1');
-    const unit: 'dias' | 'horas' = choice === '2' ? 'horas' : 'dias';
-    this.payrollService.exportPdf(payroll.id, unit).subscribe({
+  openPdfModal(payroll: any) {
+    this.pdfPayroll = payroll;
+    this.pdfUnit = 'dias';
+    this.pdfGroupBy = 'area';
+    this.showPdfUnitModal.set(true);
+  }
+
+  confirmPdfUnit() {
+    this.showPdfUnitModal.set(false);
+    if (!this.pdfPayroll) return;
+    this.payrollService.exportPdf(this.pdfPayroll.id, this.pdfUnit, this.pdfGroupBy).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `nomina-sc-4-06-${payroll.id}.pdf`;
+        a.download = `nomina-sc-4-06-${this.pdfPayroll.id}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
       },

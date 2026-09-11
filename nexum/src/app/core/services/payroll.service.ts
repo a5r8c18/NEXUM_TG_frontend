@@ -51,8 +51,8 @@ export class PayrollService {
     return this.http.post(`${this.apiUrl}/generate/libre`, data);
   }
 
-  process(id: number, processedBy: string, costCenterId?: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/process`, { processedBy, costCenterId });
+  process(id: number, processedBy: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}/process`, { processedBy });
   }
 
   markAsPaid(id: number, bankAccountId?: string): Observable<any> {
@@ -67,8 +67,12 @@ export class PayrollService {
     return this.http.put(`${this.apiUrl}/${id}/items`, { items });
   }
 
-  exportPdf(id: number, unit: 'dias' | 'horas' = 'dias'): Observable<Blob> {
-    let params = new HttpParams().set('unit', unit);
+  exportPdf(
+    id: number,
+    unit: 'dias' | 'horas' = 'dias',
+    groupBy: 'area' | 'costCenterAccount' | 'none' = 'area',
+  ): Observable<Blob> {
+    let params = new HttpParams().set('unit', unit).set('groupBy', groupBy);
     return this.http.get(`${this.apiUrl}/${id}/export/pdf`, { params, responseType: 'blob' });
   }
 }
