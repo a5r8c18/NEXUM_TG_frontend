@@ -366,10 +366,6 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                           <input type="number" step="0.01" [(ngModel)]="item.pension" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
                         </label>
                         <label class="block">
-                          <span class="text-xs text-slate-600 dark:text-slate-400">Sindicato</span>
-                          <input type="number" step="0.01" [(ngModel)]="item.unionDues" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
-                        </label>
-                        <label class="block">
                           <span class="text-xs text-slate-600 dark:text-slate-400">Otras retenciones</span>
                           <input type="number" step="0.01" [(ngModel)]="item.otherDeductions" (ngModelChange)="recalcItem(item)" [disabled]="!isDetailEditable()" [class]="detailInputClass"/>
                         </label>
@@ -407,7 +403,6 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
             <p><strong>Seguridad Social (5%):</strong> {{ receiptItem()?.socialSecurity | number:'1.2-2' }}</p>
             <p><strong>Impuesto sobre ingresos:</strong> {{ receiptItem()?.taxWithholding | number:'1.2-2' }}</p>
             <p><strong>Pensión:</strong> {{ receiptItem()?.pension | number:'1.2-2' }}</p>
-            <p><strong>Sindicato:</strong> {{ receiptItem()?.unionDues | number:'1.2-2' }}</p>
             <p><strong>Otras retenciones:</strong> {{ receiptItem()?.otherDeductions | number:'1.2-2' }}</p>
             <p><strong>Provisión vacaciones:</strong> {{ receiptItem()?.vacationProvision | number:'1.2-2' }}</p>
             <p class="text-lg font-bold text-right border-t pt-2">NETO: {{ receiptItem()?.netSalary | number:'1.2-2' }}</p>
@@ -738,7 +733,6 @@ export class PayrollComponent implements OnInit {
     item.commissions = Number(item.commissions) || 0;
     item.allowances = Number(item.allowances) || 0;
     item.socialSecurity = Number(item.socialSecurity) || 0;
-    item.unionDues = Number(item.unionDues) || 0;
     item.pension = Number(item.pension) || 0;
     item.taxWithholding = Number(item.taxWithholding) || 0;
     item.otherDeductions = Number(item.otherDeductions) || 0;
@@ -755,7 +749,7 @@ export class PayrollComponent implements OnInit {
       item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
     }
 
-    item.totalDeductions = item.socialSecurity + item.unionDues + item.pension + item.taxWithholding + item.otherDeductions;
+    item.totalDeductions = item.socialSecurity + item.pension + item.taxWithholding + item.otherDeductions;
     item.netSalary = item.grossSalary - item.totalDeductions;
   }
 
