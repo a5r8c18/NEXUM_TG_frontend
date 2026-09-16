@@ -104,87 +104,84 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
           <div class="flex flex-col items-center gap-3 text-slate-500">
             <svg class="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
             </svg>
             <span class="text-sm">Cargando nóminas...</span>
           </div>
         </div>
       } @else {
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">No.</th>
-                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Concepto</th>
-                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Período</th>
-                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fecha Pago</th>
-                <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Total Bruto</th>
-                <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Total Neto</th>
-                <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Empleados</th>
-                <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
-                <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-              @for (payroll of pagedItems(); track payroll.id) {
-                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                  <td class="px-4 py-3 dark:text-slate-300 font-mono text-xs">{{ payroll.id }}</td>
-                  <td class="px-4 py-3">
-                    <span [class]="getConceptClass(payroll.concept)" class="px-2 py-1 rounded-full text-xs font-medium">
-                      {{ getConceptLabel(payroll.concept) }}{{ payroll.installment ? ' · Plazo ' + payroll.installment : '' }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3">
-                    <div class="font-medium text-slate-900 dark:text-white">{{ payroll.period }}</div>
-                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ payroll.startDate }} → {{ payroll.endDate }}</div>
-                  </td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ payroll.paidAt || '—' }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ payroll.totalGross | number:'1.2-2' }}</td>
-                  <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ payroll.totalNet | number:'1.2-2' }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ (payroll.items?.length) || 0 }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <span [class]="getStatusClass(payroll.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(payroll.status) }}</span>
-                  </td>
-                  <td class="px-4 py-3">
-                    <div class="flex items-center justify-center gap-1">
-                      <button (click)="openDetail(payroll)" title="Ver líneas" class="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                      </button>
-                      <button (click)="openPdfModal(payroll)" title="Descargar Modelo SC-4-06" class="p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h5.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-                      </button>
-                      @if (payroll.status === 'draft') {
-                        <button (click)="processPayroll(payroll)" class="px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">Procesar</button>
-                      }
-                      @if (payroll.status === 'processed') {
-                        <button (click)="openPay(payroll.id)" class="px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors">Pagar</button>
-                      }
-                      @if (['draft', 'processed'].includes(payroll.status)) {
-                        <button (click)="cancel(payroll.id)" title="Cancelar y anular comprobantes" class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </button>
-                      }
-                    </div>
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="9" class="px-4 py-16 text-center">
-                    <svg class="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    <p class="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">No hay nóminas</p>
-                    <p class="text-xs text-slate-400 dark:text-slate-500">Genere una nómina por concepto para comenzar</p>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class='space-y-3'>
+          @for (payroll of pagedItems(); track payroll.id) {
+            @let s = payrollSummary(payroll);
+            <div class='bg-white dark:bg-slate-800 rounded-md shadow-sm overflow-hidden border-t-4 border-slate-200 dark:border-slate-600'>
+              <div class='flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700'>
+                <span class='bg-sky-500 text-white text-sm font-medium px-3 py-1 rounded'>NO{{ payroll.id }}</span>
+                <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Fecha:</span> {{ payroll.endDate }}</span>
+                <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Nómina:</span> {{ getConceptLabel(payroll.concept) }}{{ payroll.installment ? ' · Plazo ' + payroll.installment : '' }}</span>
+                <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Personas:</span> {{ (payroll.items?.length) || 0 }}</span>
+                <div class='flex items-center gap-1 ml-auto'>
+                  <button (click)='openDetail(payroll)' title='Ver líneas' class='p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors'>
+                    <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/></svg>
+                  </button>
+                  <button (click)='openPdfModal(payroll)' title='Descargar Modelo SC-4-06' class='p-1.5 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors'>
+                    <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h5.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z'/></svg>
+                  </button>
+                  @if (payroll.status === 'draft') {
+                    <button (click)='processPayroll(payroll)' class='px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors'>Procesar</button>
+                  }
+                  @if (payroll.status === 'processed') {
+                    <button (click)='openPay(payroll.id)' class='px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors'>Pagar</button>
+                  }
+                  @if (['draft', 'processed'].includes(payroll.status)) {
+                    <button (click)='cancel(payroll.id)' title='Cancelar y anular comprobantes' class='p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors'>
+                      <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'/></svg>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class='grid grid-cols-6 gap-2 px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 border-t border-slate-100 dark:border-slate-700'>
+                <div>Salario</div>
+                <div>Vacaciones</div>
+                <div>Impuesto s/ ingresos personales</div>
+                <div>Contribución esp. seguridad social</div>
+                <div>A cobrar</div>
+                <div class='text-right pr-6'>Importe Vacaciones acumuladas</div>
+              </div>
+              <div class='grid grid-cols-6 gap-2 px-4 py-2 text-sm text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30'>
+                <div>{{ s.salary | number:'1.2-2' }}</div>
+                <div>{{ s.vacation | number:'1.2-2' }}</div>
+                <div>{{ s.incomeTax | number:'1.2-2' }}</div>
+                <div>{{ s.specialSS | number:'1.2-2' }}</div>
+                <div>{{ s.toPay | number:'1.2-2' }}</div>
+                <div class='text-right pr-6'>{{ s.vacationAccumulated | number:'1.2-2' }}</div>
+              </div>
+              <div class='grid grid-cols-4 gap-2 px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 border-t border-slate-100 dark:border-slate-700'>
+                <div>Contribución SS (14%)</div>
+                <div>Aporte (12.5%)</div>
+                <div>Provisiones (1.5%)</div>
+                <div class='text-right pr-6'>Imp. uso fuerza de trabajo (5%)</div>
+              </div>
+              <div class='grid grid-cols-4 gap-2 px-4 py-2 text-sm text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30'>
+                <div>{{ s.employerSS14 | number:'1.2-2' }}</div>
+                <div>{{ s.aporte125 | number:'1.2-2' }}</div>
+                <div>{{ s.provisions15 | number:'1.2-2' }}</div>
+                <div class='text-right pr-6'>{{ s.laborForceTax5 | number:'1.2-2' }}</div>
+              </div>
+              <div class='px-4 py-3 border-t border-slate-100 dark:border-slate-700'>
+                <div class='font-semibold text-slate-800 dark:text-slate-200'>Notas</div>
+                <div class='text-sm text-slate-700 dark:text-slate-400'>{{ payroll.notes || 'Nómina de ' + getConceptLabel(payroll.concept) + ' del período ' + payroll.period }}</div>
+              </div>
+            </div>
+          } @empty {
+            <div class='bg-white dark:bg-slate-800 rounded-md shadow-sm p-8 text-center'>
+              <p class='text-sm font-medium text-slate-600 dark:text-slate-300'>No hay nóminas</p>
+              <p class='text-xs text-slate-400 dark:text-slate-500'>Genere una nómina por concepto para comenzar</p>
+            </div>
+          }
         </div>
       }
       </div>
 
-      @if (!isLoading() && paginationConfig().totalPages > 1) {
-        <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
-      }
+      <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
 
       <!-- Modal Generar Nómina -->
       @if (showGenerate()) {
@@ -849,6 +846,31 @@ export class PayrollComponent implements OnInit {
       },
       error: () => this.showToast('Error al generar el PDF de la nómina', 'error'),
     });
+  }
+
+  payrollSummary(payroll: any) {
+    const totalGross = Number(payroll.totalGross || 0);
+    const items = payroll.items || [];
+    const isVacation = payroll.concept === 'vacaciones';
+    const salary = isVacation ? 0 : totalGross;
+    const vacation = isVacation ? totalGross : 0;
+    const incomeTax = items.reduce((s: number, i: any) => s + Number(i.taxWithholding || 0), 0);
+    const specialSS = items.reduce((s: number, i: any) => s + Number(i.socialSecurity || 0), 0);
+    const toPay = Number(payroll.totalNet || 0);
+    const vacationAccumulated = items.reduce((s: number, i: any) => s + Number(i.vacationProvision || 0), 0);
+    const employerBase = isVacation ? totalGross : totalGross + vacationAccumulated;
+    return {
+      salary,
+      vacation,
+      incomeTax,
+      specialSS,
+      toPay,
+      vacationAccumulated,
+      employerSS14: employerBase * 0.14,
+      aporte125: employerBase * 0.125,
+      provisions15: employerBase * 0.015,
+      laborForceTax5: employerBase * 0.05,
+    };
   }
 
   private showToast(message: string, type: 'success' | 'error') {
