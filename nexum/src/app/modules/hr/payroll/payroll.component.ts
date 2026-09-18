@@ -372,7 +372,9 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                     <div class="flex flex-wrap justify-between gap-x-6 gap-y-1 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs">
                       <span class="text-slate-500 dark:text-slate-400">Devengado <span class="font-semibold text-slate-700 dark:text-slate-200">{{ item.grossSalary | number:'1.2-2' }}</span></span>
                       <span class="text-slate-500 dark:text-slate-400">Retenciones <span class="font-semibold text-slate-700 dark:text-slate-200">{{ item.totalDeductions | number:'1.2-2' }}</span></span>
-                      <span class="text-slate-500 dark:text-slate-400">Provisión vacaciones <span class="font-semibold text-slate-700 dark:text-slate-200">{{ item.vacationProvision | number:'1.2-2' }}</span></span>
+                      @if (item.vacationProvision > 0) {
+                        <span class="text-slate-500 dark:text-slate-400">Provisión vacaciones <span class="font-semibold text-slate-700 dark:text-slate-200">{{ item.vacationProvision | number:'1.2-2' }}</span></span>
+                      }
                     </div>
                   </div>
                 </div>
@@ -401,7 +403,9 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
             <p><strong>Impuesto sobre ingresos:</strong> {{ receiptItem()?.taxWithholding | number:'1.2-2' }}</p>
             <p><strong>Pensión:</strong> {{ receiptItem()?.pension | number:'1.2-2' }}</p>
             <p><strong>Otras retenciones:</strong> {{ receiptItem()?.otherDeductions | number:'1.2-2' }}</p>
-            <p><strong>Provisión vacaciones:</strong> {{ receiptItem()?.vacationProvision | number:'1.2-2' }}</p>
+            @if (receiptItem()?.vacationProvision > 0) {
+              <p><strong>Provisión vacaciones:</strong> {{ receiptItem()?.vacationProvision | number:'1.2-2' }}</p>
+            }
             <p class="text-lg font-bold text-right border-t pt-2">NETO: {{ receiptItem()?.netSalary | number:'1.2-2' }}</p>
             <p class="text-xs text-slate-400 text-center">Generado por NEXUM TG</p>
           </div>
@@ -736,14 +740,14 @@ export class PayrollComponent implements OnInit {
 
     const isSalary = this.detailPayroll()?.concept === 'salario';
     if (isSalary) {
-      const paidUnits = item.paidUnits > 0 ? item.paidUnits : 30;
-      const baseEarnings = Number(((item.baseSalary / 30) * paidUnits).toFixed(2));
+      const paidUnits = item.paidUnits > 0 ? item.paidUnits : 24;
+      const baseEarnings = Number(((item.baseSalary / 24) * paidUnits).toFixed(2));
       item.grossSalary = baseEarnings + item.overtimePay + item.bonuses + item.commissions + item.allowances;
       item.paidUnits = paidUnits;
       item.vacationProvision = Number((item.baseSalary * 0.0909).toFixed(2));
     } else {
       item.grossSalary = Number(item.grossSalary) || 0;
-      item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
+      item.vacationProvision = Number(item.vacationProvision) || 0;
     }
 
     item.totalDeductions = item.socialSecurity + item.pension + item.taxWithholding + item.otherDeductions;
@@ -858,7 +862,10 @@ export class PayrollComponent implements OnInit {
     const specialSS = items.reduce((s: number, i: any) => s + Number(i.socialSecurity || 0), 0);
     const toPay = Number(payroll.totalNet || 0);
     const vacationAccumulated = items.reduce((s: number, i: any) => s + Number(i.vacationProvision || 0), 0);
-    const employerBase = isVacation ? totalGross : totalGross + vacationAccumulated;
+    // Los tributos patronales solo se generan en conceptos que cargan a gasto
+    // (salario/libre); en vacaciones, subsidio y maternidad no se contabilizan.
+    const chargesExpense = payroll.concept === 'salario' || payroll.concept === 'libre';
+    const employerBase = chargesExpense ? totalGross + vacationAccumulated : 0;
     return {
       salary,
       vacation,
