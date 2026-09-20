@@ -7,11 +7,12 @@ import { FinanceService } from '../../../core/services/finance.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
+import { LeavesComponent } from '../leaves/leaves.component';
 
 @Component({
   selector: 'app-payroll',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, PaginationComponent, LeavesComponent],
   template: `
     <div class="p-6 space-y-5">
       @if (toast()) {
@@ -32,12 +33,42 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
           <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Nómina</h1>
           <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Devengo, retenciones y pago por concepto, contabilizado automáticamente</p>
         </div>
-        <button (click)="openGenerate()" class="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Generar Nómina
-        </button>
+        @if (activeTab() === 'nominas') {
+          <button (click)="openGenerate()" class="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Generar Nómina
+          </button>
+        }
       </div>
 
+      <!-- Pestañas: nóminas y las licencias que las alimentan -->
+      <div class="border-b border-slate-200 dark:border-slate-700">
+        <div class="flex gap-1">
+          <button (click)="activeTab.set('nominas')"
+                  class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+                  [class]="activeTab() === 'nominas'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'">
+            Nóminas
+          </button>
+          <button (click)="activeTab.set('licencias')"
+                  class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+                  [class]="activeTab() === 'licencias'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'">
+            Vacaciones / Licencias
+          </button>
+        </div>
+      </div>
+
+      @if (activeTab() === 'licencias') {
+        <!-- El componente trae su propio padding; se compensa el del contenedor -->
+        <div class="-mx-6 -mb-6 -mt-5">
+          <app-leaves />
+        </div>
+      }
+
+      @if (activeTab() === 'nominas') {
       <!-- Stats -->
       @if (stats()) {
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -182,6 +213,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
       </div>
 
       <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)" />
+      }
 
       <!-- Modal Generar Nómina -->
       @if (showGenerate()) {
@@ -486,6 +518,8 @@ export class PayrollComponent implements OnInit {
   private financeService = inject(FinanceService);
   private confirmDialog = inject(ConfirmDialogService);
 
+  /** Pestaña activa: nóminas o las licencias que las alimentan. */
+  activeTab = signal<'nominas' | 'licencias'>('nominas');
   items = signal<any[]>([]);
   stats = signal<any>(null);
   currentPage = signal(1);
@@ -744,7 +778,9 @@ export class PayrollComponent implements OnInit {
       const baseEarnings = Number(((item.baseSalary / 24) * paidUnits).toFixed(2));
       item.grossSalary = baseEarnings + item.overtimePay + item.bonuses + item.commissions + item.allowances;
       item.paidUnits = paidUnits;
-      item.vacationProvision = Number((item.baseSalary * 0.0909).toFixed(2));
+      // Art. 102 Ley 116: 9,09 % de los salarios percibidos del período, no del
+      // salario contractual, igual que en el backend.
+      item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
     } else {
       item.grossSalary = Number(item.grossSalary) || 0;
       item.vacationProvision = Number(item.vacationProvision) || 0;
