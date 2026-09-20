@@ -47,6 +47,11 @@ export class PayrollService {
     return this.http.post(`${this.apiUrl}/generate/maternidad`, data);
   }
 
+  /** Liquidación del saldo de vacaciones al terminar la relación laboral (Art. 52). */
+  generateVacationSettlement(data: { period: string; startDate: string; endDate: string; employeeId: string; processedBy?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate/liquidacion`, data);
+  }
+
   generateFree(data: { period: string; startDate: string; endDate: string; items: { employeeId: string; amount: number; description?: string }[]; processedBy?: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/generate/libre`, data);
   }

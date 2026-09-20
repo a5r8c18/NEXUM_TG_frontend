@@ -72,6 +72,8 @@ export class EmployeesComponent implements OnInit {
       bankAccount: null,
       initialVacationDays: 0,
       initialVacationAmount: 0,
+      unionMember: false,
+      overtimeRate: 1,
     };
   }
 
@@ -200,6 +202,8 @@ export class EmployeesComponent implements OnInit {
       bankAccount: emp.bankAccount,
       initialVacationDays: Number(emp.initialVacationDays || 0),
       initialVacationAmount: Number(emp.initialVacationAmount || 0),
+      unionMember: !!emp.unionMember,
+      overtimeRate: Number(emp.overtimeRate || 1),
     };
     this.isCreateOpen.set(true);
   }

@@ -244,6 +244,18 @@ import { LeavesComponent } from '../leaves/leaves.component';
                 </select>
               </div>
             }
+            @if (genForm.concept === 'liquidacion') {
+              <div class="space-y-1">
+                <label class="text-xs font-medium text-slate-600">Trabajador que termina <span class="text-red-500">*</span></label>
+                <select [(ngModel)]="genForm.employeeId"
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">— Seleccione —</option>
+                  @for (e of employees(); track e.id) {
+                    <option [value]="e.id">{{ e.lastName }}, {{ e.firstName }}</option>
+                  }
+                </select>
+              </div>
+            }
             @if (genForm.concept === 'libre') {
               <div class="space-y-2">
                 <label class="text-xs font-medium text-slate-600">Líneas del concepto libre <span class="text-red-500">*</span></label>
@@ -552,6 +564,7 @@ export class PayrollComponent implements OnInit {
     { value: 'subsidio', label: 'Subsidio' },
     { value: 'maternidad', label: 'Maternidad' },
     { value: 'paternidad', label: 'Paternidad' },
+    { value: 'liquidacion', label: 'Liquidación (Art. 52)' },
     { value: 'libre', label: 'Concepto libre' },
   ];
   employees = signal<Employee[]>([]);
@@ -599,8 +612,8 @@ export class PayrollComponent implements OnInit {
 
   onPageChange(page: number) { this.currentPage.set(page); }
 
-  genForm: { concept: string; period: string; startDate: string; endDate: string; installment: number } =
-    { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1 };
+  genForm: { concept: string; period: string; startDate: string; endDate: string; installment: number; employeeId: string } =
+    { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1, employeeId: '' };
   payingId: number | null = null;
   selectedBankAccountId: string | null = null;
 
@@ -635,13 +648,13 @@ export class PayrollComponent implements OnInit {
   }
 
   openGenerate() {
-    this.genForm = { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1 };
+    this.genForm = { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1, employeeId: '' };
     this.freeItems = [];
     this.showGenerate.set(true);
   }
 
   onConceptChange() {
-    if (this.genForm.concept === 'libre' && this.employees().length === 0) {
+    if (['libre', 'liquidacion'].includes(this.genForm.concept) && this.employees().length === 0) {
       this.hrService.getEmployees({ status: 'active' }).subscribe({
         next: (data) => this.employees.set(data || []),
         error: () => this.showToast('No se pudieron cargar los empleados', 'error'),
@@ -656,6 +669,7 @@ export class PayrollComponent implements OnInit {
       subsidio: 'Paga las licencias por enfermedad aprobadas con certificado médico. Aplica carencia de 3 días, porcentajes 50-80% y mínimo legal. Se carga a la provisión 500.',
       maternidad: 'Paga un plazo de la licencia de maternidad según el salario promedio semanal. Sector estatal: recuperable (164-0030). Sector no estatal: paga la Filial INSS.',
       paternidad: 'Paga la licencia de paternidad aprobada. Se carga a la provisión 500.',
+      liquidacion: 'Paga todo el saldo de vacaciones acumulado del trabajador al terminar la relación laboral (Art. 52). Se carga a la provisión 492.',
       libre: 'Nómina de concepto libre: defina manualmente empleado, importe y descripción de cada línea.',
     };
     return hints[this.genForm.concept] || '';
@@ -702,6 +716,13 @@ export class PayrollComponent implements OnInit {
         break;
       case 'paternidad':
         request = this.payrollService.generateSubsidy(this.genForm);
+        break;
+      case 'liquidacion':
+        if (!this.genForm.employeeId) {
+          this.showToast('Seleccione el trabajador a liquidar', 'error');
+          return;
+        }
+        request = this.payrollService.generateVacationSettlement(this.genForm);
         break;
       case 'libre': {
         const items = this.freeItems.filter((i) => i.employeeId && i.amount > 0);
@@ -770,6 +791,7 @@ export class PayrollComponent implements OnInit {
     item.socialSecurity = Number(item.socialSecurity) || 0;
     item.pension = Number(item.pension) || 0;
     item.taxWithholding = Number(item.taxWithholding) || 0;
+    item.unionDues = Number(item.unionDues) || 0;
     item.otherDeductions = Number(item.otherDeductions) || 0;
 
     const isSalary = this.detailPayroll()?.concept === 'salario';
@@ -786,7 +808,7 @@ export class PayrollComponent implements OnInit {
       item.vacationProvision = Number(item.vacationProvision) || 0;
     }
 
-    item.totalDeductions = item.socialSecurity + item.pension + item.taxWithholding + item.otherDeductions;
+    item.totalDeductions = item.socialSecurity + item.pension + item.taxWithholding + item.unionDues + item.otherDeductions;
     item.netSalary = item.grossSalary - item.totalDeductions;
   }
 
@@ -952,6 +974,7 @@ export class PayrollComponent implements OnInit {
       subsidio: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
       maternidad: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
       paternidad: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+      liquidacion: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
       libre: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
     };
     return map[concept] || map['salario'];

@@ -33,6 +33,10 @@ export interface Employee {
   /** Saldo de apertura de vacaciones al entrar al sistema (Art. 102). */
   initialVacationDays: number;
   initialVacationAmount: number;
+  /** Afiliado al sindicato: la nómina le retiene la cuota del 1 %. */
+  unionMember: boolean;
+  /** Recargo pactado en convenio para las horas extra (1 = tarifa base). */
+  overtimeRate: number;
   createdAt: string;
 }
 

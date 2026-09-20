@@ -286,6 +286,19 @@
           <p class="text-xs text-slate-400">Saldo de vacaciones que traía al entrar al sistema; de ahí sale la tarifa del pago</p>
         </div>
         <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Recargo por hora extra (×)</label>
+          <input type="number" step="0.05" min="1" [(ngModel)]="form.overtimeRate"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
+          <p class="text-xs text-slate-400">Multiplicador del salario/hora según convenio: 1 = tarifa base, 1.5 = +50 %</p>
+        </div>
+        <div class="flex items-center gap-2 pt-5">
+          <input type="checkbox" id="unionMember" [(ngModel)]="form.unionMember"
+                 class="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"/>
+          <label for="unionMember" class="text-xs font-medium text-slate-600">
+            Afiliado al sindicato <span class="text-slate-400">(retiene 1 % de cuota en nómina)</span>
+          </label>
+        </div>
+        <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Cargo</label>
           <select [(ngModel)]="form.positionId" (ngModelChange)="onPositionSelected()"
                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
