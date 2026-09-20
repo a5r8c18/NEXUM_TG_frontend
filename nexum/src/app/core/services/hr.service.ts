@@ -30,6 +30,9 @@ export interface Employee {
   /** Banco y cuenta para el fichero de acreditación salarial. */
   bankName: string | null;
   bankAccount: string | null;
+  /** Saldo de apertura de vacaciones al entrar al sistema (Art. 102). */
+  initialVacationDays: number;
+  initialVacationAmount: number;
   createdAt: string;
 }
 
