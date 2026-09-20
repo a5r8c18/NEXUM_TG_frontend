@@ -265,6 +265,16 @@
                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
         </div>
         <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Banco</label>
+          <input type="text" [(ngModel)]="form.bankName" placeholder="Para el fichero de acreditación"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Cuenta bancaria</label>
+          <input type="text" [(ngModel)]="form.bankAccount" placeholder="Número de cuenta o tarjeta"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
+        </div>
+        <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Cargo</label>
           <select [(ngModel)]="form.positionId" (ngModelChange)="onPositionSelected()"
                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">

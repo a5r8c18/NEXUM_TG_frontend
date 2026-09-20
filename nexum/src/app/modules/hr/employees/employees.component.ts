@@ -68,6 +68,8 @@ export class EmployeesComponent implements OnInit {
       status: 'active',
       documentId: null,
       address: null,
+      bankName: null,
+      bankAccount: null,
     };
   }
 
@@ -192,6 +194,8 @@ export class EmployeesComponent implements OnInit {
       status: emp.status,
       documentId: emp.documentId,
       address: emp.address,
+      bankName: emp.bankName,
+      bankAccount: emp.bankAccount,
     };
     this.isCreateOpen.set(true);
   }

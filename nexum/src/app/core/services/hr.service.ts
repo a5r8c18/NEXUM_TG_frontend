@@ -27,6 +27,9 @@ export interface Employee {
   status: 'active' | 'inactive' | 'on_leave';
   address: string | null;
   documentId: string | null;
+  /** Banco y cuenta para el fichero de acreditación salarial. */
+  bankName: string | null;
+  bankAccount: string | null;
   createdAt: string;
 }
 
@@ -63,6 +66,7 @@ export interface JobPosition {
   name: string;
   description: string | null;
   baseSalary: number;
+  approvedCount?: number;
   workingHours: number;
   timeBank: number;
   timeUnit: 'hours' | 'days';
@@ -115,6 +119,38 @@ export interface LeaveRequest {
   // Prestación social (Art. 30-33)
   socialBenefitVariant?: 'mother' | 'mother_working' | 'other_worker' | null;
   beneficiaryEmployeeId?: string | null;
+}
+
+export interface VacationSubmayorRow {
+  employeeName: string;
+  documentId: string | null;
+  accumulatedDays: number;
+  accumulatedAmount: number;
+}
+
+export interface PayrollCncRow {
+  employeeName: string;
+  grossSalary: number;
+  socialSecurity: number;
+  taxWithholding: number;
+  netSalary: number;
+}
+
+export interface AccreditationRow {
+  documentId: string | null;
+  employeeName: string;
+  bankName: string | null;
+  bankAccount: string | null;
+  amount: number;
+}
+
+export interface StaffingRow {
+  positionName: string;
+  departmentName: string | null;
+  approved: number;
+  covered: number;
+  vacant: number;
+  baseSalary: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -237,5 +273,22 @@ export class HrService {
   }
   deleteLeave(id: string) {
     return this.http.delete(`${this.baseUrl}/leaves/${id}`);
+  }
+
+  // ── Reportes ──
+  getVacationSubmayor(period: string) {
+    return this.http.get<VacationSubmayorRow[]>(`${this.baseUrl}/reports/vacation-submayor`, { params: { period } });
+  }
+
+  getPayrollCNC(period: string) {
+    return this.http.get<PayrollCncRow[]>(`${this.baseUrl}/reports/payroll-cnc`, { params: { period } });
+  }
+
+  getAccreditationFile(period: string) {
+    return this.http.get<AccreditationRow[]>(`${this.baseUrl}/reports/accreditation`, { params: { period } });
+  }
+
+  getStaffingReport() {
+    return this.http.get<StaffingRow[]>(`${this.baseUrl}/reports/staffing`);
   }
 }

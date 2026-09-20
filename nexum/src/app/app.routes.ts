@@ -254,8 +254,8 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/hr/attendance/attendance.component').then(m => m.AttendanceComponent)
       },
       {
-        path: 'hr/leaves',
-        loadComponent: () => import('./modules/hr/leaves/leaves.component').then(m => m.LeavesComponent)
+        path: 'hr/reports',
+        loadComponent: () => import('./modules/hr/reports/reports.component').then(m => m.ReportsComponent)
       },
       // Messages Module
       {

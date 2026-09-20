@@ -163,6 +163,12 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
                        class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-right"/>
               </div>
             </div>
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-slate-600 dark:text-slate-400">Plazas aprobadas</label>
+              <input type="number" step="1" min="0" [(ngModel)]="form.approvedCount"
+                     class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-right"/>
+              <p class="text-xs text-slate-500">Plantilla aprobada del cargo; las cubiertas se calculan con los trabajadores activos</p>
+            </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
                 <label class="text-xs font-medium text-slate-600 dark:text-slate-400">Fondo de tiempo</label>
@@ -251,7 +257,7 @@ export class PositionsComponent implements OnInit {
   onPageChange(page: number) { this.currentPage.set(page); }
 
   private emptyForm(): Partial<JobPosition> {
-    return { name: '', description: null, baseSalary: 0, workingHours: 8, timeBank: 0, timeUnit: 'hours', salaryRate: 0, paymentConcept: null, departmentId: null, isActive: true };
+    return { name: '', description: null, baseSalary: 0, approvedCount: 1, workingHours: 8, timeBank: 0, timeUnit: 'hours', salaryRate: 0, paymentConcept: null, departmentId: null, isActive: true };
   }
 
   ngOnInit() { this.load(); this.loadDepartments(); }
