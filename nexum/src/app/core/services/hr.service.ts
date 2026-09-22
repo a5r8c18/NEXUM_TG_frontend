@@ -114,7 +114,7 @@ export interface LeaveRequest {
   approvedBy: string | null;
   approvedAt: string | null;
   // Campos para subsidio por enfermedad (Art. 40-46)
-  origin?: 'common' | 'work' | null;
+  origin?: 'common' | 'occupational' | null;
   hospitalized?: boolean | null;
   hospitalizationStart?: string | null;
   medicalCertificate?: string | null;
@@ -123,8 +123,9 @@ export interface LeaveRequest {
   birthDate?: string | null;
   prenatalStart?: string | null;
   postnatalStart?: string | null;
-  // Prestación social (Art. 30-33)
-  socialBenefitVariant?: 'mother' | 'mother_working' | 'other_worker' | null;
+  // Prestación social (Art. 30.1): a) madre cuida, b) madre reincorporada,
+  // c) cedida al padre, abuelo u otro familiar trabajador.
+  socialBenefitVariant?: 'a' | 'b' | 'c' | null;
   beneficiaryEmployeeId?: string | null;
 }
 

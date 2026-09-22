@@ -145,7 +145,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
                 <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Origen</label>
                   <select [(ngModel)]="form.origin" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm">
                     <option value="common">Enfermedad común</option>
-                    <option value="work">Accidente / enfermedad laboral</option>
+                    <option value="occupational">Accidente / enfermedad laboral</option>
                   </select>
                 </div>
                 <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Certificado médico</label>
@@ -181,12 +181,12 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
               <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Prestación social (Art. 30)</label>
                 <select [(ngModel)]="form.socialBenefitVariant" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm">
                   <option [ngValue]="null">No aplica</option>
-                  <option value="mother">Madre cuida al menor (60%)</option>
-                  <option value="mother_working">Madre reincorporada + prestación (60%)</option>
-                  <option value="other_worker">Cedida a padre/abuelo trabajador (60% de su salario)</option>
+                  <option value="a">a) Madre cuida al menor (60%)</option>
+                  <option value="b">b) Madre reincorporada + prestación (60%)</option>
+                  <option value="c">c) Cedida a padre/abuelo trabajador (60% de su salario)</option>
                 </select>
               </div>
-              @if (form.socialBenefitVariant === 'other_worker') {
+              @if (form.socialBenefitVariant === 'c') {
                 <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Beneficiario</label>
                   <select [(ngModel)]="form.beneficiaryEmployeeId" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm">
                     <option [ngValue]="null">Seleccione...</option>
