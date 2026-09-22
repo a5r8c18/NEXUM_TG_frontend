@@ -563,7 +563,6 @@ export class PayrollComponent implements OnInit {
     { value: 'vacaciones', label: 'Vacaciones' },
     { value: 'subsidio', label: 'Subsidio' },
     { value: 'maternidad', label: 'Maternidad' },
-    { value: 'paternidad', label: 'Paternidad' },
     { value: 'liquidacion', label: 'Liquidación (Art. 52)' },
     { value: 'libre', label: 'Concepto libre' },
   ];
@@ -667,8 +666,7 @@ export class PayrollComponent implements OnInit {
       salario: 'Borrador con todos los empleados activos: salario contractual, horas extra, ausencias, Contribución Especial (5%), provisión de vacaciones y retención 1,5% para subsidios.',
       vacaciones: 'Paga las licencias de vacaciones aprobadas que solapen el período. Se carga a la provisión 492, no a gasto.',
       subsidio: 'Paga las licencias por enfermedad aprobadas con certificado médico. Aplica carencia de 3 días, porcentajes 50-80% y mínimo legal. Se carga a la provisión 500.',
-      maternidad: 'Paga un plazo de la licencia de maternidad según el salario promedio semanal. Sector estatal: recuperable (164-0030). Sector no estatal: paga la Filial INSS.',
-      paternidad: 'Paga la licencia de paternidad aprobada. Se carga a la provisión 500.',
+      maternidad: 'Paga un plazo de la licencia de maternidad según el salario promedio semanal (DL 56/2021). La prestación cedida al padre o abuelo (Art. 30.1.c) se paga aquí con él como beneficiario. Sector estatal: recuperable (164-0030). Sector no estatal: paga la Filial INSS.',
       liquidacion: 'Paga todo el saldo de vacaciones acumulado del trabajador al terminar la relación laboral (Art. 52). Se carga a la provisión 492.',
       libre: 'Nómina de concepto libre: defina manualmente empleado, importe y descripción de cada línea.',
     };
@@ -713,9 +711,6 @@ export class PayrollComponent implements OnInit {
         break;
       case 'maternidad':
         request = this.payrollService.generateMaternity(this.genForm);
-        break;
-      case 'paternidad':
-        request = this.payrollService.generateSubsidy(this.genForm);
         break;
       case 'liquidacion':
         if (!this.genForm.employeeId) {
@@ -973,7 +968,6 @@ export class PayrollComponent implements OnInit {
       vacaciones: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
       subsidio: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
       maternidad: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
-      paternidad: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
       liquidacion: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
       libre: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
     };

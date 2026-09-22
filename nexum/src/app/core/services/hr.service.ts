@@ -123,8 +123,8 @@ export interface LeaveRequest {
   birthDate?: string | null;
   prenatalStart?: string | null;
   postnatalStart?: string | null;
-  // Prestación social (Art. 30.1): a) madre cuida, b) madre reincorporada,
-  // c) cedida al padre, abuelo u otro familiar trabajador.
+  // Prestación social (Art. 30.1 DL 56/2021, mod. DL 71/2023): a) madre cuida,
+  // b) madre reincorporada, c) cedida al padre, abuelo u otro familiar.
   socialBenefitVariant?: 'a' | 'b' | 'c' | null;
   beneficiaryEmployeeId?: string | null;
 }
