@@ -64,7 +64,7 @@ export class EmployeesComponent implements OnInit {
       activity: 'direct',
       hireDate: null,
       salary: 0,
-      contractType: 'work_execution',
+      contractType: 'ordinary',
       status: 'active',
       documentId: null,
       address: null,
@@ -194,7 +194,7 @@ export class EmployeesComponent implements OnInit {
       activity: emp.activity ?? 'direct',
       hireDate: emp.hireDate,
       salary: emp.salary,
-      contractType: emp.contractType ?? 'work_execution',
+      contractType: emp.contractType ?? 'ordinary',
       status: emp.status,
       documentId: emp.documentId,
       address: emp.address,
@@ -274,8 +274,16 @@ export class EmployeesComponent implements OnInit {
     }
   }
 
+  // El contrato indeterminado no tiene modalidad: queda en 'ordinary'.
+  onContractTermChange() {
+    if (this.form.contractTerm === 'indeterminate') {
+      this.form.contractType = 'ordinary';
+    }
+  }
+
   getContractLabel(type: string): string {
     switch (type) {
+      case 'ordinary': return 'Ordinario';
       case 'trial_period': return 'Período a pruebas';
       case 'work_execution': return 'Ejecución de obras';
       default: return type;

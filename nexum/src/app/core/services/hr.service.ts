@@ -23,7 +23,7 @@ export interface Employee {
   activity: 'direct' | 'indirect';
   hireDate: string | null;
   salary: number;
-  contractType: 'trial_period' | 'work_execution';
+  contractType: 'ordinary' | 'trial_period' | 'work_execution';
   status: 'active' | 'inactive' | 'on_leave';
   address: string | null;
   documentId: string | null;
@@ -56,7 +56,9 @@ export interface EmployeeContract {
   companyId: number;
   employeeId: string;
   employeeName: string;
-  contractType: string;
+  contractType: 'ordinary' | 'trial_period' | 'work_execution';
+  /** Duración del vínculo (Art. 24 Ley 116). */
+  contractTerm?: 'determinate' | 'indeterminate';
   positionId: string | null;
   position: string | null;
   startDate: string;

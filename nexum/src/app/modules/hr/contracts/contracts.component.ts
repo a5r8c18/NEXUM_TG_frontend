@@ -104,7 +104,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
               @for (c of pagedContracts(); track c.id) {
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ c.employeeName }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ contractTypeLabel(c.contractType) }}</td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ contractTermLabel(c.contractTerm) }} · {{ contractTypeLabel(c.contractType) }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ c.position || '—' }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ c.startDate }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ c.endDate || 'Indefinido' }}</td>
@@ -149,13 +149,20 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <label class="text-xs font-medium text-slate-600">Tipo</label>
+                <label class="text-xs font-medium text-slate-600">Término</label>
+                <select [(ngModel)]="form.contractTerm"
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500">
+                  <option value="indeterminate">Indeterminado</option>
+                  <option value="determinate">Determinado</option>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-medium text-slate-600">Modalidad</label>
                 <select [(ngModel)]="form.contractType"
                         class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500">
-                  <option value="full_time">Tiempo completo</option>
-                  <option value="part_time">Medio tiempo</option>
-                  <option value="contractor">Contratista</option>
-                  <option value="intern">Pasante</option>
+                  <option value="ordinary">Ordinario</option>
+                  <option value="trial_period">A prueba</option>
+                  <option value="work_execution">Ejecución de obra</option>
                 </select>
               </div>
               <div class="space-y-1">
@@ -242,7 +249,7 @@ export class ContractsComponent implements OnInit {
   }
 
   private emptyForm() {
-    return { employeeId: '', contractType: 'full_time', positionId: null, position: null, startDate: '', endDate: '', salary: 0, status: 'active', notes: '' };
+    return { employeeId: '', contractType: 'ordinary', contractTerm: 'indeterminate', positionId: null, position: null, startDate: '', endDate: '', salary: 0, status: 'active', notes: '' };
   }
 
   loadData() {
@@ -273,7 +280,11 @@ export class ContractsComponent implements OnInit {
   activeSalaryTotal(): number { return this.contracts().filter(c => c.status === 'active').reduce((sum, c) => sum + Number(c.salary || 0), 0); }
 
   contractTypeLabel(t: string) {
-    return { full_time: 'Tiempo completo', part_time: 'Medio tiempo', contractor: 'Contratista', intern: 'Pasante' }[t] || t;
+    return { ordinary: 'Ordinario', trial_period: 'A prueba', work_execution: 'Ejecución de obra' }[t] || t;
+  }
+
+  contractTermLabel(t?: string) {
+    return { determinate: 'Determinado', indeterminate: 'Indeterminado' }[t || 'indeterminate'] || t;
   }
 
   statusLabel(s: string) {
