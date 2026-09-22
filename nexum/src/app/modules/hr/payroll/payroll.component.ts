@@ -147,7 +147,7 @@ import { LeavesComponent } from '../leaves/leaves.component';
               <div class='flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700'>
                 <span class='bg-sky-500 text-white text-sm font-medium px-3 py-1 rounded'>NO{{ payroll.id }}</span>
                 <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Fecha:</span> {{ payroll.endDate }}</span>
-                <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Nómina:</span> {{ getConceptLabel(payroll.concept) }}{{ payroll.installment ? ' · Plazo ' + payroll.installment : '' }}</span>
+                <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Nómina:</span> {{ getConceptLabel(payroll.concept) }}{{ payroll.installment ? (payroll.installment === 4 ? ' · Prestación social' : ' · Plazo ' + payroll.installment) : '' }}</span>
                 <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Personas:</span> {{ (payroll.items?.length) || 0 }}</span>
                 <div class='flex items-center gap-1 ml-auto'>
                   <button (click)='openDetail(payroll)' title='Ver líneas' class='p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors'>
@@ -241,6 +241,7 @@ import { LeavesComponent } from '../leaves/leaves.component';
                   <option [ngValue]="1">1 — Prenatal (semanas 34-38/42)</option>
                   <option [ngValue]="2">2 — Postnatal (semanas 1-6)</option>
                   <option [ngValue]="3">3 — Postnatal (semanas 7-12)</option>
+                  <option [ngValue]="4">Prestación social mensual — 60% (Art. 30.1 DL 56/2021)</option>
                 </select>
               </div>
             }
@@ -666,7 +667,7 @@ export class PayrollComponent implements OnInit {
       salario: 'Borrador con todos los empleados activos: salario contractual, horas extra, ausencias, Contribución Especial (5%), provisión de vacaciones y retención 1,5% para subsidios.',
       vacaciones: 'Paga las licencias de vacaciones aprobadas que solapen el período. Se carga a la provisión 492, no a gasto.',
       subsidio: 'Paga las licencias por enfermedad aprobadas con certificado médico. Aplica carencia de 3 días, porcentajes 50-80% y mínimo legal. Se carga a la provisión 500.',
-      maternidad: 'Paga un plazo de la licencia de maternidad según el salario promedio semanal (DL 56/2021). La prestación cedida al padre o abuelo (Art. 30.1.c) se paga aquí con él como beneficiario. Sector estatal: recuperable (164-0030). Sector no estatal: paga la Filial INSS.',
+      maternidad: 'Plazos 1-3: prestación económica según salario promedio semanal. Plazo 4: prestación social mensual del 60% hasta que el menor cumpla 1 año (DL 56/2021); la cedida al padre o abuelo (Art. 30.1.c) se paga aquí con él como beneficiario. Sector estatal: recuperable (164-0030). Sector no estatal: paga la Filial INSS.',
       liquidacion: 'Paga todo el saldo de vacaciones acumulado del trabajador al terminar la relación laboral (Art. 52). Se carga a la provisión 492.',
       libre: 'Nómina de concepto libre: defina manualmente empleado, importe y descripción de cada línea.',
     };
