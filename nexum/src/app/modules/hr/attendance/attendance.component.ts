@@ -137,8 +137,8 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
               <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Salida</label><input type="time" [(ngModel)]="form.checkOut" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
             </div>
             <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Horas trabajadas</label><input type="number" step="0.01" [(ngModel)]="form.hoursWorked" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
-              <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Horas extra</label><input type="number" step="0.01" [(ngModel)]="form.overtimeHours" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
+              <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Horas trabajadas</label><input type="number" min="0" max="24" step="0.01" [(ngModel)]="form.hoursWorked" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
+              <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Horas extra</label><input type="number" min="0" max="16" step="0.01" [(ngModel)]="form.overtimeHours" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
             </div>
             <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Notas</label><textarea [(ngModel)]="form.notes" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"></textarea></div>
           </div>
