@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ProductsService } from '../../../core/services/products.service';
@@ -11,7 +11,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 @Component({
   selector: 'app-catalog',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
   templateUrl: './catalog.component.html',
 })
 export class CatalogComponent implements OnInit, OnDestroy {

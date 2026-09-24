@@ -28,7 +28,15 @@
               "src/styles.css",
               "src/styles/scrollbar.css"
             ],
-            "serviceWorker": "ngsw-config.json"
+            "serviceWorker": "ngsw-config.json",
+            "allowedCommonJsDependencies": [
+              "canvg",
+              "core-js",
+              "raf",
+              "rgbcolor",
+              "html2canvas",
+              "jspdf"
+            ]
           },
           "configurations": {
             "production": {
