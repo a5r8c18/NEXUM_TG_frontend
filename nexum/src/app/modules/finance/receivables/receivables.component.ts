@@ -182,15 +182,30 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
 
   async markAsPaid(receivable: any): Promise<void> {
     const confirmed = await this.confirmDialog.confirm({
-      title: 'Marcar como pagada',
-      message: `Marcar "${receivable.customerName}" como pagada?`,
+      title: 'Registrar cobro',
+      message: `Registrar el cobro total de "${receivable.customerName}" por $${Number(receivable.balanceAmount).toFixed(2)} en efectivo?`,
       confirmText: 'Confirmar',
       type: 'warning',
     });
     if (!confirmed) return;
-    this.editReceivable = { ...receivable, status: 'paid' };
-    this.selectedReceivable.set(receivable);
-    this.updateReceivable();
+    // El cobro pasa por createPayment: genera el Payment, el comprobante
+    // contable y el movimiento de caja — no basta con cambiar el estado.
+    this.financeService.createPayment({
+      paymentType: 'receivable',
+      accountReceivableId: receivable.id,
+      amount: Number(receivable.balanceAmount),
+      paymentMethod: 'cash',
+      paymentDate: new Date().toISOString().split('T')[0],
+      description: `Cobro de ${receivable.arNumber || receivable.invoiceNumber}`,
+      counterpartyName: receivable.customerName,
+      performedBy: 'Usuario',
+    }).subscribe({
+      next: () => {
+        this.loadData();
+        this.showToast('Cobro registrado exitosamente', 'success');
+      },
+      error: (err: any) => this.showToast(err?.error?.message || 'Error al registrar el cobro', 'error'),
+    });
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info'): void {
