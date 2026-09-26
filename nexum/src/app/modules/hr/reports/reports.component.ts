@@ -82,22 +82,41 @@ type ReportTab = 'submayor' | 'empleados' | 'cnc' | 'acreditacion' | 'plantilla'
         <div class="overflow-x-auto">
 
           @if (activeTab() === 'submayor') {
-            <table class="w-full text-sm"><thead class="bg-slate-50 dark:bg-slate-900/50"><tr>
-              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Nombre y Apellidos</th>
-              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">CI</th>
-              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Días Acumulados</th>
-              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Importe Acumulado</th>
-            </tr></thead>
+            <table class="w-full text-sm"><thead class="bg-slate-50 dark:bg-slate-900/50">
+              <tr>
+                <th rowspan="2" class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Nombre y Apellidos</th>
+                <th rowspan="2" class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">CI</th>
+                <th colspan="2" class="px-4 py-2 text-center font-semibold text-slate-600 dark:text-slate-400 border-b border-l border-slate-200 dark:border-slate-700">Saldo inicial</th>
+                <th colspan="2" class="px-4 py-2 text-center font-semibold text-slate-600 dark:text-slate-400 border-b border-l border-slate-200 dark:border-slate-700">Devengado (+)</th>
+                <th colspan="2" class="px-4 py-2 text-center font-semibold text-slate-600 dark:text-slate-400 border-b border-l border-slate-200 dark:border-slate-700">Liquidado (−)</th>
+                <th colspan="2" class="px-4 py-2 text-center font-semibold text-slate-600 dark:text-slate-400 border-b border-l border-slate-200 dark:border-slate-700">Saldo final</th>
+              </tr>
+              <tr>
+                @for (h of ['Días', 'Importe', 'Días', 'Importe', 'Días', 'Importe', 'Días', 'Importe']; track $index) {
+                  <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400 border-l border-slate-100 dark:border-slate-700 first:border-l-0">{{ h }}</th>
+                }
+              </tr>
+            </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               @for (r of pagedSubmayor(); track r.documentId || r.employeeName) {
-                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                    [class.bg-red-50]="r.closingDays < 0 || r.closingAmount < 0"
+                    [class.dark:bg-red-900/10]="r.closingDays < 0 || r.closingAmount < 0">
                   <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ r.employeeName }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ r.documentId || '—' }}</td>
-                  <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ r.accumulatedDays }}</td>
-                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.accumulatedAmount | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.openingDays | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.openingAmount | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.accruedDays | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.accruedAmount | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.settledDays | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.settledAmount | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right font-semibold" [class]="(r.closingDays < 0 || r.closingAmount < 0) ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'"
+                      [title]="(r.closingDays < 0 || r.closingAmount < 0) ? 'Adelanto de vacaciones: disfrutó más de lo acumulado' : ''">{{ r.closingDays | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right font-semibold" [class]="(r.closingDays < 0 || r.closingAmount < 0) ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'"
+                      [title]="(r.closingDays < 0 || r.closingAmount < 0) ? 'Adelanto de vacaciones: disfrutó más de lo acumulado' : ''">{{ r.closingAmount | number:'1.2-2' }}</td>
                 </tr>
               } @empty {
-                <tr><td colspan="4" class="px-4 py-16 text-center">
+                <tr><td colspan="10" class="px-4 py-16 text-center">
                   <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Sin acumulado de vacaciones hasta el período</p>
                   <p class="text-xs text-slate-400 dark:text-slate-500">El saldo se forma con el 9,09 % de los días y salarios de las nóminas contabilizadas (Art. 102)</p>
                 </td></tr>
@@ -347,8 +366,19 @@ export class ReportsComponent implements OnInit {
     switch (this.activeTab()) {
       case 'submayor':
         return [
-          ['Nombre y Apellidos', 'CI', 'Días Acumulados', 'Importe Acumulado'],
-          this.submayorRows().map((r) => [r.employeeName, r.documentId || '', r.accumulatedDays, money(r.accumulatedAmount)]),
+          ['Nombre y Apellidos', 'CI', 'Saldo Inicial Días', 'Saldo Inicial Importe', 'Devengado Días', 'Devengado Importe', 'Liquidado Días', 'Liquidado Importe', 'Saldo Final Días', 'Saldo Final Importe'],
+          this.submayorRows().map((r) => [
+            r.employeeName,
+            r.documentId || '',
+            r.openingDays,
+            money(r.openingAmount),
+            r.accruedDays,
+            money(r.accruedAmount),
+            r.settledDays,
+            money(r.settledAmount),
+            r.closingDays,
+            money(r.closingAmount),
+          ]),
         ];
       case 'empleados':
         return [

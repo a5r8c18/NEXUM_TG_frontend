@@ -16,13 +16,16 @@ import { LeavesComponent } from '../leaves/leaves.component';
   template: `
     <div class="p-6 space-y-5">
       @if (toast()) {
-        <div class="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border"
+        <div class="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border max-w-md"
              [class.bg-green-50]="toast()?.type === 'success'"
              [class.text-green-800]="toast()?.type === 'success'"
              [class.border-green-200]="toast()?.type === 'success'"
              [class.bg-red-50]="toast()?.type === 'error'"
              [class.text-red-800]="toast()?.type === 'error'"
-             [class.border-red-200]="toast()?.type === 'error'">
+             [class.border-red-200]="toast()?.type === 'error'"
+             [class.bg-amber-50]="toast()?.type === 'warning'"
+             [class.text-amber-800]="toast()?.type === 'warning'"
+             [class.border-amber-200]="toast()?.type === 'warning'">
           {{ toast()?.message }}
         </div>
       }
@@ -544,7 +547,7 @@ export class PayrollComponent implements OnInit {
   showReceipt = signal(false);
   showPay = signal(false);
   banks = signal<any[]>([]);
-  toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
+  toast = signal<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   detailPayroll = signal<any>(null);
   detailItems = signal<any[]>([]);
   receiptItem = signal<any>(null);
@@ -751,9 +754,15 @@ export class PayrollComponent implements OnInit {
   processPayroll(payroll: any) {
     this.isBusy.set(true);
     this.payrollService.process(payroll.id, 'system').subscribe({
-      next: () => {
+      next: (res: any) => {
         this.isBusy.set(false);
-        this.showToast('Nómina procesada y contabilizada', 'success');
+        const warnings: string[] = res?.warnings || [];
+        this.showToast(
+          warnings.length
+            ? `Nómina procesada y contabilizada. Avisos: ${warnings.join(' ')}`
+            : 'Nómina procesada y contabilizada',
+          warnings.length ? 'warning' : 'success',
+        );
         this.loadData();
         this.loadStats();
       },
@@ -916,10 +925,23 @@ export class PayrollComponent implements OnInit {
     const specialSS = items.reduce((s: number, i: any) => s + Number(i.socialSecurity || 0), 0);
     const toPay = Number(payroll.totalNet || 0);
     const vacationAccumulated = items.reduce((s: number, i: any) => s + Number(i.vacationProvision || 0), 0);
-    // Los tributos patronales solo se generan en conceptos que cargan a gasto
-    // (salario/libre); en vacaciones, subsidio y maternidad no se contabilizan.
-    const chargesExpense = payroll.concept === 'salario' || payroll.concept === 'libre';
-    const employerBase = chargesExpense ? totalGross + vacationAccumulated : 0;
+    // Los tributos patronales gravan toda remuneración devengada (salario,
+    // vacaciones, liquidación y libre); subsidio y maternidad son prestaciones
+    // sociales exentas. La base es solo el devengado del período: la provisión
+    // de vacaciones es un cargo a la reserva 492, no remuneración pagada.
+    const chargesEmployerTaxes = ['salario', 'vacaciones', 'liquidacion', 'libre'].includes(payroll.concept);
+    const round2 = (v: number) => Math.round(v * 100) / 100;
+    let aporte125 = 0;
+    let provisions15 = 0;
+    let laborForceTax5 = 0;
+    if (chargesEmployerTaxes) {
+      for (const i of items) {
+        const gross = Number(i.grossSalary || 0);
+        aporte125 += round2(gross * 0.125);
+        provisions15 += Number(i.subsidyRetention || 0) || round2(gross * 0.015);
+        laborForceTax5 += round2(gross * 0.05);
+      }
+    }
     return {
       salary,
       vacation,
@@ -927,14 +949,14 @@ export class PayrollComponent implements OnInit {
       specialSS,
       toPay,
       vacationAccumulated,
-      employerSS14: employerBase * 0.14,
-      aporte125: employerBase * 0.125,
-      provisions15: employerBase * 0.015,
-      laborForceTax5: employerBase * 0.05,
+      employerSS14: round2(aporte125 + provisions15),
+      aporte125: round2(aporte125),
+      provisions15: round2(provisions15),
+      laborForceTax5: round2(laborForceTax5),
     };
   }
 
-  private showToast(message: string, type: 'success' | 'error') {
+  private showToast(message: string, type: 'success' | 'error' | 'warning') {
     this.toast.set({ message, type });
     setTimeout(() => this.toast.set(null), 3000);
   }

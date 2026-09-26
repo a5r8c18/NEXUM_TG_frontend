@@ -107,7 +107,17 @@ export interface LeaveRequest {
   companyId: number;
   employeeId: string;
   employeeName: string;
-  type: 'vacation' | 'sick' | 'unpaid' | 'maternity' | 'paternity' | 'other';
+  type:
+    | 'vacation'
+    | 'sick'
+    | 'unpaid'
+    | 'maternity'
+    | 'paternity'
+    | 'marriage'
+    | 'funeral'
+    | 'blood_donation'
+    | 'study'
+    | 'other';
   startDate: string;
   endDate: string;
   days: number;
@@ -134,8 +144,18 @@ export interface LeaveRequest {
 export interface VacationSubmayorRow {
   employeeName: string;
   documentId: string | null;
-  accumulatedDays: number;
-  accumulatedAmount: number;
+  /** Saldo al inicio del período (días e importe). */
+  openingDays: number;
+  openingAmount: number;
+  /** Devengado en el período (provisión del Art. 102). */
+  accruedDays: number;
+  accruedAmount: number;
+  /** Liquidado en el período (disfrute y liquidación del Art. 52). */
+  settledDays: number;
+  settledAmount: number;
+  /** Saldo al cierre: inicial + devengado − liquidado. Negativo = adelanto. */
+  closingDays: number;
+  closingAmount: number;
 }
 
 export interface PayrollCncRow {

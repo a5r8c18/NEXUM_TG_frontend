@@ -58,7 +58,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             <option value="">Todos los estados</option><option value="pending">Pendiente</option><option value="approved">Aprobado</option><option value="rejected">Rechazado</option><option value="cancelled">Cancelado</option>
           </select>
           <select [(ngModel)]="filterType" (change)="loadData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            <option value="">Todos los tipos</option><option value="vacation">Vacaciones</option><option value="sick">Incapacidad</option><option value="unpaid">Sin pago</option><option value="maternity">Maternidad</option><option value="paternity">Paternidad</option><option value="other">Otro</option>
+            <option value="">Todos los tipos</option><option value="vacation">Vacaciones</option><option value="sick">Incapacidad</option><option value="unpaid">Sin pago</option><option value="maternity">Maternidad</option><option value="paternity">Paternidad</option><option value="marriage">Matrimonio</option><option value="funeral">Duelo familiar</option><option value="blood_donation">Donación de sangre</option><option value="study">Estudios</option><option value="other">Otro</option>
           </select>
         </div>
       </div>
@@ -131,7 +131,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Tipo</label>
                 <select [(ngModel)]="form.type" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm">
-                  <option value="vacation">Vacaciones</option><option value="sick">Incapacidad</option><option value="unpaid">Sin pago</option><option value="maternity">Maternidad</option><option value="paternity">Paternidad</option><option value="other">Otro</option>
+                  <option value="vacation">Vacaciones</option><option value="sick">Incapacidad</option><option value="unpaid">Sin pago</option><option value="maternity">Maternidad</option><option value="paternity">Paternidad</option><option value="marriage">Matrimonio</option><option value="funeral">Duelo familiar</option><option value="blood_donation">Donación de sangre</option><option value="study">Estudios</option><option value="other">Otro</option>
                 </select>
               </div>
               <div class="space-y-1"><label class="text-xs font-medium text-slate-600">Días</label><input type="number" [(ngModel)]="form.days" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"/></div>
@@ -259,7 +259,7 @@ export class LeavesComponent implements OnInit {
   countByStatus(status: string): number { return this.leaves().filter(l => l.status === status).length; }
   approvedDays(): number { return this.leaves().filter(l => l.status === 'approved').reduce((sum, l) => sum + Number(l.days || 0), 0); }
 
-  typeLabel(t: string) { return { vacation: 'Vacaciones', sick: 'Incapacidad', unpaid: 'Sin pago', maternity: 'Maternidad', paternity: 'Paternidad', other: 'Otro' }[t] || t; }
+  typeLabel(t: string) { return { vacation: 'Vacaciones', sick: 'Incapacidad', unpaid: 'Sin pago', maternity: 'Maternidad', paternity: 'Paternidad', marriage: 'Matrimonio', funeral: 'Duelo familiar', blood_donation: 'Donación de sangre', study: 'Estudios', other: 'Otro' }[t] || t; }
   statusLabel(s: string) { return { pending: 'Pendiente', approved: 'Aprobado', rejected: 'Rechazado', cancelled: 'Cancelado' }[s] || s; }
   statusClass(s: string) { return { pending: 'bg-amber-100 text-amber-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', cancelled: 'bg-slate-100 text-slate-600' }[s] || 'bg-slate-100 text-slate-600'; }
 
