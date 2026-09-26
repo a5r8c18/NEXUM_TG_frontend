@@ -67,7 +67,7 @@ import { AuthService } from '../../core/services/auth.service';
 
         <!-- Logo -->
         <div class="text-center mt-6">
-          <span class="text-sm text-slate-400 font-medium">NEXUM TG</span>
+          <span class="text-sm text-slate-400 font-medium">MIDAS</span>
         </div>
       </div>
     </div>

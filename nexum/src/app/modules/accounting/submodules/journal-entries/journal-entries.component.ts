@@ -133,21 +133,27 @@ export class JournalEntriesComponent implements OnInit {
     };
   });
 
-  // █████████████████████████████████████████████████████████████
-  // NUEVAS COMPUTADAS PARA COLUMNA ÁREA (SOLO ACTIVOS FIJOS)
-  // █████████████████████████████████████████████████████████████
+  // ── Detalle expandible y columna Área (solo activos fijos) ──
 
-  areaColumnVisible = computed(() => {
-    return this.pagedComprobantes().some(c => c.sourceModule === 'fixed-assets');
-  });
+  /** Comprobantes con sus líneas desplegadas dentro de la tabla. */
+  expandedIds = signal<Set<string>>(new Set());
 
-  totalColspan = computed(() => this.areaColumnVisible() ? 6 : 5);
-  emptyColspan = computed(() => this.areaColumnVisible() ? 10 : 9);
+  isExpanded(id: string): boolean {
+    return this.expandedIds().has(id);
+  }
+
+  toggleExpand(id: string) {
+    const set = new Set(this.expandedIds());
+    if (set.has(id)) {
+      set.delete(id);
+    } else {
+      set.add(id);
+    }
+    this.expandedIds.set(set);
+  }
 
   detailAreaVisible = computed(() => this.selectedComprobante()?.sourceModule === 'fixed-assets');
   detailTotalColspan = computed(() => this.detailAreaVisible() ? 6 : 5);
-
-  // █████████████████████████████████████████████████████████████
 
   constructor() {
     this.filterForm = this.fb.group({

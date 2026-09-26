@@ -8,7 +8,7 @@
     <h3 class="font-semibold text-base tracking-wide transition-all duration-200"
         [class.opacity-0]="isCollapsed()"
         [class.hidden]="isCollapsed()">
-      NEXUM
+      MIDAS
     </h3>
     <button class="p-2 rounded-lg transition-all duration-200 shrink-0"
             [class]="themeService.currentTheme() === 'light' ? 'bg-slate-200/50 border border-slate-300 text-slate-700 hover:bg-slate-300/50' : 'bg-slate-700/50 border border-slate-600 text-white hover:bg-slate-600/50'"
@@ -30,8 +30,11 @@
               <div class="w-full flex items-center gap-3 p-3" [class]="navItemClasses">
                 
                 <!-- Icono principal y Label (navegación) -->
-                <a class="flex items-center gap-3 flex-1 text-inherit hover:text-inherit"
-                   [routerLink]="item.route || '#'">
+                <a class="flex items-center gap-3 flex-1 text-inherit hover:text-inherit rounded-lg"
+                   [routerLink]="item.route || '#'"
+                   [routerLinkActive]="navParentLinkActiveClasses"
+                   [attr.title]="isCollapsed() ? item.label : null"
+                   (click)="onParentNavClick(item, $event)">
                   @switch (item.icon) {
                     @case ('Package') {
                       <svg class="w-5 h-5 text-center shrink-0 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,7 +102,9 @@
                     <li>
                       @if (subItem.hasSubmenu) {
                         <div class="w-full flex items-center justify-between p-2" [class]="navSubItemClasses">
-                          <a class="flex items-center gap-3 flex-1" [routerLink]="subItem.route || '#'">
+                          <a class="flex items-center gap-3 flex-1 rounded-lg"
+                             [routerLink]="subItem.route || '#'"
+                             [routerLinkActive]="navParentLinkActiveClasses">
                             @switch (subItem.icon) {
                               @case ('Wallet') {
                                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +138,10 @@
                             @for (child of subItem.submenu; track child.label) {
                               <li>
                                 <a class="flex items-center gap-3 p-2" [class]="navSubItemClasses"
-                                   [routerLink]="child.route || '#'">
+                                   [class.opacity-40]="!isNavigable(child)"
+                                   [class.cursor-not-allowed]="!isNavigable(child)"
+                                   [routerLink]="isNavigable(child) ? child.route : null"
+                                   [routerLinkActive]="navLinkActiveClasses">
                                   @switch (child.icon) {
                                     @case ('TrendingUp') {
                                       <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,7 +323,8 @@
                       </a>
                       } @else {
                         <a class="flex items-center gap-3 p-2" [class]="navSubItemClasses"
-                           [routerLink]="subItem.route || '#'">
+                           [routerLink]="subItem.route || '#'"
+                           [routerLinkActive]="navLinkActiveClasses">
                           
                           <!-- Iconos del submenú -->
                         @switch (subItem.icon) {
@@ -465,7 +474,9 @@
           } @else {
             <!-- Menú sin submenú -->
             <a class="flex items-center gap-3 p-3" [class]="navItemClasses"
-               [routerLink]="item.route || '#'">
+               [routerLink]="item.route || '#'"
+               [routerLinkActive]="navLinkActiveClasses"
+               [attr.title]="isCollapsed() ? item.label : null">
               
               <!-- Iconos -->
               @switch (item.icon) {

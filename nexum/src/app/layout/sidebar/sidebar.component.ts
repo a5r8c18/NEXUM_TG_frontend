@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SidebarService } from '../../core/services/sidebar.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -17,7 +17,7 @@ interface NavItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html'
 })
 export class SidebarComponent {
@@ -65,6 +65,25 @@ export class SidebarComponent {
     } else {
       return 'text-slate-400 rounded-lg transition-all duration-200 hover:bg-slate-700/30 hover:text-white text-sm';
     }
+  }
+
+  /** Estado activo en enlaces que ocupan toda la fila. */
+  get navLinkActiveClasses(): string {
+    return this.themeService.currentTheme() === 'light'
+      ? 'bg-emerald-100/70 text-emerald-800'
+      : 'bg-emerald-500/15 text-emerald-300';
+  }
+
+  /** Estado activo en el enlace interno del ítem padre (comparte fila con el chevron). */
+  get navParentLinkActiveClasses(): string {
+    return this.themeService.currentTheme() === 'light'
+      ? 'text-emerald-700 font-semibold'
+      : 'text-emerald-300 font-semibold';
+  }
+
+  /** Los placeholders '#' no tienen destino: se muestran atenuados y no navegan. */
+  isNavigable(item: NavItem): boolean {
+    return !!item.route && item.route !== '#';
   }
 
   get filteredNavItems(): NavItem[] {
@@ -199,6 +218,17 @@ export class SidebarComponent {
 
   toggleSidebar(): void {
     this.sidebarService.toggleSidebar();
+  }
+
+  /** Colapsado + submenú: clic en el padre expande el sidebar y abre su menú en vez de navegar a ciegas. */
+  onParentNavClick(item: NavItem, event: MouseEvent): void {
+    if (this.isCollapsed() && item.hasSubmenu) {
+      event.preventDefault();
+      this.sidebarService.setCollapsed(false);
+      if (!item.isExpanded) {
+        this.toggleSubmenu(item);
+      }
+    }
   }
 
   toggleSubmenu(item: NavItem): void {

@@ -455,7 +455,7 @@ import { LeavesComponent } from '../leaves/leaves.component';
               <p><strong>Provisión vacaciones:</strong> {{ receiptItem()?.vacationProvision | number:'1.2-2' }}</p>
             }
             <p class="text-lg font-bold text-right border-t pt-2">NETO: {{ receiptItem()?.netSalary | number:'1.2-2' }}</p>
-            <p class="text-xs text-slate-400 text-center">Generado por NEXUM TG</p>
+            <p class="text-xs text-slate-400 text-center">Generado por MIDAS</p>
           </div>
         </app-modal>
       }

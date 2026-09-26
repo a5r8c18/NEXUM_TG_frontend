@@ -47,7 +47,7 @@ export class SupportButtonComponent {
   openWhatsApp(): void {
     // Número de WhatsApp de soporte (configurable)
     const supportNumber = '593999999999'; // Reemplazar con número real
-    const message = encodeURIComponent('Hola, necesito soporte con el sistema NEXUM');
+    const message = encodeURIComponent('Hola, necesito soporte con el sistema MIDAS');
     
     // Abrir WhatsApp Web
     const whatsappUrl = `https://wa.me/${supportNumber}?text=${message}`;

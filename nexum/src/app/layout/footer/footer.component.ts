@@ -8,5 +8,5 @@ import { Component, signal } from '@angular/core';
 })
 export class FooterComponent {
   currentYear = signal(new Date().getFullYear());
-  companyName = signal('NEXUM TG');
+  companyName = signal('MIDAS');
 }

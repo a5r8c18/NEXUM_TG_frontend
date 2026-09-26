@@ -1,143 +1,197 @@
-<div class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-  <!-- Hero Section -->
-  <div class="relative overflow-hidden">
-    <!-- Navigation -->
-    <nav class="relative z-10 px-6 py-8">
-      <div class="max-w-7xl mx-auto flex justify-between items-center">
-        <!-- Logo -->
-        <div class="flex items-center space-x-3">
-          <img src="/claro.jpeg" alt="Teneduria Garcia" class="h-10 w-auto rounded-lg">
-          <span class="text-2xl font-light text-white">MIDAS</span>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="flex items-center space-x-4">
-          <button 
-            (click)="goToLogin()"
-            class="text-white/80 hover:text-white transition-colors duration-200"
-          >
-            Iniciar Sesión
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  .midas-landing {
+    --midas-bg: #07101f;
+    --midas-panel: rgba(16, 29, 52, .74);
+    --midas-blue: #4f8cff;
+    --midas-cyan: #55d6ff;
+    --midas-green: #42e6a4;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 78% 8%, rgba(56, 125, 255, .18), transparent 28rem),
+      radial-gradient(circle at 8% 42%, rgba(56, 211, 255, .08), transparent 24rem),
+      var(--midas-bg);
+  }
+
+  .midas-landing .font-display {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -.035em;
+  }
+
+  .midas-landing .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  .midas-landing .midas-grid {
+    background-image: linear-gradient(rgba(120, 170, 255, .055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120, 170, 255, .055) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: linear-gradient(to bottom, black, transparent 82%);
+  }
+
+  .midas-landing .midas-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light;
+  }
+
+  .midas-landing .midas-glass {
+    background: linear-gradient(145deg, rgba(21, 38, 68, .82), rgba(10, 21, 40, .68));
+    border: 1px solid rgba(168, 202, 255, .14);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .045);
+    backdrop-filter: blur(18px);
+  }
+
+  .midas-landing .midas-hover {
+    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+
+  .midas-landing .midas-hover:hover {
+    transform: translateY(-5px);
+    border-color: rgba(85, 214, 255, .35);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .34), 0 0 34px rgba(79, 140, 255, .08);
+  }
+
+  .midas-landing .midas-float { animation: midas-float 6s ease-in-out infinite; }
+  .midas-landing .midas-pulse { animation: midas-pulse 2.3s ease-in-out infinite; }
+  .midas-landing .midas-shimmer { animation: midas-shimmer 3.5s ease-in-out infinite; }
+
+  @keyframes midas-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-9px); }
+  }
+  @keyframes midas-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(66, 230, 164, .35); }
+    50% { box-shadow: 0 0 0 7px rgba(66, 230, 164, 0); }
+  }
+  @keyframes midas-shimmer {
+    0%, 100% { opacity: .72; }
+    50% { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .midas-landing *, .midas-landing *::before, .midas-landing *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: .01ms !important;
+    }
+  }
+</style>
+
+<div class="midas-landing min-h-screen overflow-hidden text-[#e8f0ff] selection:bg-[#4f8cff]/30">
+  <div class="pointer-events-none fixed inset-0 z-0 midas-grid"></div>
+  <div class="pointer-events-none fixed inset-0 z-0 opacity-[.08] midas-noise"></div>
+
+  <div class="relative z-10">
+    <!-- Barra de navegación -->
+    <nav class="border-b border-white/[.08] bg-[#07101f]/70 px-5 py-5 backdrop-blur-xl md:px-10" aria-label="Navegación principal">
+      <div class="mx-auto flex max-w-7xl items-center justify-between">
+        <a href="#inicio" class="group flex items-center" aria-label="MIDAS ERP, inicio">
+          <span class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#55d6ff]/30 bg-[#55d6ff]/10 shadow-[0_0_24px_rgba(85,214,255,.14)]">
+            <img src="/icons/midas-icon.png" alt="" class="h-7 w-auto transition-transform duration-300 group-hover:rotate-6">
+          </span>
+          <span class="ml-3 font-display text-lg font-semibold tracking-tight text-white">MIDAS</span>
+          <span class="ml-2 rounded border border-[#55d6ff]/25 bg-[#55d6ff]/10 px-1.5 py-0.5 font-mono text-[10px] tracking-[.22em] text-[#55d6ff]">ERP</span>
+        </a>
+
+        <div class="flex items-center gap-3 sm:gap-6">
+          <button (click)="goToLogin()" class="text-sm font-medium text-[#93a6c5] transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-[#55d6ff]/60 focus:ring-offset-4 focus:ring-offset-[#07101f]">
+            Iniciar sesión
           </button>
-          <button 
-            (click)="goToSignup()"
-            class="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-all duration-200"
-          >
-            Solicitar Acceso
+          <button (click)="goToSignup()" class="rounded-xl bg-gradient-to-r from-[#3d7cf7] to-[#5a9bff] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_25px_rgba(61,124,247,.24)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(61,124,247,.38)] focus:outline-none focus:ring-2 focus:ring-[#55d6ff]/70 focus:ring-offset-4 focus:ring-offset-[#07101f] sm:px-5">
+            <span class="hidden sm:inline">Solicitar acceso</span>
+            <span class="sm:hidden">Acceder</span>
           </button>
         </div>
       </div>
     </nav>
 
-    <!-- Hero Content -->
-    <div class="relative z-10 px-6 py-20 md:py-32">
-      <div class="max-w-7xl mx-auto text-center">
-        <div class="max-w-4xl mx-auto">
-          <!-- Main Title -->
-          <h1 class="text-5xl md:text-7xl font-light text-white mb-6">
-            Gestión Empresarial
-            <span class="block text-blue-400 font-medium">Simplificada</span>
-          </h1>
-          
-          <!-- Subtitle -->
-          <p class="text-xl text-white/80 mb-12 max-w-2xl mx-auto">
-            Sistema ERP multi-tenant diseñado para empresas modernas. 
-            Control total de inventario, facturación y recursos en una plataforma unificada.
-          </p>
-          
-          <!-- CTA Buttons -->
-          <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <button 
-              (click)="goToSignup()"
-              class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-4 rounded-xl hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg shadow-blue-500/25"
-            >
-              <span class="flex items-center justify-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                Solicitar Acceso
-              </span>
-            </button>
-            
-            <button 
-              (click)="goToLogin()"
-              class="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-xl hover:bg-white/20 transition-all duration-200"
-            >
-              Iniciar Sesión
-            </button>
+    <!-- Hero -->
+    <main id="inicio">
+      <section class="px-5 pb-20 pt-16 md:px-10 md:pb-28 md:pt-24">
+        <div class="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.02fr_.98fr] lg:gap-20">
+          <div>
+            <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-[#42e6a4]/20 bg-[#42e6a4]/[.07] px-3 py-1.5 font-mono text-[11px] tracking-wide text-[#77f0bc]">
+              <span class="midas-pulse h-2 w-2 rounded-full bg-[#42e6a4]"></span>
+              SISTEMA OPERATIVO FINANCIERO
+            </div>
+
+            <h1 class="font-display max-w-2xl text-5xl font-semibold leading-[1.03] text-white sm:text-6xl lg:text-[4.75rem]">
+              Claridad para decidir.<br>
+              <span class="bg-gradient-to-r from-[#fff] via-[#9fc6ff] to-[#55d6ff] bg-clip-text text-transparent">Control para crecer.</span>
+            </h1>
+
+            <p class="mt-7 max-w-xl text-lg leading-relaxed text-[#9aacc8] md:text-xl">
+              MIDAS ERP centraliza contabilidad, inventario y facturación en una plataforma inteligente, multi-empresa y diseñada para operar en tiempo real.
+            </p>
+
+            <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+              <button (click)="goToSignup()" class="group rounded-xl bg-gradient-to-r from-[#3d7cf7] to-[#55b9ff] px-7 py-3.5 font-semibold text-white shadow-[0_12px_35px_rgba(61,124,247,.3)] transition hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(61,124,247,.45)] focus:outline-none focus:ring-2 focus:ring-[#55d6ff] focus:ring-offset-4 focus:ring-offset-[#07101f]">
+                Solicitar acceso <span class="ml-2 inline-block transition-transform group-hover:translate-x-1">→</span>
+              </button>
+              <button (click)="goToLogin()" class="rounded-xl border border-white/[.16] bg-white/[.03] px-7 py-3.5 font-semibold text-white transition hover:border-[#55d6ff]/50 hover:bg-white/[.07] focus:outline-none focus:ring-2 focus:ring-[#55d6ff] focus:ring-offset-4 focus:ring-offset-[#07101f]">
+                Ya tengo una cuenta
+              </button>
+            </div>
+
+            <div class="mt-14 grid max-w-xl grid-cols-2 gap-x-6 gap-y-6 border-t border-white/[.1] pt-7 sm:grid-cols-4">
+              <div><div class="font-mono text-xl font-semibold text-white">03</div><div class="mt-1 text-xs text-[#8296b7]">Módulos integrados</div></div>
+              <div><div class="font-mono text-xl font-semibold text-white">N:1</div><div class="mt-1 text-xs text-[#8296b7]">Empresas por cuenta</div></div>
+              <div><div class="font-mono text-xl font-semibold text-white">SIEN</div><div class="mt-1 text-xs text-[#8296b7]">Reportes PDF</div></div>
+              <div><div class="font-mono text-xl font-semibold text-white">24/7</div><div class="mt-1 text-xs text-[#8296b7]">Datos en vivo</div></div>
+            </div>
+          </div>
+
+          <!-- Mockup del producto -->
+          <div class="relative mx-auto w-full max-w-xl lg:ml-auto">
+            <div class="absolute -inset-10 rounded-full bg-[#3d7cf7]/20 blur-3xl"></div>
+            <div class="midas-float relative">
+              <div class="absolute -right-3 -top-5 z-20 hidden rounded-xl border border-[#42e6a4]/25 bg-[#0e2340]/90 px-3 py-2 shadow-xl backdrop-blur-md sm:block">
+                <div class="flex items-center gap-2 font-mono text-[10px] text-[#8df6c8]"><span class="h-1.5 w-1.5 rounded-full bg-[#42e6a4]"></span> DATOS SINCRONIZADOS</div>
+              </div>
+              <div class="midas-glass overflow-hidden rounded-2xl">
+                <div class="flex items-center justify-between border-b border-white/[.08] px-5 py-4">
+                  <div><div class="font-display text-sm font-semibold text-white">Resumen ejecutivo</div><div class="mt-0.5 font-mono text-[10px] text-[#7188aa]">CUENTA / GENERAL</div></div>
+                  <span class="flex items-center gap-1.5 rounded-full border border-[#42e6a4]/20 bg-[#42e6a4]/[.08] px-2.5 py-1 font-mono text-[10px] text-[#6df1b5]"><span class="h-1.5 w-1.5 rounded-full bg-[#42e6a4]"></span> EN VIVO</span>
+                </div>
+                <div class="space-y-5 p-5 sm:p-6">
+                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div class="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><div class="text-[10px] text-[#8095b7]">INGRESOS</div><div class="mt-1 font-mono text-lg text-white">$48.2K</div><div class="mt-1 text-[10px] text-[#42e6a4]">↑ 12.4%</div></div>
+                    <div class="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><div class="text-[10px] text-[#8095b7]">FACTURAS</div><div class="mt-1 font-mono text-lg text-white">1,284</div><div class="mt-1 text-[10px] text-[#55d6ff]">+18 este mes</div></div>
+                    <div class="col-span-2 rounded-xl border border-white/[.07] bg-white/[.035] p-3 sm:col-span-1"><div class="text-[10px] text-[#8095b7]">STOCK</div><div class="mt-1 font-mono text-lg text-white">94.8%</div><div class="mt-1 text-[10px] text-[#f5c76b]">12 alertas</div></div>
+                  </div>
+
+                  <div class="rounded-xl border border-white/[.07] bg-[#071426]/50 p-4">
+                    <div class="mb-4 flex items-center justify-between"><span class="text-xs text-[#91a4c1]">Ingresos mensuales</span><span class="font-mono text-xs text-[#42e6a4]">+12.4%</span></div>
+                    <div class="flex h-28 items-end gap-2">
+                      <div class="h-[42%] flex-1 rounded-t bg-[#27528f] transition-all hover:h-[55%]"></div><div class="h-[58%] flex-1 rounded-t bg-[#2d62aa] transition-all hover:h-[68%]"></div><div class="h-[36%] flex-1 rounded-t bg-[#27528f] transition-all hover:h-[50%]"></div><div class="h-[70%] flex-1 rounded-t bg-[#3975c8] transition-all hover:h-[80%]"></div><div class="h-[54%] flex-1 rounded-t bg-[#4084df] transition-all hover:h-[67%]"></div><div class="midas-shimmer h-[91%] flex-1 rounded-t bg-gradient-to-t from-[#3d7cf7] to-[#55d6ff]"></div>
+                    </div>
+                    <div class="mt-2 flex justify-between font-mono text-[9px] text-[#5f7699]"><span>ENE</span><span>FEB</span><span>MAR</span><span>ABR</span><span>MAY</span><span>JUN</span></div>
+                  </div>
+
+                  <div class="border-t border-white/[.07] pt-4"><div class="mb-3 flex items-center justify-between"><span class="text-xs text-[#91a4c1]">Actividad reciente</span><span class="font-mono text-[10px] text-[#55d6ff]">VER TODO →</span></div><div class="space-y-3 font-mono text-[10px]"><div class="flex items-center justify-between text-[#c9d5e8]"><span>FAC-0231 · Almacén Norte</span><span class="text-[#42e6a4]">PAGADA</span></div><div class="flex items-center justify-between text-[#c9d5e8]"><span>FAC-0230 · Cliente 118</span><span class="text-[#f5c76b]">PENDIENTE</span></div><div class="flex items-center justify-between text-[#c9d5e8]"><span>FAC-0229 · Distrib. Este</span><span class="text-[#42e6a4]">PAGADA</span></div></div></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+
+      <!-- Características -->
+      <section class="border-t border-white/[.08] px-5 py-20 md:px-10 md:py-28">
+        <div class="mx-auto max-w-7xl">
+          <div class="mb-12 max-w-2xl"><div class="mb-4 font-mono text-xs tracking-[.2em] text-[#55d6ff]">UNA PLATAFORMA / TRES CAPACIDADES</div><h2 class="font-display text-3xl font-semibold text-white md:text-5xl">Todo conectado.<br><span class="text-[#8da9d7]">Nada duplicado.</span></h2><p class="mt-5 max-w-xl text-lg leading-relaxed text-[#8fa3c1]">Los módulos centrales de MIDAS ERP trabajan sobre una misma base de datos para que tu operación avance con una sola fuente de verdad.</p></div>
+          <div class="grid gap-5 lg:grid-cols-2">
+            <div class="midas-glass midas-hover flex flex-col justify-between rounded-2xl p-7 md:p-9 lg:row-span-2"><div><div class="flex items-center justify-between"><span class="font-mono text-xs text-[#55d6ff]">MOD-CONT</span><span class="rounded-lg bg-[#55d6ff]/10 px-2 py-1 text-lg text-[#55d6ff]">◈</span></div><h3 class="font-display mt-6 text-2xl font-semibold text-white md:text-3xl">Contabilidad y facturación</h3><p class="mt-4 leading-relaxed text-[#91a5c4]">Facturación electrónica, clientes y estados financieros conforme al modelo SIEN cubano. Todo listo para auditar, analizar y exportar a PDF.</p></div><div class="mt-10 grid grid-cols-3 gap-3"><div class="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><div class="font-mono text-sm text-white">5920</div><div class="mt-1 text-[11px] text-[#8298b9]">Balance</div></div><div class="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><div class="font-mono text-sm text-white">5921</div><div class="mt-1 text-[11px] text-[#8298b9]">Resultados</div></div><div class="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><div class="font-mono text-sm text-white">5924</div><div class="mt-1 text-[11px] text-[#8298b9]">Efectivo</div></div></div></div>
+            <div class="midas-glass midas-hover rounded-2xl p-7 md:p-8"><div class="flex items-center justify-between"><span class="font-mono text-xs text-[#55d6ff]">MOD-INV</span><span class="text-xl text-[#42e6a4]">▦</span></div><h3 class="font-display mt-5 text-xl font-semibold text-white">Inventario inteligente</h3><p class="mt-3 leading-relaxed text-[#91a5c4]">Control de stock multi-almacén, movimientos en tiempo real y alertas de reposición antes de que se conviertan en problemas.</p></div>
+            <div class="midas-glass midas-hover rounded-2xl p-7 md:p-8"><div class="flex items-center justify-between"><span class="font-mono text-xs text-[#55d6ff]">MOD-TEN</span><span class="text-xl text-[#f5c76b]">◎</span></div><h3 class="font-display mt-5 text-xl font-semibold text-white">Multiempresa seguro</h3><p class="mt-3 leading-relaxed text-[#91a5c4]">Administra varias empresas desde una única cuenta, con datos aislados y una visión consolidada de tu operación.</p></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/[.08] px-5 py-8 md:px-10"><div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 md:flex-row"><div class="flex items-center"><img src="/icons/midas-icon.png" alt="MIDAS ERP" class="h-6 w-auto opacity-80"><span class="ml-3 text-sm text-[#8094b3]">MIDAS ERP © {{ currentYear }}</span></div><div class="flex gap-6 text-sm text-[#8094b3]"><a href="#" class="transition-colors hover:text-white">Privacidad</a><a href="#" class="transition-colors hover:text-white">Términos</a><a href="#" class="transition-colors hover:text-white">Soporte</a></div></div></footer>
   </div>
-
-  <!-- Features Section -->
-  <div class="relative z-10 px-6 py-20 bg-black/20 backdrop-blur-sm">
-    <div class="max-w-7xl mx-auto">
-      <div class="text-center mb-16">
-        <h2 class="text-3xl md:text-4xl font-light text-white mb-4">
-          Características Principales
-        </h2>
-        <p class="text-white/60 max-w-2xl mx-auto">
-          Todo lo que necesitas para gestionar tu empresa de manera eficiente
-        </p>
-      </div>
-      
-      <div class="grid md:grid-cols-3 gap-8">
-        <!-- Feature 1 -->
-        <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/10 transition-all duration-200">
-          <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mb-6">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-            </svg>
-          </div>
-          <h3 class="text-xl font-medium text-white mb-3">Inventario Inteligente</h3>
-          <p class="text-white/60">
-            Control total de stock con gestión multi-almacén, tracking en tiempo real y reportes avanzados.
-          </p>
-        </div>
-
-        <!-- Feature 2 -->
-        <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/10 transition-all duration-200">
-          <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center mb-6">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
-          <h3 class="text-xl font-medium text-white mb-3">Facturación Pro</h3>
-          <p class="text-white/60">
-            Sistema completo de facturación electrónica, gestión de clientes y reportes financieros automáticos.
-          </p>
-        </div>
-
-        <!-- Feature 3 -->
-        <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/10 transition-all duration-200">
-          <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center mb-6">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-          </div>
-          <h3 class="text-xl font-medium text-white mb-3">Multi-Tenant</h3>
-          <p class="text-white/60">
-            Arquitectura escalable para gestionar múltiples empresas desde una única plataforma.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer class="relative z-10 px-6 py-12 border-t border-white/10">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
-      <div class="flex items-center space-x-3 mb-4 md:mb-0">
-        <img src="/oscuro.jpeg" alt="Teneduria Garcia" class="h-8 w-auto rounded-lg">
-        <span class="text-white/60">MIDAS © {{ currentYear }}</span>
-      </div>
-      
-      <div class="flex space-x-6 text-white/60 text-sm">
-        <a href="#" class="hover:text-white transition-colors">Privacidad</a>
-        <a href="#" class="hover:text-white transition-colors">Términos</a>
-        <a href="#" class="hover:text-white transition-colors">Soporte</a>
-      </div>
-    </div>
-  </footer>
 </div>

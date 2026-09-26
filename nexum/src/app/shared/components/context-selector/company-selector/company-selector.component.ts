@@ -44,7 +44,7 @@ export class CompanySelectorComponent {
   }
 
   get tenantName(): string {
-    return this.authService.getCurrentUserTenant()?.name || 'NEXUM';
+    return this.authService.getCurrentUserTenant()?.name || 'MIDAS';
   }
 
   get isMultiCompany(): boolean {
