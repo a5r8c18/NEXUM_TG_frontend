@@ -154,7 +154,7 @@ type ReportTab = 'submayor' | 'empleados' | 'cnc' | 'acreditacion' | 'plantilla'
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Empleado</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Devengado</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Seg. Social (5%)</th>
-              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Impuesto</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Ingresos Personales</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Neto a Pagar</th>
             </tr></thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -178,22 +178,18 @@ type ReportTab = 'submayor' | 'empleados' | 'cnc' | 'acreditacion' | 'plantilla'
           @if (activeTab() === 'acreditacion') {
             <table class="w-full text-sm"><thead class="bg-slate-50 dark:bg-slate-900/50"><tr>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">CI</th>
-              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Nombre</th>
-              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Banco</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Cuenta</th>
-              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Importe</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Importe a Cobrar</th>
             </tr></thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               @for (r of pagedAccreditation(); track r.documentId || r.employeeName) {
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <td class="px-4 py-3 dark:text-slate-300">{{ r.documentId || '—' }}</td>
-                  <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ r.employeeName }}</td>
-                  <td class="px-4 py-3 dark:text-slate-300">{{ r.bankName || '—' }}</td>
                   <td class="px-4 py-3 dark:text-slate-300">{{ r.bankAccount || '—' }}</td>
                   <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ r.amount | number:'1.2-2' }}</td>
                 </tr>
               } @empty {
-                <tr><td colspan="5" class="px-4 py-16 text-center">
+                <tr><td colspan="3" class="px-4 py-16 text-center">
                   <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No hay nómina de salario procesada en el período</p>
                   <p class="text-xs text-slate-400 dark:text-slate-500">El fichero se alimenta de nóminas procesadas o pagadas</p>
                 </td></tr>
@@ -243,7 +239,7 @@ export class ReportsComponent implements OnInit {
   tabs: { key: ReportTab; label: string }[] = [
     { key: 'submayor', label: 'Submayor de Vacaciones' },
     { key: 'empleados', label: 'Listado de Empleados' },
-    { key: 'cnc', label: 'Salario Devengado (CNC)' },
+    { key: 'cnc', label: 'Salario Devengado (SNC)' },
     { key: 'acreditacion', label: 'Fichero de Acreditación' },
     { key: 'plantilla', label: 'Plantilla Aprobada y Cubierta' },
   ];
@@ -387,13 +383,13 @@ export class ReportsComponent implements OnInit {
         ];
       case 'cnc':
         return [
-          ['Empleado', 'Devengado', 'Seg. Social (5%)', 'Impuesto', 'Neto a Pagar'],
+          ['Empleado', 'Devengado', 'Seg. Social (5%)', 'Ingresos Personales', 'Neto a Pagar'],
           this.cncRows().map((r) => [r.employeeName, money(r.grossSalary), money(r.socialSecurity), money(r.taxWithholding), money(r.netSalary)]),
         ];
       case 'acreditacion':
         return [
-          ['CI', 'Nombre', 'Banco', 'Cuenta', 'Importe'],
-          this.accreditationRows().map((r) => [r.documentId || '', r.employeeName, r.bankName || '', r.bankAccount || '', money(r.amount)]),
+          ['CI', 'Cuenta', 'Importe a Cobrar'],
+          this.accreditationRows().map((r) => [r.documentId || '', r.bankAccount || '', money(r.amount)]),
         ];
       case 'plantilla':
         return [
