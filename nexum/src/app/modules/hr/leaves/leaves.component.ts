@@ -94,7 +94,12 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
                 <td class="px-4 py-3 dark:text-slate-300">{{ l.startDate }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ l.endDate }}</td>
                 <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ l.days }}</td>
-                <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded-full text-xs font-medium" [class]="statusClass(l.status)">{{ statusLabel(l.status) }}</span></td>
+                <td class="px-4 py-3 text-center">
+                  <span class="px-2 py-1 rounded-full text-xs font-medium" [class]="statusClass(l.status)">{{ statusLabel(l.status) }}</span>
+                  @if (l.advanceAuthorized) {
+                    <span class="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700" title="Aprobada por encima del saldo acumulado de vacaciones">Adelanto</span>
+                  }
+                </td>
                 <td class="px-4 py-3"><div class="flex justify-center gap-1">
                   <button (click)="openEdit(l)" class="p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
                   @if (l.status === 'pending') {
@@ -283,9 +288,26 @@ export class LeavesComponent implements OnInit {
   async setStatus(l: LeaveRequest, status: 'approved' | 'rejected' | 'cancelled') {
     const confirmed = await this.confirmDialog.confirm('Cambiar estado', `¿${status === 'approved' ? 'Aprobar' : 'Rechazar'} solicitud de ${l.employeeName}?`);
     if (!confirmed) return;
-    this.hrService.setLeaveStatus(l.id, status, 'Admin').subscribe({
-      next: () => { this.showToast('success', 'Estado actualizado'); this.loadData(); },
-      error: () => this.showToast('error', 'Error actualizando estado')
+    this.applyStatus(l, status);
+  }
+
+  /**
+   * El backend rechaza aprobar vacaciones sin saldo acumulado suficiente
+   * (409). Ofrecemos entonces autorizar el adelanto, que es la única vía para
+   * dejar el submayor en negativo, y reintentamos con esa marca.
+   */
+  private applyStatus(l: LeaveRequest, status: 'approved' | 'rejected' | 'cancelled', advanceAuthorized = false) {
+    this.hrService.setLeaveStatus(l.id, status, 'Admin', advanceAuthorized).subscribe({
+      next: () => { this.showToast('success', advanceAuthorized ? 'Aprobada como adelanto de vacaciones' : 'Estado actualizado'); this.loadData(); },
+      error: async (err: any) => {
+        const message = err?.error?.message || 'Error actualizando estado';
+        if (err?.status === 409 && status === 'approved' && !advanceAuthorized) {
+          const authorize = await this.confirmDialog.confirm('Saldo de vacaciones insuficiente', `${message}\n\n¿Aprobar como adelanto de vacaciones?`);
+          if (authorize) this.applyStatus(l, status, true);
+          return;
+        }
+        this.showToast('error', message);
+      }
     });
   }
 

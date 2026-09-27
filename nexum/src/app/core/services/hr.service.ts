@@ -125,6 +125,8 @@ export interface LeaveRequest {
   reason: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** Vacaciones aprobadas por encima del saldo acumulado del submayor. */
+  advanceAuthorized?: boolean | null;
   // Campos para subsidio por enfermedad (Art. 40-46)
   origin?: 'common' | 'occupational' | null;
   hospitalized?: boolean | null;
@@ -298,8 +300,13 @@ export class HrService {
   updateLeave(id: string, data: Partial<LeaveRequest>) {
     return this.http.put<LeaveRequest>(`${this.baseUrl}/leaves/${id}`, data);
   }
-  setLeaveStatus(id: string, status: 'approved' | 'rejected' | 'cancelled', approvedBy?: string) {
-    return this.http.put<LeaveRequest>(`${this.baseUrl}/leaves/${id}/status`, { status, approvedBy });
+  setLeaveStatus(
+    id: string,
+    status: 'approved' | 'rejected' | 'cancelled',
+    approvedBy?: string,
+    advanceAuthorized?: boolean,
+  ) {
+    return this.http.put<LeaveRequest>(`${this.baseUrl}/leaves/${id}/status`, { status, approvedBy, advanceAuthorized });
   }
   deleteLeave(id: string) {
     return this.http.delete(`${this.baseUrl}/leaves/${id}`);
