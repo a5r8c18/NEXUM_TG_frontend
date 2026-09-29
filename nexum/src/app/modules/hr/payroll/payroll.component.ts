@@ -236,6 +236,53 @@ import { LeavesComponent } from '../leaves/leaves.component';
               </select>
             </div>
             <p class="text-xs text-slate-500">{{ conceptHint() }}</p>
+
+            @if (['salario', 'vacaciones'].includes(genForm.concept)) {
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-medium text-slate-600">Trabajadores <span class="text-red-500">*</span></label>
+                  @if (canAddManualLine()) {
+                    <button (click)="manualItems.push({ employeeId: '', days: 0, grossSalary: 0 })" class="text-blue-600 text-xs hover:underline">+ Añadir trabajador</button>
+                  }
+                </div>
+                @if (genForm.concept !== 'salario') {
+                  <input type="text" [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)" placeholder="Filtrar trabajador..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                }
+                @for (item of manualItems; track $index) {
+                  <div class="space-y-2 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                    <select [(ngModel)]="item.employeeId" (ngModelChange)="updateManualSalary($index)"
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">— Seleccione —</option>
+                      @for (e of filteredEmployees(); track e.id) {
+                        <option [value]="e.id">{{ e.lastName }}, {{ e.firstName }} · {{ e.position }} · {{ e.salary | number:'1.2-2' }}</option>
+                      }
+                    </select>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div class="space-y-1">
+                        <label class="text-xs font-medium text-slate-600">Días trabajados</label>
+                        <input type="number" [(ngModel)]="item.days" (ngModelChange)="updateManualSalary($index)"
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                      </div>
+                      <div class="space-y-1">
+                        <label class="text-xs font-medium text-slate-600">Salario</label>
+                        <input type="number" [(ngModel)]="item.grossSalary"
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                      </div>
+                    </div>
+                    @if (selectedEmployee(item.employeeId); as emp) {
+                      <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Tasa: {{ dailyRate(emp) | number:'1.2-4' }} / día
+                        @if (emp.salary > 0) { · Salario base: {{ emp.salary | number:'1.2-2' }} }
+                      </p>
+                    }
+                    @if (manualItems.length > 1 && canAddManualLine()) {
+                      <button (click)="manualItems.splice($index, 1)" class="text-red-500 text-xs">✕ Eliminar</button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
             @if (genForm.concept === 'maternidad') {
               <div class="space-y-1">
                 <label class="text-xs font-medium text-slate-600">Plazo de pago <span class="text-red-500">*</span></label>
@@ -573,6 +620,10 @@ export class PayrollComponent implements OnInit {
   employees = signal<Employee[]>([]);
   freeItems: { employeeId: string; amount: number; description: string }[] = [];
 
+  /** Líneas de la nómina manual: trabajador, días y salario calculado. */
+  manualItems: { employeeId: string; days: number; grossSalary: number }[] = [];
+  employeeSearch = signal('');
+
   /** Últimos 12 meses naturales, para no depender de períodos escritos a mano. */
   periodOptions = PayrollComponent.buildPeriodOptions();
 
@@ -653,16 +704,60 @@ export class PayrollComponent implements OnInit {
   openGenerate() {
     this.genForm = { concept: 'salario', period: '', startDate: '', endDate: '', installment: 1, employeeId: '' };
     this.freeItems = [];
+    this.manualItems = [{ employeeId: '', days: 0, grossSalary: 0 }];
+    this.employeeSearch.set('');
     this.showGenerate.set(true);
-  }
-
-  onConceptChange() {
-    if (['libre', 'liquidacion'].includes(this.genForm.concept) && this.employees().length === 0) {
+    if (this.employees().length === 0) {
       this.hrService.getEmployees({ status: 'active' }).subscribe({
         next: (data) => this.employees.set(data || []),
         error: () => this.showToast('No se pudieron cargar los empleados', 'error'),
       });
     }
+  }
+
+  onConceptChange() {
+    // Al cambiar de concepto se mantiene solo la primera línea para los
+    // conceptos que se liquidan de uno en uno.
+    this.manualItems = [{ employeeId: '', days: 0, grossSalary: 0 }];
+    this.employeeSearch.set('');
+  }
+
+  private dailyRate(emp: Employee | undefined): number {
+    if (!emp) return 0;
+    const salary = Number(emp.salary || 0);
+    // Tarifa diaria contractual: salario mensual / 24 días laborables.
+    return salary > 0 ? Number((salary / 24).toFixed(4)) : 0;
+  }
+
+  selectedEmployee(id: string): Employee | undefined {
+    return this.employees().find((e) => e.id === id);
+  }
+
+  filteredEmployees = computed(() => {
+    const term = this.employeeSearch().trim().toLowerCase();
+    const list = this.employees();
+    if (!term) return list;
+    return list.filter((e) =>
+      `${e.firstName} ${e.lastName}`.toLowerCase().includes(term) ||
+      (e.employeeCode || '').toLowerCase().includes(term),
+    );
+  });
+
+  updateManualSalary(index: number) {
+    const line = this.manualItems[index];
+    if (!line) return;
+    const emp = this.selectedEmployee(line.employeeId);
+    const rate = this.dailyRate(emp);
+    const salary = Number(emp?.salary || 0);
+    // Si el trabajador tiene salario base, el salario se calcula automáticamente
+    // a partir de los días; si no, el usuario lo edita libremente.
+    if (salary > 0 && Number(line.days || 0) > 0) {
+      line.grossSalary = Number((Number(line.days) * rate).toFixed(2));
+    }
+  }
+
+  canAddManualLine(): boolean {
+    return this.genForm.concept === 'salario';
   }
 
   conceptHint(): string {
@@ -705,11 +800,32 @@ export class PayrollComponent implements OnInit {
       this.showToast('Período y fechas son obligatorios', 'error');
       return;
     }
+    const lines = this.manualItems.filter(
+      (i) => i.employeeId && (Number(i.days) > 0 || Number(i.grossSalary) > 0),
+    );
+
     let request;
     switch (this.genForm.concept) {
-      case 'vacaciones':
-        request = this.payrollService.generateVacations(this.genForm);
+      case 'salario':
+      case 'vacaciones': {
+        if (lines.length === 0) {
+          this.showToast('Añada al menos una línea con trabajador y días/importe', 'error');
+          return;
+        }
+        if (this.genForm.concept !== 'salario' && lines.length > 1) {
+          this.showToast('Este concepto se genera para un solo trabajador', 'error');
+          return;
+        }
+        request = this.payrollService.generateManual({
+          ...this.genForm,
+          items: lines.map((l) => ({
+            employeeId: l.employeeId,
+            days: Number(l.days),
+            grossSalary: Number(l.grossSalary),
+          })),
+        });
         break;
+      }
       case 'subsidio':
         request = this.payrollService.generateSubsidy(this.genForm);
         break;

@@ -37,6 +37,9 @@ export interface Employee {
   unionMember: boolean;
   /** Recargo pactado en convenio para las horas extra (1 = tarifa base). */
   overtimeRate: number;
+  /** Tarifa salarial del cargo (baseSalary / timeBank) según la unidad del puesto. */
+  salaryRate?: number;
+  salaryUnit?: 'hora' | 'día';
   createdAt: string;
 }
 

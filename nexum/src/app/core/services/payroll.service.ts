@@ -56,6 +56,17 @@ export class PayrollService {
     return this.http.post(`${this.apiUrl}/generate/libre`, data);
   }
 
+  generateManual(data: {
+    concept: string;
+    period: string;
+    startDate: string;
+    endDate: string;
+    items: { employeeId: string; days: number; grossSalary?: number }[];
+    processedBy?: string;
+  }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate/manual`, data);
+  }
+
   process(id: number, processedBy: string): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/process`, { processedBy });
   }
