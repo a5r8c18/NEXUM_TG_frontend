@@ -23,35 +23,6 @@ export class PayrollService {
     return this.http.get(`${this.apiUrl}/statistics`);
   }
 
-  getOne(id: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/${id}`);
-  }
-
-  create(data: any): Observable<any> {
-    return this.http.post(this.apiUrl, data);
-  }
-
-  generate(data: { period: string; startDate: string; endDate: string; processedBy?: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/generate`, data);
-  }
-
-  generateVacations(data: { period: string; startDate: string; endDate: string; processedBy?: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/generate/vacaciones`, data);
-  }
-
-  generateSubsidy(data: { period: string; startDate: string; endDate: string; processedBy?: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/generate/subsidio`, data);
-  }
-
-  generateMaternity(data: { period: string; startDate: string; endDate: string; installment: number; processedBy?: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/generate/maternidad`, data);
-  }
-
-  /** Liquidación del saldo de vacaciones al terminar la relación laboral (Art. 52). */
-  generateVacationSettlement(data: { period: string; startDate: string; endDate: string; employeeId: string; processedBy?: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/generate/liquidacion`, data);
-  }
-
   generateFree(data: { period: string; startDate: string; endDate: string; items: { employeeId: string; amount: number; description?: string }[]; processedBy?: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/generate/libre`, data);
   }
@@ -61,10 +32,28 @@ export class PayrollService {
     period: string;
     startDate: string;
     endDate: string;
-    items: { employeeId: string; days: number; grossSalary?: number }[];
-    processedBy?: string;
+    items: { employeeId: string; days: number; hours?: number; grossSalary?: number }[];
   }): Observable<any> {
     return this.http.post(`${this.apiUrl}/generate/manual`, data);
+  }
+
+  /**
+   * Mismo cálculo que la generación pero sin persistir: tarifa aplicable,
+   * importe sugerido por la ley, acumulado de vacaciones y advertencias.
+   */
+  previewManual(data: {
+    concept: string;
+    period: string;
+    startDate: string;
+    endDate: string;
+    items: { employeeId: string; days: number; hours?: number; grossSalary?: number }[];
+  }): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/generate/manual/preview`, data);
+  }
+
+  /** Catálogo de conceptos con unidad de medida y tarifas de nocturnidad. */
+  getConceptCatalog(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/concepts`);
   }
 
   process(id: number, processedBy: string): Observable<any> {

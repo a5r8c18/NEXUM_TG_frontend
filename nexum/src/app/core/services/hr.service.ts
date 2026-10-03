@@ -105,47 +105,6 @@ export interface Attendance {
   notes: string | null;
 }
 
-export interface LeaveRequest {
-  id: string;
-  companyId: number;
-  employeeId: string;
-  employeeName: string;
-  type:
-    | 'vacation'
-    | 'sick'
-    | 'unpaid'
-    | 'maternity'
-    | 'paternity'
-    | 'marriage'
-    | 'funeral'
-    | 'blood_donation'
-    | 'study'
-    | 'other';
-  startDate: string;
-  endDate: string;
-  days: number;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  reason: string | null;
-  approvedBy: string | null;
-  approvedAt: string | null;
-  /** Vacaciones aprobadas por encima del saldo acumulado del submayor. */
-  advanceAuthorized?: boolean | null;
-  // Campos para subsidio por enfermedad (Art. 40-46)
-  origin?: 'common' | 'occupational' | null;
-  hospitalized?: boolean | null;
-  hospitalizationStart?: string | null;
-  medicalCertificate?: string | null;
-  // Campos para maternidad
-  multiplePregnancy?: boolean | null;
-  birthDate?: string | null;
-  prenatalStart?: string | null;
-  postnatalStart?: string | null;
-  // Prestación social (Art. 30.1 DL 56/2021, mod. DL 71/2023): a) madre cuida,
-  // b) madre reincorporada, c) cedida al padre, abuelo u otro familiar.
-  socialBenefitVariant?: 'a' | 'b' | 'c' | null;
-  beneficiaryEmployeeId?: string | null;
-}
-
 export interface VacationSubmayorRow {
   employeeName: string;
   documentId: string | null;
@@ -287,32 +246,6 @@ export class HrService {
   }
   deleteAttendance(id: string) {
     return this.http.delete(`${this.baseUrl}/attendance/${id}`);
-  }
-
-  // ── Vacaciones / Licencias ──
-  getLeaves(filters?: { employeeId?: string; status?: string; type?: string }) {
-    const params: any = {};
-    if (filters?.employeeId) params.employeeId = filters.employeeId;
-    if (filters?.status) params.status = filters.status;
-    if (filters?.type) params.type = filters.type;
-    return this.http.get<LeaveRequest[]>(`${this.baseUrl}/leaves`, { params });
-  }
-  createLeave(data: Partial<LeaveRequest>) {
-    return this.http.post<LeaveRequest>(`${this.baseUrl}/leaves`, data);
-  }
-  updateLeave(id: string, data: Partial<LeaveRequest>) {
-    return this.http.put<LeaveRequest>(`${this.baseUrl}/leaves/${id}`, data);
-  }
-  setLeaveStatus(
-    id: string,
-    status: 'approved' | 'rejected' | 'cancelled',
-    approvedBy?: string,
-    advanceAuthorized?: boolean,
-  ) {
-    return this.http.put<LeaveRequest>(`${this.baseUrl}/leaves/${id}/status`, { status, approvedBy, advanceAuthorized });
-  }
-  deleteLeave(id: string) {
-    return this.http.delete(`${this.baseUrl}/leaves/${id}`);
   }
 
   // ── Reportes ──
