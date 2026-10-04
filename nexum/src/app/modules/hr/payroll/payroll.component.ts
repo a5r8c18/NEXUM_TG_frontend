@@ -252,7 +252,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                     <p class="text-xs text-slate-400 px-3 py-4 text-center">No hay trabajadores activos</p>
                   }
                 </div>
-                <p class="text-[11px] text-slate-400">Con salario fijo se descuenta solo el tiempo faltado (día = 7,9416 h, mes = 190,6 h). Sin salario fijo se cobran horas × tasa del cargo. Líneas sin tiempo ni importe se omiten.</p>
+                <p class="text-[11px] text-slate-400">Con salario fijo se descuenta solo el tiempo faltado (día = 7,9416 h, mes = 190,6 h). Sin salario fijo se cobran las unidades × la tasa del cargo — días si su tarifa es por día, horas si es por hora. Líneas sin tiempo ni importe se omiten.</p>
               </div>
             }
 
@@ -328,19 +328,30 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
               </div>
             }
 
-            <!-- Conceptos de un solo trabajador: filtro y datos calculados -->
+            <!-- Conceptos de un solo trabajador: búsqueda con desplegable -->
             @if (isSingleWorkerConcept()) {
               <div class="space-y-3">
-                <input type="text" [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)"
-                       placeholder="Filtrar por nombre, código o CI..."
-                       class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                <select [(ngModel)]="manualItems[0].employeeId" (ngModelChange)="onSingleWorkerChange()"
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">— Seleccione el trabajador ({{ singleWorkerOptions().length }}) —</option>
-                  @for (e of singleWorkerOptions(); track e.id) {
-                    <option [value]="e.id">{{ e.lastName }}, {{ e.firstName }} · {{ e.employeeCode }}@if (e.documentId) { · CI {{ e.documentId }} }@if (e.status !== 'active') { (baja) }</option>
+                <div class="relative">
+                  <input type="text" [ngModel]="workerInput()" (ngModelChange)="onWorkerInput($event)"
+                         (focus)="workerPickOpen.set(true)" (blur)="closeWorkerPick()"
+                         placeholder="Busque por nombre, código o CI..."
+                         class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  @if (workerPickOpen()) {
+                    <div class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                      @for (e of singleWorkerOptions(); track e.id) {
+                        <button type="button" (mousedown)="pickWorker(e)"
+                                class="w-full px-3 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                                [class.bg-blue-50]="e.id === manualItems[0].employeeId"
+                                [class.dark:bg-slate-700]="e.id === manualItems[0].employeeId"
+                                [class.font-semibold]="e.id === manualItems[0].employeeId">
+                          {{ workerOptionLabel(e) }}
+                        </button>
+                      } @empty {
+                        <p class="px-3 py-3 text-xs text-slate-400">Sin resultados</p>
+                      }
+                    </div>
                   }
-                </select>
+                </div>
 
                 @if (manualItems[0].employeeId; as empId) {
                   <!-- Acumulado de vacaciones: solo lectura -->
@@ -740,6 +751,9 @@ export class PayrollComponent implements OnInit {
     grossEdited?: boolean;
   }[] = [];
   employeeSearch = signal('');
+  /** Texto del buscador del concepto individual y estado de su desplegable. */
+  workerInput = signal('');
+  workerPickOpen = signal(false);
 
   /** Catálogo del backend: conceptos y tarifas de nocturnidad de la empresa. */
   catalog = signal<any>(null);
@@ -880,6 +894,8 @@ export class PayrollComponent implements OnInit {
   /** Reconstruye las líneas según el concepto elegido. */
   private rebuildLines() {
     this.employeeSearch.set('');
+    this.workerInput.set('');
+    this.workerPickOpen.set(false);
     this.nightShiftEdit.set(null);
     if (this.isTimeSupplement()) {
       // Pagos adicionales: todos los trabajadores activos, sin horas; solo
@@ -941,8 +957,12 @@ export class PayrollComponent implements OnInit {
    * selector no muestre un valor vacío con un trabajador seleccionado.
    */
   singleWorkerOptions(): Employee[] {
-    const term = this.employeeSearch().trim().toLowerCase();
     const selectedId = this.manualItems[0]?.employeeId;
+    const selected = selectedId ? this.selectedEmployee(selectedId) : undefined;
+    const raw = this.workerInput().trim().toLowerCase();
+    // Con trabajador elegido el campo muestra su etiqueta: no es un filtro.
+    const term =
+      selected && raw === this.workerOptionLabel(selected).toLowerCase() ? '' : raw;
     const eligible = this.employees().filter(
       (e) => this.genForm.concept === 'liquidacion' || e.status === 'active' || e.id === selectedId,
     );
@@ -953,6 +973,45 @@ export class PayrollComponent implements OnInit {
       (e.employeeCode || '').toLowerCase().includes(term) ||
       (e.documentId || '').toLowerCase().includes(term);
     return eligible.filter((e) => matches(e) || e.id === selectedId);
+  }
+
+  /** Etiqueta que muestra el buscador para un trabajador elegible. */
+  workerOptionLabel(e: Employee): string {
+    const doc = e.documentId ? ` · CI ${e.documentId}` : '';
+    const status = e.status !== 'active' ? ' (baja)' : '';
+    return `${e.lastName}, ${e.firstName} · ${e.employeeCode}${doc}${status}`;
+  }
+
+  /** Escribir en el buscador abre el desplegable y anula la elección previa. */
+  onWorkerInput(value: string) {
+    this.workerInput.set(value);
+    this.workerPickOpen.set(true);
+    const line = this.manualItems[0];
+    const selected = line ? this.selectedEmployee(line.employeeId) : undefined;
+    if (selected && value !== this.workerOptionLabel(selected)) {
+      line.employeeId = '';
+      this.onSingleWorkerChange();
+    }
+  }
+
+  /** Rellena el campo con el trabajador elegido y recalcula sus datos. */
+  pickWorker(e: Employee) {
+    if (this.manualItems[0]) {
+      this.manualItems[0].employeeId = e.id;
+    }
+    this.workerInput.set(this.workerOptionLabel(e));
+    this.workerPickOpen.set(false);
+    this.onSingleWorkerChange();
+  }
+
+  /** Al salir del campo se restaura la etiqueta del trabajador elegido. */
+  closeWorkerPick() {
+    this.workerPickOpen.set(false);
+    const line = this.manualItems[0];
+    const selected = line ? this.selectedEmployee(line.employeeId) : undefined;
+    if (selected) {
+      this.workerInput.set(this.workerOptionLabel(selected));
+    }
   }
 
   onSingleWorkerChange() {
@@ -1069,10 +1128,16 @@ export class PayrollComponent implements OnInit {
     );
   });
 
-  /** El trabajador cobra por horas cuando su ficha no declara salario fijo. */
+  /**
+   * El campo de tiempo pide horas solo cuando el cargo tarifa por hora.
+   * Con salario fijo, con tarifa por día y sin tarifa se entran días — el
+   * backend los convierte a la unidad del cargo (día = 7,9416 h).
+   */
   usesHours(employeeId: string): boolean {
     const e = this.selectedEmployee(employeeId);
-    return !!e && Number(e.salary || 0) <= 0;
+    if (!e) return false;
+    if (Number(e.salary || 0) > 0) return false;
+    return e.salaryUnit === 'hora';
   }
 
   /**
@@ -1172,7 +1237,7 @@ export class PayrollComponent implements OnInit {
 
   conceptHint(): string {
     const hints: Record<string, string> = {
-      salario: 'Mes completo = 190,6 h (24 días de 7,9416 h): con salario fijo se descuenta solo el tiempo faltado a la tarifa horaria (salario ÷ 190,6); sin salario fijo se cobran las horas × la tasa del cargo.',
+      salario: 'Mes completo = 190,6 h (24 días de 7,9416 h): con salario fijo se descuenta solo el tiempo faltado a la tarifa horaria (salario ÷ 190,6); sin salario fijo se cobran las unidades × la tasa del cargo (días u horas según la unidad del cargo).',
       vacaciones: 'Seleccione el trabajador y los días a disfrutar: se paga con el acumulado del submayor de vacaciones (provisión 492), no a gasto.',
       subsidio: 'Subsidio por enfermedad o accidente (Arts. 39-46): se calcula con el salario promedio, la carencia y el origen de la incapacidad. Se carga a la provisión 500.',
       maternidad: 'Licencia de maternidad (DL 56/2021): indique los días y el importe de la prestación correspondiente.',
