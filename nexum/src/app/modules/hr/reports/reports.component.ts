@@ -34,17 +34,27 @@ type ReportTab = 'submayor' | 'empleados' | 'cnc' | 'acreditacion' | 'plantilla'
           <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Reportes de Recursos Humanos</h1>
           <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Submayor de vacaciones, salario devengado, acreditación bancaria y plantilla</p>
         </div>
-        <button (click)="exportCsv()" class="inline-flex items-center justify-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition-colors text-sm font-medium shadow-sm">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
-          Exportar
-        </button>
+        <div class="flex items-center gap-2">
+          @if (activeTab() === 'acreditacion') {
+            <button (click)="downloadDbf()" [disabled]="!accreditationRows().length"
+                    title="Fichero para el banco con la estructura de nominalimpia.dbf"
+                    class="inline-flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors text-sm font-medium shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+              DBF para el banco
+            </button>
+          }
+          <button (click)="exportCsv()" class="inline-flex items-center justify-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition-colors text-sm font-medium shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+            Exportar
+          </button>
+        </div>
       </div>
 
       <!-- Filtros -->
       <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input type="month" [(ngModel)]="filterPeriod" (change)="loadPeriodData()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"/>
-          <select [(ngModel)]="filterDepartmentId" (change)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+          <select [ngModel]="filterDepartmentId()" (ngModelChange)="filterDepartmentId.set($event); onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
             <option value="">Todas las áreas</option>
             @for (d of departments(); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
           </select>
@@ -257,21 +267,54 @@ export class ReportsComponent implements OnInit {
   isLoading = signal(false);
   toast = signal<{ type: 'success' | 'error'; message: string } | null>(null);
   filterPeriod = new Date().toISOString().slice(0, 7);
-  filterDepartmentId = '';
+  /** Señal: los listados filtrados son computed y deben enterarse del cambio. */
+  filterDepartmentId = signal('');
 
   filteredEmployees = computed(() =>
     this.employees().filter(
-      (e) => !this.filterDepartmentId || e.departmentId === this.filterDepartmentId,
+      (e) => !this.filterDepartmentId() || e.departmentId === this.filterDepartmentId(),
     ),
   );
 
+  /**
+   * Las filas de los reportes por período no traen el área: se cruzan con
+   * las fichas del área elegida por CI o, sin CI, por nombre.
+   */
+  private inDepartment = computed(() => {
+    if (!this.filterDepartmentId()) return null;
+    const docs = new Set<string>();
+    const names = new Set<string>();
+    for (const e of this.filteredEmployees()) {
+      if (e.documentId) docs.add(e.documentId);
+      names.add(`${e.firstName} ${e.lastName}`.trim().toLowerCase());
+    }
+    return (row: { documentId?: string | null; employeeName?: string }) =>
+      (!!row.documentId && docs.has(row.documentId)) ||
+      names.has((row.employeeName || '').trim().toLowerCase());
+  });
+
+  private byDepartment<T extends { documentId?: string | null; employeeName?: string }>(rows: T[]): T[] {
+    const match = this.inDepartment();
+    return match ? rows.filter(match) : rows;
+  }
+
+  filteredSubmayor = computed(() => this.byDepartment(this.submayorRows()));
+  filteredCnc = computed(() => this.byDepartment(this.cncRows()));
+  filteredAccreditation = computed(() => this.byDepartment(this.accreditationRows()));
+  filteredStaffing = computed(() => {
+    const id = this.filterDepartmentId();
+    if (!id) return this.staffingRows();
+    const name = this.departments().find((d) => d.id === id)?.name;
+    return this.staffingRows().filter((r) => r.departmentName === name);
+  });
+
   private activeRows = computed<unknown[]>(() => {
     switch (this.activeTab()) {
-      case 'submayor': return this.submayorRows();
+      case 'submayor': return this.filteredSubmayor();
       case 'empleados': return this.filteredEmployees();
-      case 'cnc': return this.cncRows();
-      case 'acreditacion': return this.accreditationRows();
-      case 'plantilla': return this.staffingRows();
+      case 'cnc': return this.filteredCnc();
+      case 'acreditacion': return this.filteredAccreditation();
+      case 'plantilla': return this.filteredStaffing();
     }
   });
 
@@ -280,11 +323,11 @@ export class ReportsComponent implements OnInit {
     return rows.slice(start, start + this.pageSize);
   }
 
-  pagedSubmayor = computed(() => this.paged(this.submayorRows()));
+  pagedSubmayor = computed(() => this.paged(this.filteredSubmayor()));
   pagedEmployees = computed(() => this.paged(this.filteredEmployees()));
-  pagedCnc = computed(() => this.paged(this.cncRows()));
-  pagedAccreditation = computed(() => this.paged(this.accreditationRows()));
-  pagedStaffing = computed(() => this.paged(this.staffingRows()));
+  pagedCnc = computed(() => this.paged(this.filteredCnc()));
+  pagedAccreditation = computed(() => this.paged(this.filteredAccreditation()));
+  pagedStaffing = computed(() => this.paged(this.filteredStaffing()));
 
   paginationConfig = computed<PaginationConfig>(() => ({
     currentPage: this.currentPage(),
@@ -357,13 +400,41 @@ export class ReportsComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
 
+  /**
+   * Fichero para el banco (DBF de la muestra nominalimpia.dbf) con todo el
+   * período, sin el filtro de área: el banco acredita a todos a la vez.
+   */
+  downloadDbf() {
+    this.hrService.downloadAccreditationDbf(this.filterPeriod).subscribe({
+      next: (res) => {
+        const blob = res.body;
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `acreditacion-${this.filterPeriod}.dbf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        const omitted = decodeURIComponent(res.headers.get('X-Omitted-Employees') || '')
+          .split('|')
+          .filter(Boolean);
+        if (omitted.length) {
+          this.showToast('error', `Sin CI o cuenta bancaria, no incluidos: ${omitted.join(', ')}`);
+        } else {
+          this.showToast('success', 'Fichero DBF generado');
+        }
+      },
+      error: () => this.showToast('error', 'Error generando el fichero DBF'),
+    });
+  }
+
   private currentTable(): [string[], (string | number)[][]] {
     const money = (n: number) => n.toFixed(2);
     switch (this.activeTab()) {
       case 'submayor':
         return [
           ['Nombre y Apellidos', 'CI', 'Saldo Inicial Días', 'Saldo Inicial Importe', 'Devengado Días', 'Devengado Importe', 'Liquidado Días', 'Liquidado Importe', 'Saldo Final Días', 'Saldo Final Importe'],
-          this.submayorRows().map((r) => [
+          this.filteredSubmayor().map((r) => [
             r.employeeName,
             r.documentId || '',
             r.openingDays,
@@ -384,17 +455,17 @@ export class ReportsComponent implements OnInit {
       case 'cnc':
         return [
           ['Empleado', 'Devengado', 'Seg. Social (5%)', 'Ingresos Personales', 'Neto a Pagar'],
-          this.cncRows().map((r) => [r.employeeName, money(r.grossSalary), money(r.socialSecurity), money(r.taxWithholding), money(r.netSalary)]),
+          this.filteredCnc().map((r) => [r.employeeName, money(r.grossSalary), money(r.socialSecurity), money(r.taxWithholding), money(r.netSalary)]),
         ];
       case 'acreditacion':
         return [
           ['CI', 'Cuenta', 'Importe a Cobrar'],
-          this.accreditationRows().map((r) => [r.documentId || '', r.bankAccount || '', money(r.amount)]),
+          this.filteredAccreditation().map((r) => [r.documentId || '', r.bankAccount || '', money(r.amount)]),
         ];
       case 'plantilla':
         return [
           ['Cargo', 'Aprobada', 'Cubierta', 'Vacantes', 'Salario Base'],
-          this.staffingRows().map((r) => [r.positionName, r.approved, r.covered, r.vacant, money(r.baseSalary)]),
+          this.filteredStaffing().map((r) => [r.positionName, r.approved, r.covered, r.vacant, money(r.baseSalary)]),
         ];
     }
   }

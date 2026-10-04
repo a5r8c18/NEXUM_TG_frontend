@@ -32,9 +32,21 @@ export class PayrollService {
     period: string;
     startDate: string;
     endDate: string;
-    items: { employeeId: string; days: number; hours?: number; grossSalary?: number }[];
+    items: { employeeId: string; days: number; hours?: number; nightHours?: number; grossSalary?: number }[];
   }): Observable<any> {
     return this.http.post(`${this.apiUrl}/generate/manual`, data);
+  }
+
+  /** Tarifas del pago adicional por nocturnidad de la empresa, en CUP por hora. */
+  updateNightShiftRates(rates: { nightShiftRateEvening: number; nightShiftRateNight: number }): Observable<any> {
+    return this.http.put(`${this.apiUrl}/night-shift-rates`, rates);
+  }
+
+  /** Cuenta de Nóminas por Pagar y las subcuentas que la empresa le creó. */
+  getPayableSubaccounts(): Observable<{ account: string; subaccounts: { code: string; name: string }[] }> {
+    return this.http.get<{ account: string; subaccounts: { code: string; name: string }[] }>(
+      `${this.apiUrl}/payable-subaccounts`,
+    );
   }
 
   /**
@@ -46,7 +58,7 @@ export class PayrollService {
     period: string;
     startDate: string;
     endDate: string;
-    items: { employeeId: string; days: number; hours?: number; grossSalary?: number }[];
+    items: { employeeId: string; days: number; hours?: number; nightHours?: number; grossSalary?: number }[];
   }): Observable<any[]> {
     return this.http.post<any[]>(`${this.apiUrl}/generate/manual/preview`, data);
   }

@@ -119,7 +119,7 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
               <div class='flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700'>
                 <span class='bg-sky-500 text-white text-sm font-medium px-3 py-1 rounded'>NO{{ payroll.id }}</span>
                 <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Fecha:</span> {{ payroll.endDate }}</span>
-                <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Nómina:</span> {{ getConceptLabel(payroll.concept) }}{{ payroll.installment ? (payroll.installment === 4 ? ' · Prestación social' : ' · Plazo ' + payroll.installment) : '' }}</span>
+                <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Nómina:</span> {{ getConceptLabel(payroll.concept) }}{{ payroll.concept === 'maternidad' && payroll.installment ? (payroll.installment === 4 ? ' · Prestación social' : ' · Plazo ' + payroll.installment) : '' }}@if (payroll.items?.length === 1 && isSingleConcept(payroll.concept)) { · {{ payroll.items[0].employeeName }} }</span>
                 <span class='text-sm text-slate-700 dark:text-slate-300'><span class='font-semibold'>Personas:</span> {{ (payroll.items?.length) || 0 }}</span>
                 <div class='flex items-center gap-1 ml-auto'>
                   <button (click)='openDetail(payroll)' title='Ver líneas' class='p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors'>
@@ -256,17 +256,89 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
               </div>
             }
 
+            <!-- Pagos adicionales por horas: horas extra, nocturnidad y feriado -->
+            @if (isTimeSupplement()) {
+              <div class="space-y-2">
+                @if (genForm.concept === 'nocturnidad') {
+                  <div class="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 space-y-2">
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs text-slate-600">
+                        Tarifas: 7-11 pm <span class="font-semibold">{{ nightRate('evening') | number:'1.2-2' }}</span> CUP/h ·
+                        11 pm-7 am <span class="font-semibold">{{ nightRate('night') | number:'1.2-2' }}</span> CUP/h
+                      </p>
+                      <button (click)="toggleNightShiftEdit()" class="text-blue-600 text-xs hover:underline">
+                        {{ nightShiftEdit() ? 'Cerrar' : 'Configurar tarifas' }}
+                      </button>
+                    </div>
+                    @if (nightShiftEdit(); as rates) {
+                      <div class="grid grid-cols-[1fr_6rem] gap-x-3 gap-y-2 items-center">
+                        <span class="text-xs text-slate-600">7:00 pm – 11:00 pm (0,60 – 1,20)</span>
+                        <input type="number" step="0.01" min="0.6" max="1.2" [(ngModel)]="rates.evening"
+                               class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                        <span class="text-xs text-slate-600">11:00 pm – 7:00 am (1,15 – 2,30)</span>
+                        <input type="number" step="0.01" min="1.15" max="2.3" [(ngModel)]="rates.night"
+                               class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                        <button (click)="saveNightShiftRates()" class="col-span-2 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Guardar tarifas</button>
+                      </div>
+                    }
+                  </div>
+                }
+                <div class="flex items-center justify-between gap-2">
+                  <label class="text-xs font-medium text-slate-600">Trabajadores <span class="text-red-500">*</span></label>
+                  <input type="text" [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)"
+                         placeholder="Filtrar por nombre, código o CI..."
+                         class="w-56 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                </div>
+                <div class="grid gap-x-3 px-3 text-xs font-semibold text-slate-500" [class]="supplementGrid()">
+                  <span>Trabajador</span>
+                  @if (genForm.concept === 'nocturnidad') {
+                    <span>7-11 pm (h)</span><span>11 pm-7 am (h)</span>
+                  } @else {
+                    <span>Horas</span>
+                  }
+                  <span class="text-right">Importe</span>
+                </div>
+                <div class="max-h-72 overflow-y-auto space-y-1.5 pr-1">
+                  @for (item of manualItems; track item.employeeId) {
+                    @if (salaryRowVisible(item.employeeId)) {
+                      <div class="grid gap-x-3 items-center rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2" [class]="supplementGrid()">
+                        <div class="min-w-0">
+                          <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{{ employeeLabel(item.employeeId) }}</p>
+                          @if (genForm.concept !== 'nocturnidad') {
+                            <p class="text-[10px] text-slate-400">
+                              {{ hourlyRateOf(item.employeeId) | number:'1.2-4' }}/h
+                              @if (genForm.concept === 'horas_extras' && overtimeMultiplier(item.employeeId) !== 1) { × {{ overtimeMultiplier(item.employeeId) }} }
+                            </p>
+                          }
+                        </div>
+                        <input type="number" min="0" step="any" [(ngModel)]="item.hours" (ngModelChange)="updateSupplement($index)"
+                               class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                        @if (genForm.concept === 'nocturnidad') {
+                          <input type="number" min="0" step="any" [(ngModel)]="item.nightHours" (ngModelChange)="updateSupplement($index)"
+                                 class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                        }
+                        <span class="text-sm text-right tabular-nums text-slate-700 dark:text-slate-200">{{ item.grossSalary | number:'1.2-2' }}</span>
+                      </div>
+                    }
+                  } @empty {
+                    <p class="text-xs text-slate-400 px-3 py-4 text-center">No hay trabajadores activos</p>
+                  }
+                </div>
+                <p class="text-[11px] text-slate-400">El importe lo recalcula el servidor al generar. Los trabajadores sin horas se omiten.</p>
+              </div>
+            }
+
             <!-- Conceptos de un solo trabajador: filtro y datos calculados -->
             @if (isSingleWorkerConcept()) {
               <div class="space-y-3">
                 <input type="text" [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)"
                        placeholder="Filtrar por nombre, código o CI..."
                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                <select [(ngModel)]="manualItems[0].employeeId" (ngModelChange)="schedulePreview()"
+                <select [(ngModel)]="manualItems[0].employeeId" (ngModelChange)="onSingleWorkerChange()"
                         class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">— Seleccione el trabajador —</option>
-                  @for (e of filteredEmployees(); track e.id) {
-                    <option [value]="e.id">{{ e.lastName }}, {{ e.firstName }} · {{ e.employeeCode }}@if (e.documentId) { · CI {{ e.documentId }} }</option>
+                  <option value="">— Seleccione el trabajador ({{ singleWorkerOptions().length }}) —</option>
+                  @for (e of singleWorkerOptions(); track e.id) {
+                    <option [value]="e.id">{{ e.lastName }}, {{ e.firstName }} · {{ e.employeeCode }}@if (e.documentId) { · CI {{ e.documentId }} }@if (e.status !== 'active') { (baja) }</option>
                   }
                 </select>
 
@@ -285,7 +357,26 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                     </div>
                   }
 
-                  @if (genForm.concept !== 'liquidacion') {
+                  @if (genForm.concept === 'vacaciones') {
+                    <div class="grid grid-cols-3 gap-3">
+                      <div class="space-y-1">
+                        <label class="text-xs font-medium text-slate-600">Días a disfrutar</label>
+                        <input type="number" min="0" step="any" [(ngModel)]="manualItems[0].days" (ngModelChange)="schedulePreview()"
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                      </div>
+                      <div class="rounded-lg bg-slate-100 dark:bg-slate-700/40 px-3 py-2">
+                        <p class="text-[10px] font-semibold text-slate-500 uppercase">Tarifa diaria</p>
+                        <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ (manualItems[0].rate || 0) | number:'1.2-2' }}</p>
+                      </div>
+                      <div class="rounded-lg bg-slate-100 dark:bg-slate-700/40 px-3 py-2">
+                        <p class="text-[10px] font-semibold text-slate-500 uppercase">Importe</p>
+                        <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ manualItems[0].grossSalary | number:'1.2-2' }}</p>
+                      </div>
+                    </div>
+                    @if (manualItems[0].accumulatedDays != null && manualItems[0].days > 0) {
+                      <p class="text-xs text-slate-500">Saldo tras el disfrute: {{ manualItems[0].accumulatedDays - manualItems[0].days | number:'1.2-2' }} día(s) · {{ (manualItems[0].accumulatedAmount || 0) - manualItems[0].grossSalary | number:'1.2-2' }} CUP</p>
+                    }
+                  } @else if (genForm.concept !== 'liquidacion') {
                     <div class="grid grid-cols-2 gap-3">
                       <div class="space-y-1">
                         <label class="text-xs font-medium text-slate-600">Días</label>
@@ -299,8 +390,9 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                       </div>
                     </div>
                   } @else {
-                    <div class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
-                      <p class="text-xs text-orange-800">La liquidación paga todo el saldo acumulado (Art. 52). Se genera para el trabajador que causa baja.</p>
+                    <div class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 space-y-1">
+                      <p class="text-xs text-orange-800">Se paga todo el saldo acumulado (Art. 52): <span class="font-semibold">{{ (manualItems[0].accumulatedAmount || 0) | number:'1.2-2' }} CUP</span> por {{ (manualItems[0].accumulatedDays || 0) | number:'1.2-2' }} día(s), con cargo a la provisión 492.</p>
+                      <p class="text-[11px] text-orange-700">Procese antes la nómina de salario del mes de la baja: lo que esté en borrador no entra en el acumulado.</p>
                     </div>
                   }
 
@@ -616,9 +708,16 @@ export class PayrollComponent implements OnInit {
     { value: 'vacaciones', label: 'Vacaciones' },
     { value: 'subsidio', label: 'Subsidio' },
     { value: 'maternidad', label: 'Licencia de maternidad' },
-    { value: 'liquidacion', label: 'Liquidación (Art. 52)' },
+    { value: 'liquidacion', label: 'Liquidación por terminación' },
+    { value: 'horas_extras', label: 'Horas extras' },
+    { value: 'nocturnidad', label: 'Nocturnidad' },
+    { value: 'feriado', label: 'Días feriados' },
     { value: 'libre', label: 'Concepto libre' },
   ];
+
+  private static readonly TIME_SUPPLEMENTS = ['horas_extras', 'nocturnidad', 'feriado'];
+  private static readonly SINGLE_WORKER = ['vacaciones', 'subsidio', 'maternidad', 'liquidacion'];
+  private static readonly HOURS_PER_WORKDAY = 190.6 / 24;
   employees = signal<Employee[]>([]);
   freeItems: { employeeId: string; amount: number; description: string }[] = [];
 
@@ -629,6 +728,8 @@ export class PayrollComponent implements OnInit {
     days: number;
     /** Horas trabajadas (trabajadores sin salario fijo o tiempo suelto). */
     hours?: number;
+    /** Nocturnidad: horas de la banda 11 pm-7 am (`hours` es la de 7-11 pm). */
+    nightHours?: number;
     grossSalary: number;
     /** Tarifa por unidad que devuelve la previsualización del backend. */
     rate?: number;
@@ -640,8 +741,9 @@ export class PayrollComponent implements OnInit {
   }[] = [];
   employeeSearch = signal('');
 
-  /** Catálogo del backend: conceptos y unidades soportadas. */
+  /** Catálogo del backend: conceptos y tarifas de nocturnidad de la empresa. */
   catalog = signal<any>(null);
+  nightShiftEdit = signal<{ evening: number; night: number } | null>(null);
   private previewTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Últimos 12 meses naturales, para no depender de períodos escritos a mano. */
@@ -743,6 +845,7 @@ export class PayrollComponent implements OnInit {
     this.freeItems = [];
     this.manualItems = [];
     this.employeeSearch.set('');
+    this.nightShiftEdit.set(null);
     this.showGenerate.set(true);
     // Todas las fichas, no solo las activas: la liquidación se genera para el
     // trabajador que causó baja.
@@ -753,17 +856,21 @@ export class PayrollComponent implements OnInit {
       },
       error: () => this.showToast('No se pudieron cargar los empleados', 'error'),
     });
-    if (!this.catalog()) {
-      this.payrollService.getConceptCatalog().subscribe({
-        next: (c) => {
-          this.catalog.set(c);
-          if (Array.isArray(c?.concepts) && c.concepts.length) {
-            this.concepts = c.concepts.map((x: any) => ({ value: x.value, label: x.label }));
-          }
-        },
-        error: () => { /* se usa la lista estática de conceptos */ },
-      });
-    }
+    this.loadCatalog();
+  }
+
+  /** Catálogo y tarifas de nocturnidad: se relee al abrir, pueden haber cambiado. */
+  private loadCatalog() {
+    this.payrollService.getConceptCatalog().subscribe({
+      next: (c) => {
+        this.catalog.set(c);
+        if (Array.isArray(c?.concepts) && c.concepts.length) {
+          this.concepts = c.concepts.map((x: any) => ({ value: x.value, label: x.label }));
+        }
+        if (this.isTimeSupplement()) this.recalcSupplements();
+      },
+      error: () => { /* se usa la lista estática de conceptos */ },
+    });
   }
 
   onConceptChange() {
@@ -773,6 +880,15 @@ export class PayrollComponent implements OnInit {
   /** Reconstruye las líneas según el concepto elegido. */
   private rebuildLines() {
     this.employeeSearch.set('');
+    this.nightShiftEdit.set(null);
+    if (this.isTimeSupplement()) {
+      // Pagos adicionales: todos los trabajadores activos, sin horas; solo
+      // se generan las líneas a las que se les indique tiempo.
+      this.manualItems = this.employees()
+        .filter((e) => e.status === 'active')
+        .map((e) => ({ employeeId: e.id, days: 0, hours: 0, nightHours: 0, grossSalary: 0 }));
+      return;
+    }
     if (this.genForm.concept === 'salario') {
       // La nómina de salario precarga todo el listado de trabajadores activos.
       // Con salario fijo se parte del mes completo (24 días) y se restan las
@@ -801,9 +917,121 @@ export class PayrollComponent implements OnInit {
   }
 
   isSingleWorkerConcept(): boolean {
-    return ['vacaciones', 'subsidio', 'maternidad', 'liquidacion'].includes(
-      this.genForm.concept,
+    return this.isSingleConcept(this.genForm.concept);
+  }
+
+  isSingleConcept(concept: string): boolean {
+    return PayrollComponent.SINGLE_WORKER.includes(concept);
+  }
+
+  isTimeSupplement(): boolean {
+    return PayrollComponent.TIME_SUPPLEMENTS.includes(this.genForm.concept);
+  }
+
+  supplementGrid(): string {
+    return this.genForm.concept === 'nocturnidad'
+      ? 'grid-cols-[1fr_5rem_5rem_7rem]'
+      : 'grid-cols-[1fr_5.5rem_8rem]';
+  }
+
+  /**
+   * Trabajadores elegibles del concepto individual: la liquidación se hace a
+   * quien causó baja (se listan todos); el resto, solo activos. El elegido se
+   * conserva en la lista aunque el filtro de texto lo excluya, para que el
+   * selector no muestre un valor vacío con un trabajador seleccionado.
+   */
+  singleWorkerOptions(): Employee[] {
+    const term = this.employeeSearch().trim().toLowerCase();
+    const selectedId = this.manualItems[0]?.employeeId;
+    const eligible = this.employees().filter(
+      (e) => this.genForm.concept === 'liquidacion' || e.status === 'active' || e.id === selectedId,
     );
+    const matches = (e: Employee) =>
+      !term ||
+      `${e.firstName} ${e.lastName}`.toLowerCase().includes(term) ||
+      `${e.lastName} ${e.firstName}`.toLowerCase().includes(term) ||
+      (e.employeeCode || '').toLowerCase().includes(term) ||
+      (e.documentId || '').toLowerCase().includes(term);
+    return eligible.filter((e) => matches(e) || e.id === selectedId);
+  }
+
+  onSingleWorkerChange() {
+    const line = this.manualItems[0];
+    if (line) {
+      line.accumulatedDays = null;
+      line.accumulatedAmount = null;
+      line.warnings = [];
+      line.grossEdited = false;
+      line.grossSalary = 0;
+      line.rate = 0;
+    }
+    this.schedulePreview();
+  }
+
+  /** Tarifa horaria: salario / 190,6, o la del cargo convertida a horas. */
+  hourlyRateOf(employeeId: string): number {
+    const e = this.selectedEmployee(employeeId);
+    if (!e) return 0;
+    const salary = Number(e.salary || 0);
+    if (salary > 0) return salary / 190.6;
+    const rate = Number(e.salaryRate || 0);
+    return e.salaryUnit === 'día' ? rate / PayrollComponent.HOURS_PER_WORKDAY : rate;
+  }
+
+  overtimeMultiplier(employeeId: string): number {
+    return Number(this.selectedEmployee(employeeId)?.overtimeRate || 1) || 1;
+  }
+
+  nightRate(band: 'evening' | 'night'): number {
+    const rates = this.catalog()?.nightShift?.rates || {};
+    return Number(band === 'night' ? rates.night ?? 1.15 : rates.evening ?? 0.6);
+  }
+
+  /** Mismo cálculo que el servidor; el importe definitivo lo fija él. */
+  updateSupplement(index: number) {
+    const line = this.manualItems[index];
+    if (!line) return;
+    const hours = Math.max(0, Number(line.hours || 0));
+    const round2 = (v: number) => Math.round(v * 100) / 100;
+    if (this.genForm.concept === 'nocturnidad') {
+      const nightHours = Math.max(0, Number(line.nightHours || 0));
+      line.grossSalary = round2(hours * this.nightRate('evening') + nightHours * this.nightRate('night'));
+      return;
+    }
+    const multiplier =
+      this.genForm.concept === 'horas_extras' ? this.overtimeMultiplier(line.employeeId) : 1;
+    line.grossSalary = round2(hours * this.hourlyRateOf(line.employeeId) * multiplier);
+  }
+
+  private recalcSupplements() {
+    for (let i = 0; i < this.manualItems.length; i++) this.updateSupplement(i);
+  }
+
+  toggleNightShiftEdit() {
+    this.nightShiftEdit.set(
+      this.nightShiftEdit()
+        ? null
+        : { evening: this.nightRate('evening'), night: this.nightRate('night') },
+    );
+  }
+
+  saveNightShiftRates() {
+    const rates = this.nightShiftEdit();
+    if (!rates) return;
+    this.payrollService
+      .updateNightShiftRates({
+        nightShiftRateEvening: Number(rates.evening),
+        nightShiftRateNight: Number(rates.night),
+      })
+      .subscribe({
+        next: () => {
+          this.showToast('Tarifas de nocturnidad actualizadas', 'success');
+          this.nightShiftEdit.set(null);
+          this.loadCatalog();
+        },
+        error: (err) =>
+          this.showToast(err?.error?.message || 'Error al guardar las tarifas', 'error'),
+      });
   }
 
   selectedEmployee(id: string): Employee | undefined {
@@ -911,6 +1139,7 @@ export class PayrollComponent implements OnInit {
           employeeId: i.employeeId,
           days: Number(i.days || 0),
           hours: Number(i.hours || 0),
+          nightHours: Number(i.nightHours || 0),
           grossSalary: Number(i.grossSalary || 0),
         })),
       })
@@ -948,6 +1177,9 @@ export class PayrollComponent implements OnInit {
       subsidio: 'Subsidio por enfermedad o accidente (Arts. 39-46): se calcula con el salario promedio, la carencia y el origen de la incapacidad. Se carga a la provisión 500.',
       maternidad: 'Licencia de maternidad (DL 56/2021): indique los días y el importe de la prestación correspondiente.',
       liquidacion: 'Paga todo el saldo de vacaciones acumulado del trabajador que causa baja (Art. 52). Se carga a la provisión 492.',
+      horas_extras: 'Trabajo extraordinario (Art. 122 Ley 116): horas × tarifa horaria (salario ÷ 190,6 o la del cargo) × el recargo pactado en la ficha. Carga a gasto y acumula vacaciones.',
+      nocturnidad: 'Pago adicional por turno nocturno (Res. 17/2025 MTSS): horas de cada banda × la tarifa en CUP/h fijada por la entidad.',
+      feriado: 'Feriado trabajado (Art. 111.c Ley 116): se paga doble; el salario del mes ya cubre una vez esas horas, esta nómina paga el adicional (horas × tarifa horaria).',
       libre: 'Nómina de concepto libre: defina manualmente empleado, importe y descripción de cada línea.',
     };
     return hints[this.genForm.concept] || '';
@@ -962,6 +1194,8 @@ export class PayrollComponent implements OnInit {
   detailUnitLabel(): string {
     const c = this.detailPayroll()?.concept;
     if (c === 'maternidad') return 'Unidades';
+    if (PayrollComponent.TIME_SUPPLEMENTS.includes(c)) return 'Horas';
+    if (c === 'vacaciones' || c === 'liquidacion') return 'Días';
     return 'Días trabajados';
   }
 
@@ -999,19 +1233,25 @@ export class PayrollComponent implements OnInit {
       request = this.payrollService.generateFree({ ...this.genForm, items });
     } else {
       // La liquidación no lleva unidades: paga todo el saldo del trabajador.
+      // En los pagos adicionales solo cuentan las líneas con horas.
+      const supplement = this.isTimeSupplement();
       const lines = this.manualItems.filter(
         (i) =>
           i.employeeId &&
-          (Number(i.days) > 0 ||
-            Number(i.hours) > 0 ||
-            Number(i.grossSalary) > 0 ||
-            this.genForm.concept === 'liquidacion'),
+          (supplement
+            ? Number(i.hours) > 0 || Number(i.nightHours) > 0
+            : Number(i.days) > 0 ||
+              Number(i.hours) > 0 ||
+              Number(i.grossSalary) > 0 ||
+              this.genForm.concept === 'liquidacion'),
       );
       if (lines.length === 0) {
         this.showToast(
           this.genForm.concept === 'liquidacion'
             ? 'Seleccione el trabajador a liquidar'
-            : 'Indique trabajador y unidades o importe',
+            : supplement
+              ? 'Indique las horas de al menos un trabajador'
+              : 'Indique trabajador y unidades o importe',
           'error',
         );
         return;
@@ -1025,6 +1265,7 @@ export class PayrollComponent implements OnInit {
           employeeId: l.employeeId,
           days: Number(l.days || 0),
           hours: Number(l.hours || 0),
+          nightHours: Number(l.nightHours || 0),
           grossSalary: Number(l.grossSalary || 0),
         })),
       });
@@ -1127,6 +1368,16 @@ export class PayrollComponent implements OnInit {
       }
       // Art. 102 Ley 116: 9,09 % de los salarios percibidos del período, no del
       // salario contractual, igual que en el backend.
+      item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
+    } else if (PayrollComponent.TIME_SUPPLEMENTS.includes(this.detailPayroll()?.concept)) {
+      // Pago por horas: al corregir las horas el importe escala con la
+      // tarifa efectiva de la línea; el servidor lo vuelve a validar.
+      if (item._unitRate == null) {
+        item._unitRate = item.paidUnits > 0 ? Number(item.grossSalary || 0) / item.paidUnits : 0;
+      }
+      item.grossSalary = item._unitRate > 0
+        ? Number((item._unitRate * item.paidUnits).toFixed(2))
+        : Number(item.grossSalary) || 0;
       item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
     } else {
       item.grossSalary = Number(item.grossSalary) || 0;
@@ -1249,7 +1500,7 @@ export class PayrollComponent implements OnInit {
     // vacaciones, liquidación y libre); subsidio y maternidad son prestaciones
     // sociales exentas. La base es solo el devengado del período: la provisión
     // de vacaciones es un cargo a la reserva 492, no remuneración pagada.
-    const chargesEmployerTaxes = ['salario', 'vacaciones', 'liquidacion', 'libre'].includes(payroll.concept);
+    const chargesEmployerTaxes = ['salario', 'vacaciones', 'liquidacion', 'libre', ...PayrollComponent.TIME_SUPPLEMENTS].includes(payroll.concept);
     const round2 = (v: number) => Math.round(v * 100) / 100;
     let aporte125 = 0;
     let provisions15 = 0;
@@ -1311,6 +1562,9 @@ export class PayrollComponent implements OnInit {
       vacaciones: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
       subsidio: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
       maternidad: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
+      horas_extras: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+      nocturnidad: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400',
+      feriado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
       liquidacion: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
       libre: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
     };

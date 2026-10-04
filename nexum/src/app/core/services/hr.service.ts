@@ -17,6 +17,8 @@ export interface Employee {
   costCenterId: string | null;
   costCenterName?: string | null;
   expenseAccountCode?: string | null;
+  /** Subcuenta de Nóminas por Pagar; vacío = la propia 455. */
+  payableSubaccount?: string | null;
   occupationalCategory?: string | null;
   employmentSector?: 'state' | 'non_state' | null;
   contractTerm?: 'determinate' | 'indeterminate';
@@ -259,6 +261,15 @@ export class HrService {
 
   getAccreditationFile(period: string) {
     return this.http.get<AccreditationRow[]>(`${this.baseUrl}/reports/accreditation`, { params: { period } });
+  }
+
+  /** Fichero de acreditación en el DBF del banco (estructura de nominalimpia.dbf). */
+  downloadAccreditationDbf(period: string) {
+    return this.http.get(`${this.baseUrl}/reports/accreditation/dbf`, {
+      params: { period },
+      responseType: 'blob',
+      observe: 'response',
+    });
   }
 
   getStaffingReport() {

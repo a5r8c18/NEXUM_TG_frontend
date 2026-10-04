@@ -358,13 +358,31 @@
           <select [(ngModel)]="form.occupationalCategory"
                   class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
             <option [ngValue]="null">Sin asignar</option>
-            <option value="0010">0010 — Directivos</option>
+            <option value="0010">0010 — Dirigentes</option>
             <option value="0020">0020 — Técnicos</option>
-            <option value="0030">0030 — Operarios</option>
-            <option value="0040">0040 — Servicios</option>
-            <option value="0050">0050 — Administrativos</option>
+            <option value="0030">0030 — Trabajadores de Servicios</option>
+            <option value="0040">0040 — Obreros</option>
+            <option value="0050">0050 — Otros Trabajadores</option>
           </select>
-          <p class="text-xs text-slate-400">Determina la subcuenta 455-00X0 de Nóminas por Pagar.</p>
+          <p class="text-xs text-slate-400">Dato estadístico del Modelo SC-4-06.</p>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-600">Nóminas por Pagar ({{ payable().account }})</label>
+          @if (payable().subaccounts.length) {
+            <select [(ngModel)]="form.payableSubaccount"
+                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+              <option [ngValue]="null">Sin asignar</option>
+              @for (s of payable().subaccounts; track s.code) {
+                <option [ngValue]="s.code">{{ s.code }} — {{ s.name }}</option>
+              }
+              @if (payableSubaccountMissing()) {
+                <option [ngValue]="form.payableSubaccount">{{ form.payableSubaccount }} (ya no existe)</option>
+              }
+            </select>
+            <p class="text-xs text-slate-400">Subcuenta donde se acredita el neto. Con varias subcuentas es obligatoria para procesar la nómina.</p>
+          } @else {
+            <p class="px-3 py-2 rounded-lg bg-slate-100 text-xs text-slate-600">La cuenta {{ payable().account }} no tiene subcuentas: el neto se acredita en ella. Puede crearlas en Contabilidad › Plan de cuentas.</p>
+          }
         </div>
         <div class="space-y-1">
           <label class="text-xs font-medium text-slate-600">Sector de empleo</label>

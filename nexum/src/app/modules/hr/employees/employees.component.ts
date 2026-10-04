@@ -7,6 +7,7 @@ import { HrService, Employee, Department, JobPosition } from '../../../core/serv
 import { AccountingService, CostCenter } from '../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { OfflineFirstService } from '../../../core/offline/offline-first.service';
+import { PayrollService } from '../../../core/services/payroll.service';
 
 @Component({
   selector: 'app-employees',
@@ -19,6 +20,13 @@ export class EmployeesComponent implements OnInit {
   private accountingService = inject(AccountingService);
   private confirmDialog = inject(ConfirmDialogService);
   private offlineFirst = inject(OfflineFirstService);
+  private payrollService = inject(PayrollService);
+
+  /** Cuenta de Nóminas por Pagar y las subcuentas que la empresa le creó. */
+  payable = signal<{ account: string; subaccounts: { code: string; name: string }[] }>({
+    account: '455',
+    subaccounts: [],
+  });
 
   employees = signal<Employee[]>([]);
   isLoading = signal(false);
@@ -58,6 +66,7 @@ export class EmployeesComponent implements OnInit {
       departmentId: null,
       costCenterId: null,
       expenseAccountCode: null,
+      payableSubaccount: null,
       occupationalCategory: null,
       employmentSector: 'state',
       contractTerm: 'indeterminate',
@@ -172,11 +181,27 @@ export class EmployeesComponent implements OnInit {
   openCreate() {
     this.editingId.set(null);
     this.form = this.emptyForm();
+    this.loadPayableSubaccounts();
     this.isCreateOpen.set(true);
+  }
+
+  /** Se relee al abrir la ficha: las subcuentas se gestionan en Contabilidad. */
+  private loadPayableSubaccounts() {
+    this.payrollService.getPayableSubaccounts().subscribe({
+      next: (data) => this.payable.set(data),
+      error: () => { /* sin subcuentas el neto va a la propia cuenta */ }
+    });
+  }
+
+  /** La subcuenta asignada ya no existe en el plan de cuentas. */
+  payableSubaccountMissing(): boolean {
+    const code = this.form.payableSubaccount;
+    return !!code && !this.payable().subaccounts.some(s => s.code === code);
   }
 
   openEdit(emp: Employee) {
     this.editingId.set(emp.id);
+    this.loadPayableSubaccounts();
     this.form = {
       employeeCode: emp.employeeCode,
       firstName: emp.firstName,
@@ -188,6 +213,7 @@ export class EmployeesComponent implements OnInit {
       departmentId: emp.departmentId,
       costCenterId: emp.costCenterId,
       expenseAccountCode: emp.expenseAccountCode ?? null,
+      payableSubaccount: emp.payableSubaccount ?? null,
       occupationalCategory: emp.occupationalCategory ?? null,
       employmentSector: emp.employmentSector ?? 'state',
       contractTerm: emp.contractTerm ?? 'indeterminate',
