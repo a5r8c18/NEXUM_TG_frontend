@@ -9,11 +9,12 @@ import {
   Department,
   VacationSubmayorRow,
   PayrollCncRow,
+  EmployerTaxesRow,
   AccreditationRow,
   StaffingRow,
 } from '../../../core/services/hr.service';
 
-type ReportTab = 'submayor' | 'empleados' | 'cnc' | 'acreditacion' | 'plantilla';
+type ReportTab = 'submayor' | 'empleados' | 'cnc' | 'impuestos' | 'acreditacion' | 'plantilla';
 
 @Component({
   selector: 'app-reports',
@@ -185,6 +186,34 @@ type ReportTab = 'submayor' | 'empleados' | 'cnc' | 'acreditacion' | 'plantilla'
             </tbody></table>
           }
 
+          @if (activeTab() === 'impuestos') {
+            <table class="w-full text-sm"><thead class="bg-slate-50 dark:bg-slate-900/50"><tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Empleado</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">CI</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Devengado Gravable</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Aporte Patronal SS (14%)</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Uso Fuerza de Trabajo (5%)</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Total Impuestos Empresariales</th>
+            </tr></thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+              @for (r of pagedEmployerTaxes(); track r.employeeName) {
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                  <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ r.employeeName }}</td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ r.documentId || '—' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.grossSalary | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.employerSocialSecurity | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right dark:text-slate-300">{{ r.laborForceTax | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ r.totalEmployerTaxes | number:'1.2-2' }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="px-4 py-16 text-center">
+                  <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No hay nóminas gravadas por impuestos empresariales en el período</p>
+                  <p class="text-xs text-slate-400 dark:text-slate-500">El reporte se alimenta de nóminas procesadas o pagadas con conceptos que generan tributos patronales</p>
+                </td></tr>
+              }
+            </tbody></table>
+          }
+
           @if (activeTab() === 'acreditacion') {
             <table class="w-full text-sm"><thead class="bg-slate-50 dark:bg-slate-900/50"><tr>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">CI</th>
@@ -250,6 +279,7 @@ export class ReportsComponent implements OnInit {
     { key: 'submayor', label: 'Submayor de Vacaciones' },
     { key: 'empleados', label: 'Listado de Empleados' },
     { key: 'cnc', label: 'Salario Devengado (SNC)' },
+    { key: 'impuestos', label: 'Descontado por Impuestos Empresariales' },
     { key: 'acreditacion', label: 'Fichero de Acreditación' },
     { key: 'plantilla', label: 'Plantilla Aprobada y Cubierta' },
   ];
@@ -258,6 +288,7 @@ export class ReportsComponent implements OnInit {
   submayorRows = signal<VacationSubmayorRow[]>([]);
   employees = signal<Employee[]>([]);
   cncRows = signal<PayrollCncRow[]>([]);
+  employerTaxesRows = signal<EmployerTaxesRow[]>([]);
   accreditationRows = signal<AccreditationRow[]>([]);
   staffingRows = signal<StaffingRow[]>([]);
   departments = signal<Department[]>([]);
@@ -300,6 +331,7 @@ export class ReportsComponent implements OnInit {
 
   filteredSubmayor = computed(() => this.byDepartment(this.submayorRows()));
   filteredCnc = computed(() => this.byDepartment(this.cncRows()));
+  filteredEmployerTaxes = computed(() => this.byDepartment(this.employerTaxesRows()));
   filteredAccreditation = computed(() => this.byDepartment(this.accreditationRows()));
   filteredStaffing = computed(() => {
     const id = this.filterDepartmentId();
@@ -313,6 +345,7 @@ export class ReportsComponent implements OnInit {
       case 'submayor': return this.filteredSubmayor();
       case 'empleados': return this.filteredEmployees();
       case 'cnc': return this.filteredCnc();
+      case 'impuestos': return this.filteredEmployerTaxes();
       case 'acreditacion': return this.filteredAccreditation();
       case 'plantilla': return this.filteredStaffing();
     }
@@ -326,6 +359,7 @@ export class ReportsComponent implements OnInit {
   pagedSubmayor = computed(() => this.paged(this.filteredSubmayor()));
   pagedEmployees = computed(() => this.paged(this.filteredEmployees()));
   pagedCnc = computed(() => this.paged(this.filteredCnc()));
+  pagedEmployerTaxes = computed(() => this.paged(this.filteredEmployerTaxes()));
   pagedAccreditation = computed(() => this.paged(this.filteredAccreditation()));
   pagedStaffing = computed(() => this.paged(this.filteredStaffing()));
 
@@ -370,11 +404,13 @@ export class ReportsComponent implements OnInit {
     forkJoin({
       submayor: this.hrService.getVacationSubmayor(this.filterPeriod),
       cnc: this.hrService.getPayrollCNC(this.filterPeriod),
+      employerTaxes: this.hrService.getEmployerTaxesReport(this.filterPeriod),
       accreditation: this.hrService.getAccreditationFile(this.filterPeriod),
     }).subscribe({
       next: (res) => {
         this.submayorRows.set(res.submayor || []);
         this.cncRows.set(res.cnc || []);
+        this.employerTaxesRows.set(res.employerTaxes || []);
         this.accreditationRows.set(res.accreditation || []);
         this.isLoading.set(false);
       },
@@ -456,6 +492,11 @@ export class ReportsComponent implements OnInit {
         return [
           ['Empleado', 'Devengado', 'Seg. Social (5%)', 'Ingresos Personales', 'Neto a Pagar'],
           this.filteredCnc().map((r) => [r.employeeName, money(r.grossSalary), money(r.socialSecurity), money(r.taxWithholding), money(r.netSalary)]),
+        ];
+      case 'impuestos':
+        return [
+          ['Empleado', 'CI', 'Devengado Gravable', 'Aporte Patronal SS (14%)', 'Uso Fuerza de Trabajo (5%)', 'Total Impuestos Empresariales'],
+          this.filteredEmployerTaxes().map((r) => [r.employeeName, r.documentId || '', money(r.grossSalary), money(r.employerSocialSecurity), money(r.laborForceTax), money(r.totalEmployerTaxes)]),
         ];
       case 'acreditacion':
         return [

@@ -132,6 +132,15 @@ export interface PayrollCncRow {
   netSalary: number;
 }
 
+export interface EmployerTaxesRow {
+  employeeName: string;
+  documentId: string | null;
+  grossSalary: number;
+  employerSocialSecurity: number;
+  laborForceTax: number;
+  totalEmployerTaxes: number;
+}
+
 export interface AccreditationRow {
   documentId: string | null;
   employeeName: string;
@@ -257,6 +266,10 @@ export class HrService {
 
   getPayrollCNC(period: string) {
     return this.http.get<PayrollCncRow[]>(`${this.baseUrl}/reports/payroll-cnc`, { params: { period } });
+  }
+
+  getEmployerTaxesReport(period: string) {
+    return this.http.get<EmployerTaxesRow[]>(`${this.baseUrl}/reports/employer-taxes`, { params: { period } });
   }
 
   getAccreditationFile(period: string) {
