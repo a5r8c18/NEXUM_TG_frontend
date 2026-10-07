@@ -1444,6 +1444,11 @@ export class PayrollComponent implements OnInit {
         ? Number((item._unitRate * item.paidUnits).toFixed(2))
         : Number(item.grossSalary) || 0;
       item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
+    } else if (this.detailPayroll()?.concept === 'vacaciones') {
+      // El disfrute también acumula (Art. 102): 9,09 % del importe pagado,
+      // igual que en el backend.
+      item.grossSalary = Number(item.grossSalary) || 0;
+      item.vacationProvision = Number((item.grossSalary * 0.0909).toFixed(2));
     } else {
       item.grossSalary = Number(item.grossSalary) || 0;
       item.vacationProvision = Number(item.vacationProvision) || 0;
