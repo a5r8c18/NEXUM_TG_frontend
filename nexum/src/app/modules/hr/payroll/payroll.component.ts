@@ -1561,11 +1561,10 @@ export class PayrollComponent implements OnInit {
     const specialSS = items.reduce((s: number, i: any) => s + Number(i.socialSecurity || 0), 0);
     const toPay = Number(payroll.totalNet || 0);
     const vacationAccumulated = items.reduce((s: number, i: any) => s + Number(i.vacationProvision || 0), 0);
-    // Los tributos patronales gravan toda remuneración devengada (salario,
-    // vacaciones, liquidación y libre); subsidio y maternidad son prestaciones
-    // sociales exentas. La base es solo el devengado del período: la provisión
-    // de vacaciones es un cargo a la reserva 492, no remuneración pagada.
-    const chargesEmployerTaxes = ['salario', 'vacaciones', 'liquidacion', 'libre', ...PayrollComponent.TIME_SUPPLEMENTS].includes(payroll.concept);
+    // Los tributos patronales solo gravan salario, libre y los suplementos de
+    // tiempo (horas extras, nocturnidad, feriado). Vacaciones, liquidación,
+    // subsidio y maternidad no generan aporte patronal ni UFT.
+    const chargesEmployerTaxes = ['salario', 'libre', ...PayrollComponent.TIME_SUPPLEMENTS].includes(payroll.concept);
     const round2 = (v: number) => Math.round(v * 100) / 100;
     let aporte125 = 0;
     let provisions15 = 0;
