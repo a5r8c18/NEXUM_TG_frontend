@@ -10,12 +10,14 @@ import { firstValueFrom } from 'rxjs';
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { NetworkStatusService } from '../../core/services/network-status.service';
 import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
+import { SyncStatusComponent } from '../../shared/components/sync-status/sync-status.component';
+import { ExchangeRatesComponent } from '../../shared/components/exchange-rates/exchange-rates.component';
 import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [DatePipe, ThemeToggleComponent],
+  imports: [DatePipe, ThemeToggleComponent, SyncStatusComponent, ExchangeRatesComponent],
   templateUrl: './header.component.html'
 })
 export class HeaderComponent implements OnInit, OnDestroy {

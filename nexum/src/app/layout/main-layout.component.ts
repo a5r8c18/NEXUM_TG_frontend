@@ -8,7 +8,6 @@ import { AuthService } from '../core/services/auth.service';
 import { RouterOutlet } from '@angular/router';
 import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/confirm-dialog.component';
 import { NetworkStatusComponent } from '../shared/components/network-status/network-status.component';
-import { SyncStatusComponent } from '../shared/components/sync-status/sync-status.component';
 import { ThemeService } from '../core/services/theme.service';
 import { OfflineSyncManagerService } from '../core/offline/offline-sync-manager.service';
 import { IdleTimeoutService } from '../core/services/idle-timeout.service';
@@ -16,7 +15,7 @@ import { IdleTimeoutService } from '../core/services/idle-timeout.service';
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, HeaderComponent, FooterComponent, RouterOutlet, ConfirmDialogComponent, NetworkStatusComponent, SyncStatusComponent],
+  imports: [CommonModule, SidebarComponent, HeaderComponent, FooterComponent, RouterOutlet, ConfirmDialogComponent, NetworkStatusComponent],
   templateUrl: './main-layout.component.html'
 })
 export class MainLayoutComponent implements OnInit {

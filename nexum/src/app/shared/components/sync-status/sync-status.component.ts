@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NetworkStatusService } from '../../../core/services/network-status.service';
 import { ConflictResolverService, ConflictItem, ConflictResolution } from '../../../core/offline/conflict-resolver.service';
@@ -10,11 +10,13 @@ import { SyncQueueService } from '../../../core/offline/sync-queue.service';
   standalone: true,
   imports: [CommonModule],
   template: `
+    <div class="relative">
     <!-- Sync Panel Toggle Button -->
     <button
       (click)="togglePanel()"
-      class="fixed bottom-16 right-4 z-40 flex items-center gap-2 px-3 py-2 rounded-full shadow-lg text-xs font-medium transition-all"
+      class="flex items-center gap-2 px-3 py-1.5 rounded-full shadow-sm text-xs font-medium transition-all"
       [class]="buttonClass"
+      [class.animate-pulse]="networkStatus.isSyncing()"
     >
       @if (networkStatus.isSyncing()) {
         <span class="animate-spin">&#x21bb;</span>
@@ -35,7 +37,7 @@ import { SyncQueueService } from '../../../core/offline/sync-queue.service';
 
     <!-- Sync Panel -->
     @if (isOpen()) {
-      <div class="fixed bottom-28 right-4 z-50 w-96 max-h-[70vh] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="absolute top-full left-0 mt-2 z-50 w-96 max-h-[70vh] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
         <!-- Header -->
         <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <h3 class="text-sm font-semibold text-slate-800">Estado de sincronización</h3>
@@ -131,6 +133,7 @@ import { SyncQueueService } from '../../../core/offline/sync-queue.service';
         </div>
       </div>
     }
+    </div>
   `
 })
 export class SyncStatusComponent implements OnInit {
@@ -168,6 +171,14 @@ export class SyncStatusComponent implements OnInit {
     this.isOpen.update(v => !v);
     if (this.isOpen()) {
       this.conflictResolver.loadConflicts();
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('app-sync-status') && this.isOpen()) {
+      this.isOpen.set(false);
     }
   }
 
