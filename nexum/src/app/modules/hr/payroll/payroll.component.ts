@@ -722,6 +722,7 @@ export class PayrollComponent implements OnInit {
     { value: 'liquidacion', label: 'Liquidación por terminación' },
     { value: 'horas_extras', label: 'Horas extras' },
     { value: 'nocturnidad', label: 'Nocturnidad' },
+    { value: 'guardia', label: 'Guardia' },
     { value: 'feriado', label: 'Días feriados' },
     { value: 'libre', label: 'Concepto libre' },
   ];
@@ -1242,9 +1243,10 @@ export class PayrollComponent implements OnInit {
       subsidio: 'Subsidio por enfermedad o accidente (Arts. 39-46): se calcula con el salario promedio, la carencia y el origen de la incapacidad. Se carga a la provisión 500.',
       maternidad: 'Licencia de maternidad (DL 56/2021): indique los días y el importe de la prestación correspondiente.',
       liquidacion: 'Paga todo el saldo de vacaciones acumulado del trabajador que causa baja (Art. 52). Se carga a la provisión 492.',
-      horas_extras: 'Trabajo extraordinario (Art. 122 Ley 116): horas × tarifa horaria (salario ÷ 190,6 o la del cargo) × el recargo pactado en la ficha. Carga a gasto y acumula vacaciones.',
-      nocturnidad: 'Pago adicional por turno nocturno (Res. 17/2025 MTSS): horas de cada banda × la tarifa en CUP/h fijada por la entidad.',
-      feriado: 'Feriado trabajado (Art. 111.c Ley 116): se paga doble; el salario del mes ya cubre una vez esas horas, esta nómina paga el adicional (horas × tarifa horaria).',
+      horas_extras: 'Trabajo extraordinario (Art. 122 Ley 116): horas × tarifa horaria (salario ÷ 190,6 o la del cargo) × el recargo pactado en la ficha. Carga a gasto y no acumula vacaciones.',
+      nocturnidad: 'Pago adicional por turno nocturno (Res. 17/2025 MTSS): horas de cada banda × la tarifa en CUP/h fijada por la entidad. No acumula vacaciones.',
+      guardia: 'Pago por guardia: defina empleado e importe bruto. Carga a gasto, grava impuestos empresariales y no acumula vacaciones.',
+      feriado: 'Feriado trabajado (Art. 111.c Ley 116): se paga doble; el salario del mes ya cubre una vez esas horas, esta nómina paga el adicional (horas × tarifa horaria). Acumula solo importe de vacaciones.',
       libre: 'Nómina de concepto libre: defina manualmente empleado, importe y descripción de cada línea.',
     };
     return hints[this.genForm.concept] || '';
@@ -1561,10 +1563,10 @@ export class PayrollComponent implements OnInit {
     const specialSS = items.reduce((s: number, i: any) => s + Number(i.socialSecurity || 0), 0);
     const toPay = Number(payroll.totalNet || 0);
     const vacationAccumulated = items.reduce((s: number, i: any) => s + Number(i.vacationProvision || 0), 0);
-    // Los tributos patronales solo gravan salario, libre y los suplementos de
-    // tiempo (horas extras, nocturnidad, feriado). Vacaciones, liquidación,
+    // Los tributos patronales gravan salario, libre, guardia y los suplementos
+    // de tiempo (horas extras, nocturnidad, feriado). Vacaciones, liquidación,
     // subsidio y maternidad no generan aporte patronal ni UFT.
-    const chargesEmployerTaxes = ['salario', 'libre', ...PayrollComponent.TIME_SUPPLEMENTS].includes(payroll.concept);
+    const chargesEmployerTaxes = ['salario', 'libre', 'guardia', ...PayrollComponent.TIME_SUPPLEMENTS].includes(payroll.concept);
     const round2 = (v: number) => Math.round(v * 100) / 100;
     let aporte125 = 0;
     let provisions15 = 0;
@@ -1572,9 +1574,11 @@ export class PayrollComponent implements OnInit {
     if (chargesEmployerTaxes) {
       for (const i of items) {
         const gross = Number(i.grossSalary || 0);
-        aporte125 += round2(gross * 0.125);
-        provisions15 += Number(i.subsidyRetention || 0) || round2(gross * 0.015);
-        laborForceTax5 += round2(gross * 0.05);
+        const vacationProvision = Number(i.vacationProvision || 0);
+        const base = round2(gross + vacationProvision);
+        aporte125 += round2(base * 0.125);
+        provisions15 += round2(base * 0.015);
+        laborForceTax5 += round2(base * 0.05);
       }
     }
     return {
@@ -1628,6 +1632,7 @@ export class PayrollComponent implements OnInit {
       maternidad: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
       horas_extras: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
       nocturnidad: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400',
+      guardia: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
       feriado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
       liquidacion: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
       libre: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
