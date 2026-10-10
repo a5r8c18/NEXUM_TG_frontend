@@ -213,7 +213,7 @@ export class SidebarComponent {
       ]
     },
     {
-      icon: 'FileText',
+      icon: 'BarChart3',
       label: 'Reportes',
       route: '/accounting/reports',
       hasSubmenu: true,
