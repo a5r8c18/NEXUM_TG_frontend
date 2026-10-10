@@ -1,6 +1,7 @@
 import { Component, inject, signal, HostListener, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import {
   AccountingService,
@@ -41,6 +42,8 @@ export interface GeneratedReport {
   templateUrl: './reports.template.html',
 })
 export class ReportsComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+
   constructor(
     private accountingService: AccountingService,
     private confirmDialog: ConfirmDialogService,
@@ -53,6 +56,14 @@ export class ReportsComponent implements OnInit {
 
   ngOnInit() {
     this.loadReports();
+    // /accounting/reports/:tab — cada informe es un submódulo con su ruta
+    const validTabs = ['trial-balance', 'balance-sheet', 'income-statement', 'expense-breakdown'] as const;
+    this.route.paramMap.subscribe((params) => {
+      const tab = params.get('tab');
+      if (tab && (validTabs as readonly string[]).includes(tab)) {
+        this.activeTab.set(tab as (typeof validTabs)[number]);
+      }
+    });
   }
 
   private loadReports() {
@@ -83,6 +94,13 @@ export class ReportsComponent implements OnInit {
 
   // Active tab
   activeTab = signal<'trial-balance' | 'balance-sheet' | 'income-statement' | 'expense-breakdown'>('trial-balance');
+
+  // Documentos fiscales pendientes de implementar (obtención de datos y exportación a Excel)
+  readonly upcomingDocuments = [
+    { code: 'DJ-08', description: 'Declaración Jurada del Impuesto sobre Fuerza de Trabajo' },
+    { code: 'DJ-01', description: 'Declaración Jurada del Impuesto sobre Ingresos Personales' },
+    { code: 'DJ de Dividendos', description: 'Declaración Jurada de Dividendos' },
+  ];
 
   // Shared filter signals
   includeDraftEntries = signal(false);

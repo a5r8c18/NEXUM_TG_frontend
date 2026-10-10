@@ -213,7 +213,22 @@ export class SidebarComponent {
         { icon: 'FileText', label: 'Facturas', route: '/billing/invoices' }
       ]
     },
-    { icon: 'Mail', label: 'Mensajes', route: '/messages' }
+    {
+      icon: 'FileText',
+      label: 'Reportes',
+      route: '/accounting/reports',
+      hasSubmenu: true,
+      isExpanded: false,
+      submenu: [
+        { icon: 'FileText', label: 'Balance de Comprobación', route: '/accounting/reports/trial-balance' },
+        { icon: 'FileText', label: 'Estado de Situación', route: '/accounting/reports/balance-sheet' },
+        { icon: 'FileText', label: 'Estado de Rendimiento', route: '/accounting/reports/income-statement' },
+        { icon: 'FileText', label: 'Gastos por Subelementos', route: '/accounting/reports/expense-breakdown' },
+        { icon: 'FileText', label: 'DJ-08', route: '#', isComingSoon: true },
+        { icon: 'FileText', label: 'DJ-01', route: '#', isComingSoon: true },
+        { icon: 'FileText', label: 'DJ de Dividendos', route: '#', isComingSoon: true },
+      ]
+    }
   ];
 
   toggleSidebar(): void {

@@ -204,6 +204,10 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/accounting/submodules/reports/reports.component').then(m => m.ReportsComponent)
       },
       {
+        path: 'accounting/reports/:tab',
+        loadComponent: () => import('./modules/accounting/submodules/reports/reports.component').then(m => m.ReportsComponent)
+      },
+      {
         path: 'accounting/accounts',
         loadComponent: () => import('./modules/accounting/submodules/accounts/accounts.component').then(m => m.AccountsComponent)
       },
