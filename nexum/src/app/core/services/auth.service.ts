@@ -395,10 +395,13 @@ export class AuthService {
         return user.companies;
       }
 
-      // Otherwise fetch from API
-      return await firstValueFrom(
+      // Otherwise fetch from API. The endpoint returns UserCompany rows
+      // ({ company: {...} }) — normalize to plain Company objects for the
+      // switcher.
+      const rows = await firstValueFrom(
         this.http.get<any[]>(`${this.apiUrl}/users/${user.id}/companies`)
       );
+      return (rows || []).map((row) => row.company ?? row);
     } catch (error) {
       console.error('Error fetching user companies:', error);
       return [];
