@@ -47,6 +47,10 @@ export class FinanceService {
     return this.http.get(`${this.apiUrl}/finance/payables`, { params });
   }
 
+  getPayable(id: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/payables/${id}`);
+  }
+
   getPayableStats(): Observable<any> {
     return this.http.get(`${this.apiUrl}/finance/payables/statistics`);
   }

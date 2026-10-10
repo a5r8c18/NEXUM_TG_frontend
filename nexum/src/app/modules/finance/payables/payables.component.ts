@@ -33,7 +33,9 @@ export class PayablesComponent implements OnInit, OnDestroy {
   isCreateOpen = signal(false);
   isEditOpen = signal(false);
   isPaymentOpen = signal(false);
+  isViewOpen = signal(false);
   selectedPayable = signal<any>(null);
+  viewPayable = signal<any>(null);
   formError = signal('');
 
   newPayable: any = { supplierName: '', supplierId: '', originalAmount: 0, dueDate: '', description: '' };
@@ -161,6 +163,23 @@ export class PayablesComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear cuenta por pagar'),
     });
+  }
+
+  openView(payable: any): void {
+    this.viewPayable.set(null);
+    this.isViewOpen.set(true);
+    this.financeService.getPayable(payable.id).subscribe({
+      next: (data: any) => this.viewPayable.set(data),
+      error: () => {
+        this.isViewOpen.set(false);
+        this.showToast('Error al cargar el detalle de la cuenta por pagar', 'error');
+      },
+    });
+  }
+
+  closeView(): void {
+    this.isViewOpen.set(false);
+    this.viewPayable.set(null);
   }
 
   openEdit(payable: any): void {

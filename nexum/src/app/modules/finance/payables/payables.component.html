@@ -88,6 +88,7 @@
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Pagado</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
               <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Vencimiento</th>
+              <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Creada</th>
               <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
               <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
             </tr>
@@ -104,10 +105,12 @@
                 <td class="px-4 py-3 text-right text-green-600 dark:text-green-400">{{ formatCurrency(ap.paidAmount) }}</td>
                 <td class="px-4 py-3 text-right font-semibold dark:text-white">{{ formatCurrency(ap.balanceAmount) }}</td>
                 <td class="px-4 py-3 text-center dark:text-slate-300">{{ formatDate(ap.dueDate) }}</td>
+                <td class="px-4 py-3 text-center dark:text-slate-300">{{ formatDate(ap.createdAt) }}</td>
                 <td class="px-4 py-3 text-center">
                   <span [class]="getStatusClass(ap.status)" class="px-2 py-1 rounded-full text-xs font-medium">{{ getStatusLabel(ap.status) }}</span>
                 </td>
                 <td class="px-4 py-3 text-center">
+                  <button (click)="openView(ap)" class="text-slate-600 hover:text-slate-700 mr-2 text-sm">Ver</button>
                   <button (click)="openEdit(ap)" class="text-blue-600 hover:text-blue-700 mr-2 text-sm">Editar</button>
                   @if (ap.status !== 'paid') {
                     <button (click)="openPaymentModal(ap)" class="text-green-600 hover:text-green-700 mr-2 text-sm">Liquidar</button>
@@ -115,7 +118,7 @@
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay cuentas por pagar</td></tr>
+              <tr><td colspan="9" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay cuentas por pagar</td></tr>
             }
           </tbody>
         </table>
@@ -126,6 +129,66 @@
   <!-- Paginación -->
   @if (paginationConfig().totalPages > 1) {
     <app-pagination [config]="paginationConfig()" (pageChange)="onPageChange($event)"></app-pagination>
+  }
+
+  <!-- Modal Ver detalle -->
+  @if (isViewOpen()) {
+    <app-modal [isOpen]="isViewOpen()" [title]="'Detalle Cuenta por Pagar'" [confirmText]="'Cerrar'" (closeEvent)="closeView()" (confirmEvent)="closeView()">
+      @if (!viewPayable()) {
+        <div class="flex justify-center py-8 text-sm text-slate-500">Cargando detalle...</div>
+      } @else {
+        <div class="space-y-4 text-sm">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+            <p><span class="font-medium">No.:</span> {{ viewPayable().apNumber }}</p>
+            <p><span class="font-medium">Proveedor:</span> {{ viewPayable().supplierName }}</p>
+            <p><span class="font-medium">Factura:</span> {{ viewPayable().invoiceNumber || '-' }}</p>
+            <p><span class="font-medium">Cuenta:</span> {{ viewPayable().accountCode || '-' }}</p>
+            <p><span class="font-medium">Monto:</span> {{ formatCurrency(viewPayable().originalAmount) }}</p>
+            <p><span class="font-medium">Saldo:</span> {{ formatCurrency(viewPayable().balanceAmount) }}</p>
+            <p><span class="font-medium">Fecha factura:</span> {{ formatDate(viewPayable().invoiceDate) }}</p>
+            <p><span class="font-medium">Vencimiento:</span> {{ formatDate(viewPayable().dueDate) }}</p>
+            <p><span class="font-medium">Creada:</span> {{ formatDate(viewPayable().createdAt) }}</p>
+            <p><span class="font-medium">Estado:</span> {{ getStatusLabel(viewPayable().status) }}</p>
+          </div>
+
+          @if (viewPayable().vouchers?.length) {
+            <div>
+              <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-2">Comprobante(s) contable(s)</h4>
+              @for (v of viewPayable().vouchers; track v.id) {
+                <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden mb-3">
+                  <div class="px-3 py-2 bg-slate-50 dark:bg-slate-900/50 flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                    <span class="font-mono font-semibold">{{ v.voucherNumber }}</span>
+                    <span>{{ formatDate(v.date) }}</span>
+                  </div>
+                  <table class="w-full text-xs">
+                    <thead class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                      <tr>
+                        <th class="text-left px-3 py-1.5">Cuenta</th>
+                        <th class="text-left px-3 py-1.5">Subcuenta</th>
+                        <th class="text-right px-3 py-1.5">Debe</th>
+                        <th class="text-right px-3 py-1.5">Haber</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (l of v.lines || []; track l.id) {
+                        <tr class="border-t border-slate-100 dark:border-slate-700/50">
+                          <td class="px-3 py-1.5">{{ l.accountCode }} {{ l.accountName }}</td>
+                          <td class="px-3 py-1.5">{{ l.subaccountCode ? l.subaccountCode + ' ' + (l.subaccountName || '') : '-' }}</td>
+                          <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.debit) }}</td>
+                          <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.credit) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="text-xs text-slate-500">Sin comprobante contable asociado (la obligación no generó asiento propio).</p>
+          }
+        </div>
+      }
+    </app-modal>
   }
 
   <!-- Modal Crear -->
