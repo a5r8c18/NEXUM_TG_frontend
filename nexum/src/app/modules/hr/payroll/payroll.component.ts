@@ -256,33 +256,9 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
               </div>
             }
 
-            <!-- Pagos adicionales por horas: horas extra, nocturnidad y feriado -->
+            <!-- Pagos adicionales: horas extra, nocturnidad, feriado y guardia — importe manual -->
             @if (isTimeSupplement()) {
               <div class="space-y-2">
-                @if (genForm.concept === 'nocturnidad') {
-                  <div class="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 space-y-2">
-                    <div class="flex items-center justify-between">
-                      <p class="text-xs text-slate-600">
-                        Tarifas: 7-11 pm <span class="font-semibold">{{ nightRate('evening') | number:'1.2-2' }}</span> CUP/h ·
-                        11 pm-7 am <span class="font-semibold">{{ nightRate('night') | number:'1.2-2' }}</span> CUP/h
-                      </p>
-                      <button (click)="toggleNightShiftEdit()" class="text-blue-600 text-xs hover:underline">
-                        {{ nightShiftEdit() ? 'Cerrar' : 'Configurar tarifas' }}
-                      </button>
-                    </div>
-                    @if (nightShiftEdit(); as rates) {
-                      <div class="grid grid-cols-[1fr_6rem] gap-x-3 gap-y-2 items-center">
-                        <span class="text-xs text-slate-600">7:00 pm – 11:00 pm (0,60 – 1,20)</span>
-                        <input type="number" step="0.01" min="0.6" max="1.2" [(ngModel)]="rates.evening"
-                               class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                        <span class="text-xs text-slate-600">11:00 pm – 7:00 am (1,15 – 2,30)</span>
-                        <input type="number" step="0.01" min="1.15" max="2.3" [(ngModel)]="rates.night"
-                               class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                        <button (click)="saveNightShiftRates()" class="col-span-2 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Guardar tarifas</button>
-                      </div>
-                    }
-                  </div>
-                }
                 <div class="flex items-center justify-between gap-2">
                   <label class="text-xs font-medium text-slate-600">Trabajadores <span class="text-red-500">*</span></label>
                   <input type="text" [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)"
@@ -304,27 +280,22 @@ import { PaginationComponent, PaginationConfig } from '../../../shared/component
                       <div class="grid gap-x-3 items-center rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2" [class]="supplementGrid()">
                         <div class="min-w-0">
                           <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{{ employeeLabel(item.employeeId) }}</p>
-                          @if (genForm.concept !== 'nocturnidad') {
-                            <p class="text-[10px] text-slate-400">
-                              {{ hourlyRateOf(item.employeeId) | number:'1.2-4' }}/h
-                              @if (genForm.concept === 'horas_extras' && overtimeMultiplier(item.employeeId) !== 1) { × {{ overtimeMultiplier(item.employeeId) }} }
-                            </p>
-                          }
                         </div>
-                        <input type="number" min="0" step="any" [(ngModel)]="item.hours" (ngModelChange)="updateSupplement($index)"
+                        <input type="number" min="0" step="any" [(ngModel)]="item.hours"
                                class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                         @if (genForm.concept === 'nocturnidad') {
-                          <input type="number" min="0" step="any" [(ngModel)]="item.nightHours" (ngModelChange)="updateSupplement($index)"
+                          <input type="number" min="0" step="any" [(ngModel)]="item.nightHours"
                                  class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                         }
-                        <span class="text-sm text-right tabular-nums text-slate-700 dark:text-slate-200">{{ item.grossSalary | number:'1.2-2' }}</span>
+                        <input type="number" min="0" step="any" [(ngModel)]="item.grossSalary"
+                               class="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                       </div>
                     }
                   } @empty {
                     <p class="text-xs text-slate-400 px-3 py-4 text-center">No hay trabajadores activos</p>
                   }
                 </div>
-                <p class="text-[11px] text-slate-400">El importe lo recalcula el servidor al generar. Los trabajadores sin horas se omiten.</p>
+                <p class="text-[11px] text-slate-400">Indique las horas y el importe de cada trabajador; no se realizan cálculos automáticos. Líneas sin horas ni importe se omiten.</p>
               </div>
             }
 
@@ -727,7 +698,7 @@ export class PayrollComponent implements OnInit {
     { value: 'libre', label: 'Concepto libre' },
   ];
 
-  private static readonly TIME_SUPPLEMENTS = ['horas_extras', 'nocturnidad', 'feriado'];
+  private static readonly TIME_SUPPLEMENTS = ['horas_extras', 'nocturnidad', 'feriado', 'guardia'];
   private static readonly SINGLE_WORKER = ['vacaciones', 'subsidio', 'maternidad', 'liquidacion'];
   private static readonly HOURS_PER_WORKDAY = 190.6 / 24;
   employees = signal<Employee[]>([]);
@@ -758,7 +729,6 @@ export class PayrollComponent implements OnInit {
 
   /** Catálogo del backend: conceptos y tarifas de nocturnidad de la empresa. */
   catalog = signal<any>(null);
-  nightShiftEdit = signal<{ evening: number; night: number } | null>(null);
   private previewTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Últimos 12 meses naturales, para no depender de períodos escritos a mano. */
@@ -860,7 +830,6 @@ export class PayrollComponent implements OnInit {
     this.freeItems = [];
     this.manualItems = [];
     this.employeeSearch.set('');
-    this.nightShiftEdit.set(null);
     this.showGenerate.set(true);
     // Todas las fichas, no solo las activas: la liquidación se genera para el
     // trabajador que causó baja.
@@ -882,7 +851,6 @@ export class PayrollComponent implements OnInit {
         if (Array.isArray(c?.concepts) && c.concepts.length) {
           this.concepts = c.concepts.map((x: any) => ({ value: x.value, label: x.label }));
         }
-        if (this.isTimeSupplement()) this.recalcSupplements();
       },
       error: () => { /* se usa la lista estática de conceptos */ },
     });
@@ -897,7 +865,6 @@ export class PayrollComponent implements OnInit {
     this.employeeSearch.set('');
     this.workerInput.set('');
     this.workerPickOpen.set(false);
-    this.nightShiftEdit.set(null);
     if (this.isTimeSupplement()) {
       // Pagos adicionales: todos los trabajadores activos, sin horas; solo
       // se generan las líneas a las que se les indique tiempo.
@@ -1026,72 +993,6 @@ export class PayrollComponent implements OnInit {
       line.rate = 0;
     }
     this.schedulePreview();
-  }
-
-  /** Tarifa horaria: salario / 190,6, o la del cargo convertida a horas. */
-  hourlyRateOf(employeeId: string): number {
-    const e = this.selectedEmployee(employeeId);
-    if (!e) return 0;
-    const salary = Number(e.salary || 0);
-    if (salary > 0) return salary / 190.6;
-    const rate = Number(e.salaryRate || 0);
-    return e.salaryUnit === 'día' ? rate / PayrollComponent.HOURS_PER_WORKDAY : rate;
-  }
-
-  overtimeMultiplier(employeeId: string): number {
-    return Number(this.selectedEmployee(employeeId)?.overtimeRate || 1) || 1;
-  }
-
-  nightRate(band: 'evening' | 'night'): number {
-    const rates = this.catalog()?.nightShift?.rates || {};
-    return Number(band === 'night' ? rates.night ?? 1.15 : rates.evening ?? 0.6);
-  }
-
-  /** Mismo cálculo que el servidor; el importe definitivo lo fija él. */
-  updateSupplement(index: number) {
-    const line = this.manualItems[index];
-    if (!line) return;
-    const hours = Math.max(0, Number(line.hours || 0));
-    const round2 = (v: number) => Math.round(v * 100) / 100;
-    if (this.genForm.concept === 'nocturnidad') {
-      const nightHours = Math.max(0, Number(line.nightHours || 0));
-      line.grossSalary = round2(hours * this.nightRate('evening') + nightHours * this.nightRate('night'));
-      return;
-    }
-    const multiplier =
-      this.genForm.concept === 'horas_extras' ? this.overtimeMultiplier(line.employeeId) : 1;
-    line.grossSalary = round2(hours * this.hourlyRateOf(line.employeeId) * multiplier);
-  }
-
-  private recalcSupplements() {
-    for (let i = 0; i < this.manualItems.length; i++) this.updateSupplement(i);
-  }
-
-  toggleNightShiftEdit() {
-    this.nightShiftEdit.set(
-      this.nightShiftEdit()
-        ? null
-        : { evening: this.nightRate('evening'), night: this.nightRate('night') },
-    );
-  }
-
-  saveNightShiftRates() {
-    const rates = this.nightShiftEdit();
-    if (!rates) return;
-    this.payrollService
-      .updateNightShiftRates({
-        nightShiftRateEvening: Number(rates.evening),
-        nightShiftRateNight: Number(rates.night),
-      })
-      .subscribe({
-        next: () => {
-          this.showToast('Tarifas de nocturnidad actualizadas', 'success');
-          this.nightShiftEdit.set(null);
-          this.loadCatalog();
-        },
-        error: (err) =>
-          this.showToast(err?.error?.message || 'Error al guardar las tarifas', 'error'),
-      });
   }
 
   selectedEmployee(id: string): Employee | undefined {
@@ -1243,10 +1144,10 @@ export class PayrollComponent implements OnInit {
       subsidio: 'Subsidio por enfermedad o accidente (Arts. 39-46): se calcula con el salario promedio, la carencia y el origen de la incapacidad. Se carga a la provisión 500.',
       maternidad: 'Licencia de maternidad (DL 56/2021): indique los días y el importe de la prestación correspondiente.',
       liquidacion: 'Paga todo el saldo de vacaciones acumulado del trabajador que causa baja (Art. 52). Se carga a la provisión 492.',
-      horas_extras: 'Trabajo extraordinario (Art. 122 Ley 116): horas × tarifa horaria (salario ÷ 190,6 o la del cargo) × el recargo pactado en la ficha. Carga a gasto y no acumula vacaciones.',
-      nocturnidad: 'Pago adicional por turno nocturno (Res. 17/2025 MTSS): horas de cada banda × la tarifa en CUP/h fijada por la entidad. No acumula vacaciones.',
-      guardia: 'Pago por guardia: defina empleado e importe bruto. Carga a gasto, grava impuestos empresariales y no acumula vacaciones.',
-      feriado: 'Feriado trabajado (Art. 111.c Ley 116): se paga doble; el salario del mes ya cubre una vez esas horas, esta nómina paga el adicional (horas × tarifa horaria). Acumula solo importe de vacaciones.',
+      horas_extras: 'Trabajo extraordinario (Art. 122 Ley 116): indique las horas y el importe a pagar a cada trabajador. Carga a gasto y no acumula vacaciones.',
+      nocturnidad: 'Pago adicional por turno nocturno: indique las horas de cada banda y el importe a pagar. No acumula vacaciones.',
+      guardia: 'Pago por guardia: indique las horas y el importe bruto de cada trabajador. Carga a gasto, grava impuestos empresariales y no acumula vacaciones.',
+      feriado: 'Feriado o día festivo/conmemorativo trabajado: indique las horas y el importe adicional a pagar. Acumula solo importe de vacaciones (Art. 102).',
       libre: 'Nómina de concepto libre: defina manualmente empleado, importe y descripción de cada línea.',
     };
     return hints[this.genForm.concept] || '';
@@ -1300,13 +1201,15 @@ export class PayrollComponent implements OnInit {
       request = this.payrollService.generateFree({ ...this.genForm, items });
     } else {
       // La liquidación no lleva unidades: paga todo el saldo del trabajador.
-      // En los pagos adicionales solo cuentan las líneas con horas.
+      // En los pagos adicionales cuentan las líneas con horas o importe.
       const supplement = this.isTimeSupplement();
       const lines = this.manualItems.filter(
         (i) =>
           i.employeeId &&
           (supplement
-            ? Number(i.hours) > 0 || Number(i.nightHours) > 0
+            ? Number(i.hours) > 0 ||
+              Number(i.nightHours) > 0 ||
+              Number(i.grossSalary) > 0
             : Number(i.days) > 0 ||
               Number(i.hours) > 0 ||
               Number(i.grossSalary) > 0 ||
@@ -1317,7 +1220,7 @@ export class PayrollComponent implements OnInit {
           this.genForm.concept === 'liquidacion'
             ? 'Seleccione el trabajador a liquidar'
             : supplement
-              ? 'Indique las horas de al menos un trabajador'
+              ? 'Indique horas o importe de al menos un trabajador'
               : 'Indique trabajador y unidades o importe',
           'error',
         );
