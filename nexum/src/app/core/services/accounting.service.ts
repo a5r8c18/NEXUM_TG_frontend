@@ -325,6 +325,17 @@ export class AccountingService {
     return this.http.post<Account>(`${this.baseUrl}/accounts`, data);
   }
 
+  seedChartOfAccounts(type: 'state' | 'non-state' = 'state') {
+    return this.http.post<{
+      existing: number;
+      toInsert: number;
+      toUpdate: number;
+      totalInSeed: number;
+      inserted: number;
+      updated: number;
+    }>(`${this.baseUrl}/accounts/seed-2016`, { type });
+  }
+
   createSubaccount(data: {
     accountId: string;
     subaccountCode: string;

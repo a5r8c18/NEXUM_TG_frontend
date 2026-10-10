@@ -53,6 +53,22 @@
           </svg>
         </button>
       </div>
+      <div class="relative">
+        <button (click)="showSeedMenu.set(!showSeedMenu())"
+           [disabled]="seedingPlan()"
+           class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          {{ seedingPlan() ? 'Cargando...' : 'Cargar plan 2016' }}
+        </button>
+        @if (showSeedMenu()) {
+          <div class="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-slate-200 shadow-lg z-20 py-1">
+            <button (click)="seedPlan2016('state')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Empresa estatal</button>
+            <button (click)="seedPlan2016('non-state')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Empresa no estatal</button>
+          </div>
+        }
+      </div>
       <button (click)="openCreateModal()"
          class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

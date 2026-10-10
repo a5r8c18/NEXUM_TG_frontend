@@ -66,6 +66,10 @@ export class AccountsComponent implements OnInit {
   showViewModal = signal(false);
   selectedAccount = signal<Account | null>(null);
 
+  // Chart of accounts 2016 seed
+  showSeedMenu = signal(false);
+  seedingPlan = signal(false);
+
   // Subaccount modals
   showSubaccountCreateModal = signal(false);
   showSubaccountEditModal = signal(false);
@@ -104,6 +108,31 @@ export class AccountsComponent implements OnInit {
     this.setupDebouncedSearch();
     this.loadAccounts();
     this.loadStatistics();
+  }
+
+  async seedPlan2016(type: 'state' | 'non-state') {
+    this.showSeedMenu.set(false);
+    const ok = await this.confirmDialog.confirm({
+      title: 'Cargar plan de cuentas 2016',
+      message: `Se cargará el plan de cuentas cubano 2016 para empresa ${type === 'state' ? 'estatal' : 'no estatal'}. Las cuentas existentes no se duplican. ¿Continuar?`,
+      confirmText: 'Cargar',
+      cancelText: 'Cancelar',
+      type: 'info',
+    });
+    if (!ok) return;
+    this.seedingPlan.set(true);
+    this.accountingService.seedChartOfAccounts(type).subscribe({
+      next: (r) => {
+        this.seedingPlan.set(false);
+        this.showToast(`Plan cargado: ${r.inserted} cuentas nuevas, ${r.updated} actualizadas.`, 'success');
+        this.loadAccounts();
+        this.loadStatistics();
+      },
+      error: (err) => {
+        this.seedingPlan.set(false);
+        this.showToast(err?.error?.message || 'Error cargando el plan de cuentas', 'error');
+      },
+    });
   }
 
   private setupDebouncedSearch() {
