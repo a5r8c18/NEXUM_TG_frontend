@@ -95,6 +95,15 @@ export class ReportsComponent implements OnInit {
   // Active tab
   activeTab = signal<'trial-balance' | 'balance-sheet' | 'income-statement' | 'expense-breakdown'>('trial-balance');
 
+  private readonly reportTitles: Record<string, string> = {
+    'trial-balance': 'Balance de Comprobación',
+    'balance-sheet': 'Estado de Situación',
+    'income-statement': 'Estado de Rendimiento',
+    'expense-breakdown': 'Gastos por Subelementos',
+  };
+
+  activeReportTitle = computed(() => this.reportTitles[this.activeTab()] ?? 'Informes Contables');
+
   // Documentos fiscales pendientes de implementar (obtención de datos y exportación a Excel)
   readonly upcomingDocuments = [
     { code: 'DJ-08', description: 'Declaración Jurada del Impuesto sobre Fuerza de Trabajo' },

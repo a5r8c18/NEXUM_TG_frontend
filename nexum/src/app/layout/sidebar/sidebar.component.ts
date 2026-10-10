@@ -128,7 +128,6 @@ export class SidebarComponent {
       hasSubmenu: true,
       isExpanded: false,
       submenu: [
-        { icon: 'FileText', label: 'Informes', route: '/accounting/reports' },
         { icon: 'List', label: 'Cuentas', route: '/accounting/accounts' },
         { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
         { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' },

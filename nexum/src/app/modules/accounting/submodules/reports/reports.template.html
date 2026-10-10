@@ -23,8 +23,8 @@
       </svg>
     </div>
     <div>
-      <h2 class="text-xl font-semibold text-slate-800">Informes Contables</h2>
-      <p class="text-xs text-slate-500">Generación y gestión de informes financieros</p>
+      <h2 class="text-xl font-semibold text-slate-800">{{ activeReportTitle() }}</h2>
+      <p class="text-xs text-slate-500">Generación y gestión del informe</p>
     </div>
   </div>
 
@@ -32,16 +32,12 @@
   <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/50 p-4 mb-6">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       
-      <!-- Tipo de Informe -->
+      <!-- Informe actual (fijado por el submódulo de Reportes) -->
       <div class="space-y-2">
-        <label class="text-xs font-medium text-slate-600">Tipo de Informe</label>
-        <select [value]="activeTab()" (change)="activeTab.set($any($event.target).value)"
-                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-          <option value="trial-balance">Balance de Comprobación</option>
-          <option value="balance-sheet">Estado de Situación</option>
-          <option value="income-statement">Estado de Rendimiento</option>
-          <option value="expense-breakdown">Gastos por Subelementos</option>
-        </select>
+        <label class="text-xs font-medium text-slate-600">Informe</label>
+        <div class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-medium text-slate-700">
+          {{ activeReportTitle() }}
+        </div>
       </div>
 
       <!-- Año -->
