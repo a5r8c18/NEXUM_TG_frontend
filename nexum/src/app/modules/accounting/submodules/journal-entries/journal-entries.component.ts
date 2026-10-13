@@ -266,10 +266,10 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   loadAccounts() {
-    this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true', level: '3' }).subscribe({
+    // Cargar cuentas postables de los grupos I, II y III (level 2 y 3)
+    this.accountingService.getAccounts({ activeOnly: 'true', allowsMovements: 'true' }).subscribe({
       next: (data) => {
-        // El backend ya filtra por level=3, pero mantenemos el filtro por seguridad
-        const accountsOnly = data.filter(acc => acc.level === 3);
+        const accountsOnly = data.filter(acc => acc.level <= 3);
         this.accounts.set(accountsOnly);
       },
       error: () => {},
@@ -401,9 +401,12 @@ export class JournalEntriesComponent implements OnInit {
     this.showModal.set(true);
   }
 
+  isManual(comprobante: Voucher): boolean {
+    return !comprobante.sourceModule || comprobante.sourceModule === 'manual';
+  }
+
   canEdit(comprobante: Voucher): boolean {
-    const isManual = !comprobante.sourceModule || comprobante.sourceModule === 'manual';
-    return isManual && comprobante.status === 'draft';
+    return this.isManual(comprobante) && comprobante.status === 'draft';
   }
 
   editComprobante(comprobante: Voucher) {
@@ -605,13 +608,17 @@ export class JournalEntriesComponent implements OnInit {
   hasPostableSelected(): boolean {
     const ids = this.selectedIds();
     if (ids.size === 0) return false;
-    return this.comprobantes().every((c) => !ids.has(c.id) || c.status === 'draft');
+    return this.comprobantes().every(
+      (c) => !ids.has(c.id) || (this.isManual(c) && c.status === 'draft')
+    );
   }
 
   hasCancellableSelected(): boolean {
     const ids = this.selectedIds();
     if (ids.size === 0) return false;
-    return this.comprobantes().every((c) => !ids.has(c.id) || c.status === 'draft' || c.status === 'posted');
+    return this.comprobantes().every(
+      (c) => !ids.has(c.id) || (this.isManual(c) && c.status === 'posted')
+    );
   }
 
   async batchPost() {
@@ -640,15 +647,27 @@ export class JournalEntriesComponent implements OnInit {
   async batchCancel() {
     const ids = Array.from(this.selectedIds());
     if (ids.length === 0) return;
+
+    // Solo se pueden anular en lote comprobantes manuales contabilizados
+    const eligible = this.comprobantes().filter(
+      c => ids.includes(c.id) && this.isManual(c) && c.status === 'posted'
+    );
+    const eligibleIds = eligible.map(c => c.id);
+
+    if (eligibleIds.length === 0) {
+      this.showToast('No hay comprobantes manuales contabilizados seleccionados para anular', 'info');
+      return;
+    }
+
     const confirmed = await this.confirmDialog.confirm({
       title: 'Anular comprobantes',
-      message: `¿Anular ${ids.length} comprobante(s) seleccionado(s)?`,
+      message: `¿Anular ${eligibleIds.length} comprobante(s) seleccionado(s)?`,
       confirmText: 'Anular',
       type: 'danger',
     });
     if (!confirmed) return;
 
-    this.accountingService.updateVouchersStatus(ids, 'cancelled').subscribe({
+    this.accountingService.updateVouchersStatus(eligibleIds, 'cancelled').subscribe({
       next: (res) => {
         this.showToast(`${res.processed} anulado(s), ${res.failed} error(es)`, res.failed ? 'info' : 'success');
         this.selectedIds.set(new Set());

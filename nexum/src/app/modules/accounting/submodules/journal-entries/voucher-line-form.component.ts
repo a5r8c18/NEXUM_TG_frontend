@@ -72,12 +72,13 @@ export class VoucherLineFormComponent implements OnInit {
   private async loadMasterData() {
     try {
       const [accountsRes, costCentersRes, elementsRes] = await Promise.all([
-        firstValueFrom(this.accountingService.getAccounts({ activeOnly: 'true', level: '3' })),
+        firstValueFrom(this.accountingService.getAccounts({ activeOnly: 'true' })),
         firstValueFrom(this.accountingService.getCostCenters()),
         firstValueFrom(this.subelementsService.findAll()),
       ]);
 
-      const accountsOnly = (accountsRes ?? []).filter(acc => acc.level === 3);
+      // Grupos I y II son level 3; grupo III (600) y superiores son level 2
+      const accountsOnly = (accountsRes ?? []).filter(acc => acc.level <= 3);
       this.accounts.set(accountsOnly);
       this.costCenters.set(costCentersRes ?? []);
       this.elements.set(elementsRes ?? []);

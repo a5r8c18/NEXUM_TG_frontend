@@ -108,7 +108,7 @@ export class ExitFormComponent {
   }
 
   get totalAmount(): number {
-    return (Number(this.quantity) || 0) * (this.unitPrice || 0);
+    return Math.round(((Number(this.quantity) || 0) * (this.unitPrice || 0) + Number.EPSILON) * 100) / 100;
   }
 
   categoryLabel(cat: InventoryCategory): string {

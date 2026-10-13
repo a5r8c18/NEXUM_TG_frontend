@@ -89,6 +89,10 @@ export class ExitWizardComponent implements OnChanges {
     this.closeEvent.emit();
   }
 
+  private round2(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+
   formatCurrency(amount?: number): string {
     if (!amount && amount !== 0) return '-';
     return '$' + amount.toLocaleString('es-CU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -96,8 +100,9 @@ export class ExitWizardComponent implements OnChanges {
 
   updateQuantity(index: number, quantity: number): void {
     const currentItems = this.items();
+    const unitPrice = currentItems[index].unitPrice || 0;
     currentItems[index].quantity = quantity;
-    currentItems[index].totalAmount = quantity * currentItems[index].unitPrice;
+    currentItems[index].totalAmount = this.round2(quantity * unitPrice);
     this.items.set([...currentItems]);
   }
 
@@ -181,12 +186,13 @@ export class ExitWizardComponent implements OnChanges {
       console.log('❌ EXIT WIZARD - Producto ya agregado:', product.productCode);
       return;
     }
+    const unitPrice = this.round2(product.unitPrice || 0);
     const newItem = {
       productCode: product.productCode,
       productName: product.productName,
       quantity: 1,
-      unitPrice: product.unitPrice || 0,
-      totalAmount: product.unitPrice || 0,
+      unitPrice,
+      totalAmount: unitPrice,
       stock: product.quantity || product.stock || 0,
       unit: product.productUnit || product.unit || 'UN'
     };
@@ -198,7 +204,9 @@ export class ExitWizardComponent implements OnChanges {
 
   private updateTotals(): void {
     this.totalItems = this.items().length;
-    this.totalAmount = this.items().reduce((sum, item) => sum + item.totalAmount, 0);
+    this.totalAmount = this.round2(
+      this.items().reduce((sum, item) => sum + (item.totalAmount || 0), 0)
+    );
   }
 
   onClose(): void {
