@@ -77,6 +77,7 @@ export interface EmployeeContract {
 export interface JobPosition {
   id: string;
   companyId: number;
+  code: string | null;
   name: string;
   description: string | null;
   baseSalary: number;
