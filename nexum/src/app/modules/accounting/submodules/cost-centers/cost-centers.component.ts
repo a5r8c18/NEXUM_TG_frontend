@@ -127,6 +127,7 @@ export class CostCentersComponent implements OnInit {
     this.accountingService.getAccounts({
       type: 'expense',
       activeOnly: 'true',
+      allowsMovements: 'true',
     }).subscribe({
       next: (data) => this.expenseAccounts.set(data),
       error: () => this.expenseAccounts.set([]),
