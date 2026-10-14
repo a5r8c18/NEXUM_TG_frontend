@@ -133,12 +133,12 @@
 
   <!-- Modal Ver detalle -->
   @if (isViewOpen()) {
-    <app-modal [isOpen]="isViewOpen()" [title]="'Detalle Cuenta por Pagar'" [confirmText]="'Cerrar'" (closeEvent)="closeView()" (confirmEvent)="closeView()">
+    <app-modal [isOpen]="isViewOpen()" [title]="'Detalle Cuenta por Pagar'" [confirmText]="'Cerrar'" (closeEvent)="closeView()" (confirmEvent)="closeView()" maxWidthClass="max-w-5xl">
       @if (!viewPayable()) {
         <div class="flex justify-center py-8 text-sm text-slate-500">Cargando detalle...</div>
       } @else {
-        <div class="space-y-4 text-sm">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-sm">
+          <div class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 self-start">
             <p><span class="font-medium">No.:</span> {{ viewPayable().apNumber }}</p>
             <p><span class="font-medium">Proveedor:</span> {{ viewPayable().supplierName }}</p>
             <p><span class="font-medium">Factura:</span> {{ viewPayable().invoiceNumber || '-' }}</p>
@@ -151,41 +151,43 @@
             <p><span class="font-medium">Estado:</span> {{ getStatusLabel(viewPayable().status) }}</p>
           </div>
 
-          @if (viewPayable().vouchers?.length) {
-            <div>
-              <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-2">Comprobante(s) contable(s)</h4>
+          <div class="space-y-3">
+            @if (viewPayable().vouchers?.length) {
+              <h4 class="font-semibold text-slate-700 dark:text-slate-200">Comprobante(s) contable(s)</h4>
               @for (v of viewPayable().vouchers; track v.id) {
-                <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden mb-3">
+                <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                   <div class="px-3 py-2 bg-slate-50 dark:bg-slate-900/50 flex justify-between text-xs text-slate-600 dark:text-slate-400">
                     <span class="font-mono font-semibold">{{ v.voucherNumber }}</span>
                     <span>{{ formatDate(v.date) }}</span>
                   </div>
-                  <table class="w-full text-xs">
-                    <thead class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
-                      <tr>
-                        <th class="text-left px-3 py-1.5">Cuenta</th>
-                        <th class="text-left px-3 py-1.5">Subcuenta</th>
-                        <th class="text-right px-3 py-1.5">Debe</th>
-                        <th class="text-right px-3 py-1.5">Haber</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (l of v.lines || []; track l.id) {
-                        <tr class="border-t border-slate-100 dark:border-slate-700/50">
-                          <td class="px-3 py-1.5">{{ l.accountCode }} {{ l.accountName }}</td>
-                          <td class="px-3 py-1.5">{{ l.subaccountCode ? l.subaccountCode + ' ' + (l.subaccountName || '') : '-' }}</td>
-                          <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.debit) }}</td>
-                          <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.credit) }}</td>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-xs min-w-[500px]">
+                      <thead class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                        <tr>
+                          <th class="text-left px-3 py-1.5">Cuenta</th>
+                          <th class="text-left px-3 py-1.5">Subcuenta</th>
+                          <th class="text-right px-3 py-1.5">Debe</th>
+                          <th class="text-right px-3 py-1.5">Haber</th>
                         </tr>
-                      }
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        @for (l of v.lines || []; track l.id) {
+                          <tr class="border-t border-slate-100 dark:border-slate-700/50">
+                            <td class="px-3 py-1.5">{{ l.accountCode }} {{ l.accountName }}</td>
+                            <td class="px-3 py-1.5">{{ l.subaccountCode ? l.subaccountCode + ' ' + (l.subaccountName || '') : '-' }}</td>
+                            <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.debit) }}</td>
+                            <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.credit) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               }
-            </div>
-          } @else {
-            <p class="text-xs text-slate-500">Sin comprobante contable asociado (la obligación no generó asiento propio).</p>
-          }
+            } @else {
+              <p class="text-xs text-slate-500">Sin comprobante contable asociado (la obligación no generó asiento propio).</p>
+            }
+          </div>
         </div>
       }
     </app-modal>

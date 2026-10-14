@@ -1478,10 +1478,12 @@ export class PayrollComponent implements OnInit {
       for (const i of items) {
         const gross = Number(i.grossSalary || 0);
         const vacationProvision = Number(i.vacationProvision || 0);
+        // La base se redondea por línea, pero el tributo se acumula sin redondear
+        // para que el redondeo final coincida con el backend (periodo agregado).
         const base = round2(gross + vacationProvision);
-        aporte125 += round2(base * 0.125);
-        provisions15 += round2(base * 0.015);
-        laborForceTax5 += round2(base * 0.05);
+        aporte125 += base * 0.125;
+        provisions15 += base * 0.015;
+        laborForceTax5 += base * 0.05;
       }
     }
     return {
