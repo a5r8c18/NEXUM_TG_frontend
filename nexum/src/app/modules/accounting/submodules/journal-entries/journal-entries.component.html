@@ -264,12 +264,12 @@
                       @for (line of (comprobante.lines || []).sort((a, b) => (a.lineOrder || 0) - (b.lineOrder || 0)); track line.id || $index) {
                         <tr>
                           <td class="px-2 py-2 text-slate-400">{{ line.lineOrder }}</td>
-                          <td class="px-2 py-2 font-mono text-slate-900">{{ line.accountCode || '-' }}</td>
-                          <td class="px-2 py-2 font-mono text-slate-900">{{ subaccountDisplay(line) }}</td>
-                          <td class="px-2 py-2 font-mono text-slate-900">{{ line.subelement || line.element || '-' }}</td>
-                          <td class="px-2 py-2 font-mono text-slate-900">{{ line.costCenter?.code || line.costCenterId || '-' }}</td>
+                          <td class="px-2 py-2 font-mono text-slate-900" [title]="line.accountName || ''">{{ line.accountCode || '-' }}</td>
+                          <td class="px-2 py-2 font-mono text-slate-900" [title]="line.subaccountName || ''">{{ subaccountDisplay(line) }}</td>
+                          <td class="px-2 py-2 font-mono text-slate-900" [title]="(line.subelementName || line.elementName) || ''">{{ line.subelement || line.element || '-' }}</td>
+                          <td class="px-2 py-2 font-mono text-slate-900" [title]="line.costCenter?.name || ''">{{ line.costCenter?.code || line.costCenterId || '-' }}</td>
                           @if (comprobante.sourceModule === 'fixed-assets') {
-                            <td class="px-2 py-2 font-mono text-slate-900">{{ line.area?.name || line.areaId || '-' }}</td>
+                            <td class="px-2 py-2 font-mono text-slate-900" [title]="line.area?.name || ''">{{ line.area?.name || line.areaId || '-' }}</td>
                           }
                           <td class="px-2 py-2 text-right">
                             @if (+line.debit > 0) {
@@ -461,20 +461,20 @@
             @for (line of selectedComprobante()!.lines.sort((a, b) => a.lineOrder - b.lineOrder); track $index) {
               <tr class="hover:bg-slate-50/50">
                 <td class="px-3 py-2 text-xs text-slate-400">{{ line.lineOrder }}</td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2" [title]="line.accountName || ''">
                   <div class="text-xs font-mono text-slate-900">{{ line.accountCode || '-' }}</div>
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2" [title]="line.subaccountName || ''">
                   <div class="text-xs font-mono text-slate-900">{{ subaccountDisplay(line) }}</div>
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2" [title]="(line.subelementName || line.elementName) || ''">
                   <div class="text-xs font-mono text-slate-900">{{ line.subelement || line.element || '-' }}</div>
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2" [title]="line.costCenter?.name || ''">
                   <div class="text-xs font-mono text-slate-900">{{ line.costCenter?.code || line.costCenterId || '-' }}</div>
                 </td>
                 @if (detailAreaVisible()) {
-                  <td class="px-3 py-2">
+                  <td class="px-3 py-2" [title]="line.area?.name || ''">
                     <div class="text-xs font-mono text-slate-900">{{ line.area?.name || line.areaId || '-' }}</div>
                   </td>
                 }
