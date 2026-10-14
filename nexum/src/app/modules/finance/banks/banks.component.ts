@@ -33,7 +33,7 @@ export class BanksComponent implements OnInit, OnDestroy {
   selectedBank = signal<any>(null);
   formError = signal('');
 
-  newBank: any = { bankName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP' };
+  newBank: any = { bankName: '', bankCode: '', accountName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP', openingDate: new Date().toISOString().split('T')[0] };
   editBank: any = {};
 
   readonly accountTypes = [
@@ -114,7 +114,7 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   openCreate(): void {
-    this.newBank = { bankName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP' };
+    this.newBank = { bankName: '', bankCode: '', accountName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP', openingDate: new Date().toISOString().split('T')[0] };
     this.formError.set('');
     this.isCreateOpen.set(true);
   }
@@ -134,8 +134,8 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   saveBank(): void {
-    if (!this.newBank.bankName?.trim() || !this.newBank.accountNumber?.trim() || !this.newBank.holderName?.trim()) {
-      this.formError.set('Banco, número de cuenta y titular son obligatorios');
+    if (!this.newBank.accountName?.trim() || !this.newBank.bankName?.trim() || !this.newBank.accountNumber?.trim() || !this.newBank.holderName?.trim() || !this.newBank.openingDate) {
+      this.formError.set('Nombre de cuenta, banco, número de cuenta, titular y fecha de apertura son obligatorios');
       return;
     }
     this.formError.set('');
@@ -164,8 +164,8 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   updateBank(): void {
-    if (!this.editBank.bankName?.trim() || !this.editBank.holderName?.trim()) {
-      this.formError.set('Banco y titular son obligatorios');
+    if (!this.editBank.accountName?.trim() || !this.editBank.bankName?.trim() || !this.editBank.holderName?.trim() || !this.editBank.openingDate) {
+      this.formError.set('Nombre de cuenta, banco, titular y fecha de apertura son obligatorios');
       return;
     }
     this.formError.set('');
