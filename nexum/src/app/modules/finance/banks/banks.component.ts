@@ -134,8 +134,8 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   saveBank(): void {
-    if (!this.newBank.accountName?.trim() || !this.newBank.bankName?.trim() || !this.newBank.accountNumber?.trim() || !this.newBank.holderName?.trim() || !this.newBank.openingDate) {
-      this.formError.set('Nombre de cuenta, banco, número de cuenta, titular y fecha de apertura son obligatorios');
+    if (!this.newBank.bankName?.trim() || !this.newBank.accountNumber?.trim() || !this.newBank.holderName?.trim()) {
+      this.formError.set('Banco, número de cuenta y titular son obligatorios');
       return;
     }
     this.formError.set('');
@@ -164,8 +164,8 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   updateBank(): void {
-    if (!this.editBank.accountName?.trim() || !this.editBank.bankName?.trim() || !this.editBank.holderName?.trim() || !this.editBank.openingDate) {
-      this.formError.set('Nombre de cuenta, banco, titular y fecha de apertura son obligatorios');
+    if (!this.editBank.bankName?.trim() || !this.editBank.holderName?.trim()) {
+      this.formError.set('Banco y titular son obligatorios');
       return;
     }
     this.formError.set('');
