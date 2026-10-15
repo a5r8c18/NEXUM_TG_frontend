@@ -1056,7 +1056,7 @@ export class PayrollComponent implements OnInit {
     const salary = Number(emp?.salary || 0);
     const days = Number(line.days || 0);
     const hours = Number(line.hours || 0);
-    const round2 = (v: number) => Math.round(v * 100) / 100;
+    const round2 = (v: number) => Math.round((v + Number.EPSILON * Math.abs(v)) * 100) / 100;
 
     if (salary > 0) {
       const workedHours = days * (190.6 / 24) + hours;
@@ -1470,7 +1470,7 @@ export class PayrollComponent implements OnInit {
     // de tiempo (horas extras, nocturnidad, feriado). Vacaciones, liquidación,
     // subsidio y maternidad no generan aporte patronal ni UFT.
     const chargesEmployerTaxes = ['salario', 'libre', 'guardia', ...PayrollComponent.TIME_SUPPLEMENTS].includes(payroll.concept);
-    const round2 = (v: number) => Math.round(v * 100) / 100;
+    const round2 = (v: number) => Math.round((v + Number.EPSILON * Math.abs(v)) * 100) / 100;
     let aporte125 = 0;
     let provisions15 = 0;
     let laborForceTax5 = 0;
