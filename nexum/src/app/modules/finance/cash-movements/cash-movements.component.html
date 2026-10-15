@@ -17,7 +17,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
     <div>
       <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Caja *</label>
-      <select [(ngModel)]="selectedRegisterId" (ngModelChange)="onRegisterChange()" class="w-full sm:w-80 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <select [ngModel]="selectedRegisterId()" (ngModelChange)="selectedRegisterId.set($event); onRegisterChange()" class="w-full sm:w-80 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <option value="">Seleccionar caja</option>
         @for (cr of registers(); track cr.id) {
           <option [value]="cr.id">{{ cr.registerName }} ({{ cr.registerCode }})</option>
