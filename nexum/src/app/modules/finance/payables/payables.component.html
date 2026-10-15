@@ -137,8 +137,8 @@
       @if (!viewPayable()) {
         <div class="flex justify-center py-8 text-sm text-slate-500">Cargando detalle...</div>
       } @else {
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-sm">
-          <div class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 self-start">
+        <div class="space-y-6 text-sm">
+          <div class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 justify-items-center text-center">
             <p><span class="font-medium">No.:</span> {{ viewPayable().apNumber }}</p>
             <p><span class="font-medium">Proveedor:</span> {{ viewPayable().supplierName }}</p>
             <p><span class="font-medium">Factura:</span> {{ viewPayable().invoiceNumber || '-' }}</p>
