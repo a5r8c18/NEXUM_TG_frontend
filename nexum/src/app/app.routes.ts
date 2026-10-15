@@ -164,8 +164,28 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/finance/banks/banks.component').then(m => m.BanksComponent)
       },
       {
+        path: 'finance/banks/income',
+        loadComponent: () => import('./modules/finance/bank-transactions/bank-transactions.component').then(m => m.BankTransactionsComponent),
+        data: { type: 'income' }
+      },
+      {
+        path: 'finance/banks/expense',
+        loadComponent: () => import('./modules/finance/bank-transactions/bank-transactions.component').then(m => m.BankTransactionsComponent),
+        data: { type: 'expense' }
+      },
+      {
         path: 'finance/cash',
         loadComponent: () => import('./modules/finance/cash/cash.component').then(m => m.CashComponent)
+      },
+      {
+        path: 'finance/cash/income',
+        loadComponent: () => import('./modules/finance/cash-movements/cash-movements.component').then(m => m.CashMovementsComponent),
+        data: { type: 'income' }
+      },
+      {
+        path: 'finance/cash/expense',
+        loadComponent: () => import('./modules/finance/cash-movements/cash-movements.component').then(m => m.CashMovementsComponent),
+        data: { type: 'expense' }
       },
       {
         path: 'finance/payments',

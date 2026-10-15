@@ -163,4 +163,8 @@ export class FinanceService {
     if (filters?.movementType) params = params.set('movementType', filters.movementType);
     return this.http.get(`${this.apiUrl}/finance/cash-registers/${cashRegisterId}/movements`, { params });
   }
+
+  createCashMovement(cashRegisterId: string, data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-registers/${cashRegisterId}/movements`, data);
+  }
 }
