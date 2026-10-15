@@ -874,6 +874,13 @@ export class JournalEntriesComponent implements OnInit {
     return subelement ? `${subelement.code} - ${subelement.name}` : elementCode;
   }
 
+  getElementTooltip(line: any): string {
+    const code = line.subelement || line.element;
+    if (!code) return '';
+    const subelement = this.subelements().find(el => el.code === code);
+    return subelement?.name || '';
+  }
+
   // Methods to handle debit/credit field interactions
   onDebitChange(value: number, lineIndex: number) {
     const lineGroup = this.getLineControls()[lineIndex];

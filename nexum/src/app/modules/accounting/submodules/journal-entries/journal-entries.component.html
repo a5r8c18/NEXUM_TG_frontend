@@ -266,7 +266,7 @@
                           <td class="px-2 py-2 text-slate-400">{{ line.lineOrder }}</td>
                           <td class="px-2 py-2 font-mono text-slate-900" [title]="line.accountName || ''">{{ line.accountCode || '-' }}</td>
                           <td class="px-2 py-2 font-mono text-slate-900" [title]="line.subaccountName || ''">{{ subaccountDisplay(line) }}</td>
-                          <td class="px-2 py-2 font-mono text-slate-900" [title]="(line.subelementName || line.elementName) || ''">{{ line.subelement || line.element || '-' }}</td>
+                          <td class="px-2 py-2 font-mono text-slate-900" [title]="getElementTooltip(line)">{{ line.subelement || line.element || '-' }}</td>
                           <td class="px-2 py-2 font-mono text-slate-900" [title]="line.costCenter?.name || ''">{{ line.costCenter?.code || line.costCenterId || '-' }}</td>
                           @if (comprobante.sourceModule === 'fixed-assets') {
                             <td class="px-2 py-2 font-mono text-slate-900" [title]="line.area?.name || ''">{{ line.area?.name || line.areaId || '-' }}</td>
@@ -467,7 +467,7 @@
                 <td class="px-3 py-2" [title]="line.subaccountName || ''">
                   <div class="text-xs font-mono text-slate-900">{{ subaccountDisplay(line) }}</div>
                 </td>
-                <td class="px-3 py-2" [title]="(line.subelementName || line.elementName) || ''">
+                <td class="px-3 py-2" [title]="getElementTooltip(line)">
                   <div class="text-xs font-mono text-slate-900">{{ line.subelement || line.element || '-' }}</div>
                 </td>
                 <td class="px-3 py-2" [title]="line.costCenter?.name || ''">
