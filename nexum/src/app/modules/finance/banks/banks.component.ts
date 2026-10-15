@@ -30,7 +30,11 @@ export class BanksComponent implements OnInit, OnDestroy {
 
   isCreateOpen = signal(false);
   isEditOpen = signal(false);
+  isTransactionsOpen = signal(false);
   selectedBank = signal<any>(null);
+  selectedBankForTransactions = signal<any>(null);
+  bankTransactions = signal<any[]>([]);
+  isTransactionsLoading = signal(false);
   formError = signal('');
 
   newBank: any = { bankName: '', bankCode: '', accountName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP', openingDate: new Date().toISOString().split('T')[0] };
@@ -180,8 +184,31 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   viewTransactions(bank: any): void {
-    // TODO: Implementar vista de transacciones bancarias
-    this.showToast('Vista de transacciones próximamente', 'info');
+    this.selectedBankForTransactions.set(bank);
+    this.isTransactionsOpen.set(true);
+    this.loadBankTransactions();
+  }
+
+  closeTransactions(): void {
+    this.isTransactionsOpen.set(false);
+    this.selectedBankForTransactions.set(null);
+    this.bankTransactions.set([]);
+  }
+
+  loadBankTransactions(): void {
+    const bank = this.selectedBankForTransactions();
+    if (!bank) return;
+    this.isTransactionsLoading.set(true);
+    this.financeService.getBankTransactions(bank.id).subscribe({
+      next: (data) => {
+        this.bankTransactions.set(Array.isArray(data) ? data : []);
+        this.isTransactionsLoading.set(false);
+      },
+      error: () => {
+        this.isTransactionsLoading.set(false);
+        this.showToast('Error cargando transacciones', 'error');
+      },
+    });
   }
 
   private showToast(message: string, type: 'success' | 'error' | 'info'): void {

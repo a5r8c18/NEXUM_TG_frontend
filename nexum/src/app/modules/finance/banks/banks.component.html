@@ -244,6 +244,44 @@
     </app-modal>
   }
 
+  <!-- Modal Transacciones -->
+  @if (isTransactionsOpen()) {
+    <app-modal [isOpen]="isTransactionsOpen()" [title]="'Transacciones - ' + (selectedBankForTransactions()?.bankName || '')" [confirmText]="'Cerrar'" (closeEvent)="closeTransactions()" (confirmEvent)="closeTransactions()">
+      <div class="space-y-4">
+        @if (isTransactionsLoading()) {
+          <div class="flex items-center justify-center py-8 text-slate-500 text-sm">Cargando transacciones...</div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 dark:bg-slate-900/50">
+                <tr>
+                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Número</th>
+                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Fecha</th>
+                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Descripción</th>
+                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Tipo</th>
+                  <th class="text-right px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Monto</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                @for (tx of bankTransactions(); track tx.id) {
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td class="px-4 py-2 dark:text-slate-300 font-mono">{{ tx.transactionNumber }}</td>
+                    <td class="px-4 py-2 dark:text-slate-300">{{ tx.transactionDate }}</td>
+                    <td class="px-4 py-2 dark:text-slate-300">{{ tx.description }}</td>
+                    <td class="px-4 py-2 dark:text-slate-300">{{ tx.transactionType === 'credit' ? 'Ingreso' : tx.transactionType === 'debit' ? 'Egreso' : tx.transactionType }}</td>
+                    <td class="px-4 py-2 text-right dark:text-slate-300 font-semibold" [class]="tx.transactionType === 'credit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ formatCurrency(tx.amount, tx.currency) }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">No hay transacciones registradas</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </app-modal>
+  }
+
   <!-- Toast -->
   @if (toast()) {
     <div class="fixed bottom-4 right-4 z-50">
