@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { ExchangeRateService } from '../../../core/services/exchange-rate.service';
+import { CompanyService } from '../../../core/services/company.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -16,6 +19,9 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 export class BanksComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
   private notificationService = inject(NotificationService);
+  private exchangeRateService = inject(ExchangeRateService);
+  private companyService = inject(CompanyService);
+  private authService = inject(AuthService);
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -49,6 +55,20 @@ export class BanksComponent implements OnInit, OnDestroy {
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
 
+  companyTenantType = signal<string>('state');
+  exchangeRate = computed(() => {
+    const r = this.exchangeRateService.rates();
+    if (!r) return null;
+    return this.companyTenantType() === 'non-state' ? r.segmentoIII : r.segmentoI;
+  });
+
+  balanceInCup(bank: any): number | null {
+    const rate = this.exchangeRate();
+    if (bank.currency === 'CUP') return Number(bank.balance || 0);
+    if (rate == null) return null;
+    return Number(bank.balance || 0) * rate;
+  }
+
   filteredItems = computed(() => {
     let list = this.items();
     const status = this.statusFilter();
@@ -74,6 +94,14 @@ export class BanksComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadData();
     this.loadStats();
+    this.exchangeRateService.load();
+    const companyId = this.authService.getCurrentCompanyId();
+    if (companyId) {
+      this.companyService.getCompany(companyId).subscribe({
+        next: (c) => this.companyTenantType.set(c?.tenant_type || 'state'),
+        error: () => {},
+      });
+    }
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
       this.loadData();
       this.loadStats();
