@@ -2,13 +2,15 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-export type ReconciliationStatus = 'draft' | 'completed';
+export type ReconciliationStatus = 'reconciled' | 'difference' | 'corrected';
 
 export interface BankReconciliation {
   id: string;
   companyId: number;
+  statementNumber?: string | null;
   bankAccountId: string;
   bankAccount?: any;
+  company?: { name: string; taxId: string };
   reconciliationDate: string;
   statementBalance: number;
   bookBalance: number;

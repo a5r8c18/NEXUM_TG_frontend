@@ -7,6 +7,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { ExchangeRateService } from '../../../core/services/exchange-rate.service';
 import { CompanyService } from '../../../core/services/company.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AccountingService } from '../../../core/services/accounting.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -22,6 +23,7 @@ export class BanksComponent implements OnInit, OnDestroy {
   private exchangeRateService = inject(ExchangeRateService);
   private companyService = inject(CompanyService);
   private authService = inject(AuthService);
+  private accountingService = inject(AccountingService);
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -41,9 +43,109 @@ export class BanksComponent implements OnInit, OnDestroy {
   selectedBankForTransactions = signal<any>(null);
   bankTransactions = signal<any[]>([]);
   isTransactionsLoading = signal(false);
-  formError = signal('');
 
-  newBank: any = { bankName: '', bankCode: '', accountName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP', openingDate: new Date().toISOString().split('T')[0] };
+  private readonly incomeTypes = ['credit', 'transfer_in', 'interest'];
+
+  /** Importe con signo según el tipo de operación. */
+  signedAmount(tx: any): number {
+    const amount = Number(tx.amount || 0);
+    return this.incomeTypes.includes(tx.transactionType) ? amount : -amount;
+  }
+
+  /** Transacciones ordenadas por fecha con el saldo corrido. */
+  txRows = computed(() => {
+    const bank = this.selectedBankForTransactions();
+    const txs = [...this.bankTransactions()].sort(
+      (a, b) => (a.transactionDate || '').localeCompare(b.transactionDate || '') ||
+        (a.transactionNumber || '').localeCompare(b.transactionNumber || ''),
+    );
+    const total = txs.reduce((s, tx) => s + this.signedAmount(tx), 0);
+    let balance = Number(bank?.balance || 0) - total;
+    return txs.map((tx) => {
+      const signed = this.signedAmount(tx);
+      balance += signed;
+      return { tx, signedAmount: signed, balance };
+    });
+  });
+
+  activeDetailTab = signal<'fondo' | 'operaciones'>('fondo');
+  readonly detailTabs = [
+    { key: 'fondo', label: 'Fondo de banco' },
+    { key: 'operaciones', label: 'Operaciones efectuadas' },
+  ] as const;
+
+  setDetailTab(tab: 'fondo' | 'operaciones'): void {
+    this.activeDetailTab.set(tab);
+  }
+
+  formError = signal('');
+  accountOptions = signal<any[]>([]);
+  subaccounts = signal<any[]>([]);
+  accountQueryCreate = '';
+  accountQueryEdit = '';
+  accountDropCreate = signal(false);
+  accountDropEdit = signal(false);
+
+  /** Cuentas con sus subcuentas anidadas debajo, para el selector filtrable. */
+  accountSelectOptions = computed(() => {
+    const opts: { value: string; label: string; isSub: boolean; parentCode?: string }[] = [];
+    const subs = this.subaccounts();
+    for (const a of this.accountOptions()) {
+      if (a.code?.includes('-') || Number(a.level) >= 4) continue; // las subcuentas se anidan debajo de su padre
+      // Solo cuentas de efectivo en banco (109-119) del clasificador.
+      const num = parseInt(a.code, 10);
+      if (isNaN(num) || num < 109 || num > 119) continue;
+      const children = subs.filter(s => s.parentCode === a.code || s.code?.startsWith(`${a.code}-`));
+      // Solo cuentas postables o agrupadoras con subcuentas (ej. 109 con subcuentas).
+      if (!a.allowsMovements && children.length === 0) continue;
+      opts.push({ value: a.code, label: `${a.code} - ${a.name}`, isSub: false });
+      for (const s of children) {
+        // El valor combina cuenta y subcuenta (p.ej. "109-0010") porque los
+        // códigos de subcuenta no llevan el prefijo del padre en la BD.
+        const value = s.code?.includes('-') ? s.code : `${a.code}-${s.code}`;
+        opts.push({ value, label: `${s.code} - ${s.name}`, isSub: true, parentCode: a.code });
+      }
+    }
+    return opts;
+  });
+
+  filteredAccountOptions(query: string) {
+    const q = (query || '').toLowerCase();
+    const opts = this.accountSelectOptions();
+    return q ? opts.filter(o => o.label.toLowerCase().includes(q)) : opts;
+  }
+
+  /** Etiqueta del campo: cuenta, o "cuenta → subcuenta" si se eligió una subcuenta. */
+  accountingAccountLabel(value: string): string {
+    if (!value) return '';
+    const opt = this.accountSelectOptions().find(o => o.value === value);
+    if (!opt) return value;
+    if (!opt.isSub) return opt.label;
+    const parent = this.accountSelectOptions().find(o => o.value === opt.parentCode);
+    return parent ? `${parent.label} → ${opt.label}` : opt.label;
+  }
+
+  selectAccountingAccount(value: string, which: 'create' | 'edit'): void {
+    const label = this.accountingAccountLabel(value);
+    if (which === 'create') {
+      this.newBank.accountingAccount = value;
+      this.accountQueryCreate = label;
+      this.accountDropCreate.set(false);
+    } else {
+      this.editBank.accountingAccount = value;
+      this.accountQueryEdit = label;
+      this.accountDropEdit.set(false);
+    }
+  }
+
+  onAccountBlur(which: 'create' | 'edit'): void {
+    setTimeout(() => {
+      if (which === 'create') this.accountDropCreate.set(false);
+      else this.accountDropEdit.set(false);
+    }, 150);
+  }
+
+  newBank: any = { bankName: '', bankCode: '', accountName: '', accountNumber: '', accountType: 'checking', fondo: '', accountingAccount: '', holderName: '', balance: 0, currency: 'CUP', openingDate: new Date().toISOString().split('T')[0] };
   editBank: any = {};
 
   readonly accountTypes = [
@@ -95,6 +197,14 @@ export class BanksComponent implements OnInit, OnDestroy {
     this.loadData();
     this.loadStats();
     this.exchangeRateService.load();
+    this.accountingService.getAccounts({ type: 'asset', activeOnly: 'true' }).subscribe({
+      next: (accounts) => this.accountOptions.set(Array.isArray(accounts) ? accounts : []),
+      error: () => {},
+    });
+    this.accountingService.getSubaccounts().subscribe({
+      next: (subs) => this.subaccounts.set(Array.isArray(subs) ? subs : []),
+      error: () => {},
+    });
     const companyId = this.authService.getCurrentCompanyId();
     if (companyId) {
       this.companyService.getCompany(companyId).subscribe({
@@ -146,7 +256,9 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   openCreate(): void {
-    this.newBank = { bankName: '', bankCode: '', accountName: '', accountNumber: '', accountType: 'checking', holderName: '', balance: 0, currency: 'CUP', openingDate: new Date().toISOString().split('T')[0] };
+    this.newBank = { bankName: '', bankCode: '', accountName: '', accountNumber: '', accountType: 'checking', fondo: '', accountingAccount: '', holderName: '', balance: 0, currency: 'CUP', openingDate: new Date().toISOString().split('T')[0] };
+    this.accountQueryCreate = '';
+    this.accountDropCreate.set(false);
     this.formError.set('');
     this.isCreateOpen.set(true);
   }
@@ -185,6 +297,8 @@ export class BanksComponent implements OnInit, OnDestroy {
   openEdit(bank: any): void {
     this.selectedBank.set(bank);
     this.editBank = { ...bank };
+    this.accountQueryEdit = this.accountingAccountLabel(bank.accountingAccount || '');
+    this.accountDropEdit.set(false);
     this.formError.set('');
     this.isEditOpen.set(true);
   }
@@ -211,7 +325,7 @@ export class BanksComponent implements OnInit, OnDestroy {
     });
   }
 
-  viewTransactions(bank: any): void {
+  viewDetails(bank: any): void {
     this.selectedBankForTransactions.set(bank);
     this.isTransactionsOpen.set(true);
     this.loadBankTransactions();
@@ -221,6 +335,7 @@ export class BanksComponent implements OnInit, OnDestroy {
     this.isTransactionsOpen.set(false);
     this.selectedBankForTransactions.set(null);
     this.bankTransactions.set([]);
+    this.activeDetailTab.set('fondo');
   }
 
   loadBankTransactions(): void {
@@ -267,5 +382,29 @@ export class BanksComponent implements OnInit, OnDestroy {
   formatCurrency(value: number | undefined, currency: string = 'CUP'): string {
     if (!value) return new Intl.NumberFormat('es-CU', { style: 'currency', currency }).format(0);
     return new Intl.NumberFormat('es-CU', { style: 'currency', currency }).format(value);
+  }
+
+  /** Importe sin símbolo de moneda: negativo con '-', positivo sin signo. */
+  formatSignedAmount(value: number, currency: string = 'CUP'): string {
+    const abs = Math.abs(value).toLocaleString('es-CU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${value < 0 ? '-' : ''}${abs} ${currency}`;
+  }
+
+  formatDate(date: string | undefined): string {
+    return date ? new Date(date).toLocaleDateString('es-CU') : '-';
+  }
+
+  getOperationStatusLabel(status: string | undefined): string {
+    const labels: Record<string, string> = { draft: 'Borrador', edited: 'Editado', confirmed: 'Confirmado' };
+    return labels[status || 'confirmed'] || 'Confirmado';
+  }
+
+  getOperationStatusClass(status: string | undefined): string {
+    const classes: Record<string, string> = {
+      draft: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+      edited: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+      confirmed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    };
+    return classes[status || 'confirmed'] || classes['confirmed'];
   }
 }

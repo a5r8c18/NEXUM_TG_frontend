@@ -109,8 +109,8 @@
                     <button (click)="openEdit(bank)" title="Editar" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
-                    <button (click)="viewTransactions(bank)" title="Movimientos" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                    <button (click)="viewDetails(bank)" title="Detalles" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20">
+                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                     </button>
                   </div>
                 </td>
@@ -146,6 +146,36 @@
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Código del Banco</label>
             <input [(ngModel)]="newBank.bankCode" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre de la Cuenta</label>
+            <input [(ngModel)]="newBank.accountName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Fondo</label>
+            <input [(ngModel)]="newBank.fondo" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="relative">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta contable</label>
+            <input [(ngModel)]="accountQueryCreate" (focus)="accountDropCreate.set(true)" (blur)="onAccountBlur('create')"
+                   placeholder="Buscar cuenta o subcuenta..." autocomplete="off"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            @if (accountDropCreate()) {
+              <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg">
+                <button type="button" (mousedown)="selectAccountingAccount('', 'create')"
+                        class="w-full text-left px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-600">
+                  — Seleccionar cuenta —
+                </button>
+                @for (opt of filteredAccountOptions(accountQueryCreate); track opt.value) {
+                  <button type="button" (mousedown)="selectAccountingAccount(opt.value, 'create')"
+                          class="w-full text-left py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-600 {{ opt.isSub ? 'pl-7 pr-3' : 'px-3 font-medium' }}">
+                    {{ opt.label }}
+                  </button>
+                } @empty {
+                  <p class="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">Sin resultados</p>
+                }
+              </div>
+            }
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Número de Cuenta *</label>
@@ -205,6 +235,36 @@
             <input [(ngModel)]="editBank.bankCode" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre de la Cuenta</label>
+            <input [(ngModel)]="editBank.accountName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Fondo</label>
+            <input [(ngModel)]="editBank.fondo" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="relative">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta contable</label>
+            <input [(ngModel)]="accountQueryEdit" (focus)="accountDropEdit.set(true)" (blur)="onAccountBlur('edit')"
+                   placeholder="Buscar cuenta o subcuenta..." autocomplete="off"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            @if (accountDropEdit()) {
+              <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg">
+                <button type="button" (mousedown)="selectAccountingAccount('', 'edit')"
+                        class="w-full text-left px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-600">
+                  — Seleccionar cuenta —
+                </button>
+                @for (opt of filteredAccountOptions(accountQueryEdit); track opt.value) {
+                  <button type="button" (mousedown)="selectAccountingAccount(opt.value, 'edit')"
+                          class="w-full text-left py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-600 {{ opt.isSub ? 'pl-7 pr-3' : 'px-3 font-medium' }}">
+                    {{ opt.label }}
+                  </button>
+                } @empty {
+                  <p class="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">Sin resultados</p>
+                }
+              </div>
+            }
+          </div>
+          <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Estado</label>
             <select [(ngModel)]="editBank.status" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="active">Activa</option>
@@ -248,40 +308,97 @@
     </app-modal>
   }
 
-  <!-- Modal Transacciones -->
+  <!-- Modal Detalles -->
   @if (isTransactionsOpen()) {
-    <app-modal [isOpen]="isTransactionsOpen()" [title]="'Transacciones - ' + (selectedBankForTransactions()?.bankName || '')" [confirmText]="'Cerrar'" (closeEvent)="closeTransactions()" (confirmEvent)="closeTransactions()">
+    <app-modal [isOpen]="isTransactionsOpen()" [title]="'Detalles - ' + (selectedBankForTransactions()?.bankName || '')" [confirmText]="'Cerrar'" (closeEvent)="closeTransactions()" (confirmEvent)="closeTransactions()" maxWidthClass="max-w-4xl">
       <div class="space-y-4">
-        @if (isTransactionsLoading()) {
-          <div class="flex items-center justify-center py-8 text-slate-500 text-sm">Cargando transacciones...</div>
-        } @else {
+        <!-- Pestañas -->
+        <div class="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <div class="flex gap-1 min-w-max">
+            @for (tab of detailTabs; track tab.key) {
+              <button (click)="setDetailTab(tab.key)"
+                      class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap"
+                      [class]="activeDetailTab() === tab.key
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'">
+                {{ tab.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <!-- Fondo de banco -->
+        @if (activeDetailTab() === 'fondo') {
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead class="bg-slate-50 dark:bg-slate-900/50">
                 <tr>
-                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Número</th>
-                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Fecha</th>
-                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Descripción</th>
-                  <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Tipo</th>
-                  <th class="text-right px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Monto</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fondo</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Tipo de fondo</th>
+                  <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
+                  <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Saldo CUP</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Cuenta contable</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-                @for (tx of bankTransactions(); track tx.id) {
-                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td class="px-4 py-2 dark:text-slate-300 font-mono">{{ tx.transactionNumber }}</td>
-                    <td class="px-4 py-2 dark:text-slate-300">{{ tx.transactionDate }}</td>
-                    <td class="px-4 py-2 dark:text-slate-300">{{ tx.description }}</td>
-                    <td class="px-4 py-2 dark:text-slate-300">{{ tx.transactionType === 'credit' ? 'Ingreso' : tx.transactionType === 'debit' ? 'Egreso' : tx.transactionType }}</td>
-                    <td class="px-4 py-2 text-right dark:text-slate-300 font-semibold" [class]="tx.transactionType === 'credit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ formatCurrency(tx.amount, tx.currency) }}</td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">No hay transacciones registradas</td></tr>
-                }
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                  <td class="px-4 py-3 dark:text-slate-300">
+                    <div class="font-medium">{{ selectedBankForTransactions()?.accountName || selectedBankForTransactions()?.bankName }}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ selectedBankForTransactions()?.accountNumber }}</div>
+                  </td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ selectedBankForTransactions()?.fondo || getAccountTypeLabel(selectedBankForTransactions()?.accountType) }}</td>
+                  <td class="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">{{ formatCurrency(selectedBankForTransactions()?.balance, selectedBankForTransactions()?.currency) }}</td>
+                  <td class="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">{{ balanceInCup(selectedBankForTransactions()) != null ? formatCurrency(balanceInCup(selectedBankForTransactions())!, 'CUP') : '-' }}</td>
+                  <td class="px-4 py-3 dark:text-slate-300">{{ accountingAccountLabel(selectedBankForTransactions()?.accountingAccount || '') || '-' }}</td>
+                </tr>
               </tbody>
             </table>
           </div>
         }
+
+        <!-- Operaciones efectuadas -->
+        @if (activeDetailTab() === 'operaciones') {
+          @if (isTransactionsLoading()) {
+            <div class="flex items-center justify-center py-8 text-slate-500 text-sm">Cargando operaciones...</div>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-900/50">
+                  <tr>
+                    <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">N° Documento</th>
+                    <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Tipo de documento</th>
+                    <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Descripción</th>
+                    <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Comentario</th>
+                    <th class="text-left px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Fecha</th>
+                    <th class="text-right px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Importe</th>
+                    <th class="text-right px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
+                    <th class="text-center px-4 py-2 font-semibold text-slate-600 dark:text-slate-400">Tipo de operación</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                  @for (row of txRows(); track row.tx.id) {
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <td class="px-4 py-2 dark:text-slate-300 font-mono">{{ row.tx.transactionNumber }}</td>
+                      <td class="px-4 py-2 dark:text-slate-300">{{ row.tx.transactionCode || row.tx.referenceNumber || '-' }}</td>
+                      <td class="px-4 py-2 dark:text-slate-300">{{ row.tx.description }}</td>
+                      <td class="px-4 py-2 dark:text-slate-300">{{ row.tx.notes || '-' }}</td>
+                      <td class="px-4 py-2 dark:text-slate-300">{{ formatDate(row.tx.transactionDate) }}</td>
+                      <td class="px-4 py-2 text-right font-semibold" [class]="row.signedAmount < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">{{ formatSignedAmount(row.signedAmount, row.tx.currency) }}</td>
+                      <td class="px-4 py-2 text-right dark:text-slate-300">{{ formatCurrency(row.balance, row.tx.currency) }}</td>
+                      <td class="px-4 py-2 text-center">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium" [class]="getOperationStatusClass(row.tx.operationStatus)">{{ getOperationStatusLabel(row.tx.operationStatus) }}</span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="8" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">No hay operaciones registradas</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+        </div>
       </div>
     </app-modal>
   }
