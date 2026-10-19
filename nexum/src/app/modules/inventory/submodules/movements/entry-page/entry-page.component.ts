@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { AccountSelectorComponent } from '../../../../../shared/components/account-selector/account-selector.component';
+import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
 import { MovementTypeOption } from '../../../../../models/inventory.models';
 import { CreatePurchasePayload } from '../../../../../models/purchase.models';
 import { MovementsService } from '../../../../../core/services/movements.service';
@@ -29,7 +30,7 @@ const EXPENSE_ELEMENTS = [
 @Component({
   selector: 'app-entry-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, AccountSelectorComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent, AccountSelectorComponent],
   templateUrl: './entry-page.component.html',
 })
 export class EntryPageComponent implements OnInit, OnDestroy {
@@ -370,7 +371,35 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       s.tradeName?.toLowerCase().includes(lower) ||
       s.supplierCode?.toLowerCase().includes(lower)
     ).slice(0, 8);
-    this.showSupplierDropdown = this.filteredSuppliers.length > 0;
+    this.showSupplierDropdown = !!term.trim();
+  }
+
+  /** Abre el modal de creación de proveedor con el nombre precargado. */
+  isSupplierModalOpen = false;
+  newSupplierForm: any = this.emptySupplierForm();
+
+  private emptySupplierForm() {
+    return { reeupCode: '', businessName: '', tradeName: '', nit: '', ircc: '', province: '', country: 'Cuba', contactPhone: '', contactEmail: '', address: '', city: '' };
+  }
+
+  createSupplierInline(): void {
+    this.newSupplierForm = this.emptySupplierForm();
+    this.newSupplierForm.businessName = this.supplierSearchTerm.trim();
+    this.showSupplierDropdown = false;
+    this.isSupplierModalOpen = true;
+  }
+
+  saveSupplierInline(): void {
+    if (!this.newSupplierForm.businessName?.trim()) return;
+    this.suppliersService.create(this.newSupplierForm).subscribe({
+      next: (created: any) => {
+        this.allSuppliers.push(created);
+        this.selectSupplier(created);
+        this.isSupplierModalOpen = false;
+        this.notificationService.showSuccess(`Proveedor "${created.businessName}" creado`);
+      },
+      error: () => this.notificationService.showError('Error al crear proveedor'),
+    });
   }
 
   selectSupplier(supplier: any): void {

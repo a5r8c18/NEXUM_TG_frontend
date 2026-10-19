@@ -84,7 +84,7 @@ export const routes: Routes = [
       },
       {
         path: 'inventory/suppliers',
-        loadComponent: () => import('./modules/inventory/suppliers/suppliers.component').then(m => m.SuppliersComponent)
+        redirectTo: '/settings/suppliers'
       },
             {
         path: 'inventory/warehouses',

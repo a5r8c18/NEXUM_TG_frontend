@@ -186,7 +186,6 @@ export class SidebarComponent {
         { icon: 'FileText', label: 'Reportes', route: '/inventory/reports' },
         { icon: 'Search', label: 'Conteo Físico', route: '/inventory/physical-count', isComingSoon: true },
         { icon: 'BarChart3', label: 'Analítica', route: '/inventory/analytics' },
-        { icon: 'Truck', label: 'Proveedores', route: '/inventory/suppliers' },
         { icon: 'Warehouse', label: 'Almacenes', route: '/inventory/warehouses' },
         { icon: 'AlertTriangle', label: 'Límites de Stock', route: '/inventory/stock-limits' }
       ]
@@ -263,6 +262,8 @@ export class SidebarComponent {
     if (user?.role === 'admin' || user?.role === 'superadmin') {
       // Admin y superadmin ven todo
       baseMenu.push({ icon: 'Users', label: 'Usuarios', route: '/settings/users' });
+      baseMenu.push({ icon: 'Users', label: 'Clientes', route: '/settings/customers' });
+      baseMenu.push({ icon: 'Truck', label: 'Proveedores', route: '/settings/suppliers' });
       baseMenu.push({ icon: 'Cog', label: 'General', route: '/settings/general' });
       
       // Agregar "Empresas" solo si es multi-company y es admin

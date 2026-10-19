@@ -93,8 +93,39 @@ export class FinanceService {
     return this.http.get(`${this.apiUrl}/finance/banks/${bankAccountId}/transactions`, { params });
   }
 
+  getAllBankTransactions(type?: string): Observable<any> {
+    let params = new HttpParams();
+    if (type) params = params.set('type', type);
+    return this.http.get(`${this.apiUrl}/finance/bank-transactions`, { params });
+  }
+
   createBankTransaction(bankAccountId: string, data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/finance/banks/${bankAccountId}/transactions`, data);
+  }
+
+  updateBankTransaction(id: string, data: any): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/finance/bank-transactions/${id}`, data);
+  }
+
+  deleteBankTransaction(id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/finance/bank-transactions/${id}`);
+  }
+
+  // ── Clientes / Entidades ──
+  getCustomers(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/customers`);
+  }
+
+  createCustomer(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/customers`, data);
+  }
+
+  updateCustomer(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/finance/customers/${id}`, data);
+  }
+
+  deleteCustomer(id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/finance/customers/${id}`);
   }
 
   // ── Pagos ──

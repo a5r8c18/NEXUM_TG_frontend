@@ -47,6 +47,14 @@ export const SETTINGS_ROUTES: Routes = [
     ]
   },
   {
+    path: 'suppliers',
+    loadComponent: () => import('../modules/inventory/suppliers/suppliers.component').then(m => m.SuppliersComponent)
+  },
+  {
+    path: 'customers',
+    loadComponent: () => import('./customers/customer-list/customer-list.component').then(m => m.CustomerListComponent)
+  },
+  {
     path: '',
     redirectTo: 'general',
     pathMatch: 'full'

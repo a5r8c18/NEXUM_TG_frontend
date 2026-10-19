@@ -211,17 +211,140 @@
 
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
-    <app-modal [isOpen]="isCreateOpen()" (closeEvent)="closeCreate()" (confirmEvent)="createInvoice()" title="Crear Nueva Factura" confirmText="Crear Factura" confirmButtonClass="bg-blue-600 hover:bg-blue-700">
-      <div class="p-6">
-        <div class="text-center py-8">
-          <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
+    <app-modal [isOpen]="isCreateOpen()" (closeEvent)="closeCreate()" (confirmEvent)="createInvoice()" title="Crear Nueva Factura" [confirmText]="saving() ? 'Guardando...' : 'Crear Factura'" confirmButtonClass="bg-blue-600 hover:bg-blue-700" maxWidthClass="max-w-4xl">
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="relative sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Cliente/Entidad *</label>
+            <input [(ngModel)]="customerQuery" name="invoiceCustomer" (focus)="customerDrop.set(true)" (blur)="onCustomerBlur()"
+                   placeholder="Filtrar o crear cliente/entidad" autocomplete="off"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            @if (customerDrop()) {
+              <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                @for (c of filteredCustomers(customerQuery); track c.id) {
+                  <button type="button" (mousedown)="selectCustomer(c)"
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 transition-colors text-slate-900">
+                    {{ c.name }}
+                    @if (c.taxId) { <span class="text-xs text-slate-500">· {{ c.taxId }}</span> }
+                  </button>
+                }
+                @if (customerQuery.trim() && !filteredCustomers(customerQuery).some(c => c.name.toLowerCase() === customerQuery.trim().toLowerCase())) {
+                  <button type="button" (mousedown)="createCustomerInline()"
+                          class="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors font-medium">
+                    + Crear "{{ customerQuery.trim() }}"
+                  </button>
+                }
+                @if (!filteredCustomers(customerQuery).length && !customerQuery.trim()) {
+                  <div class="px-3 py-2 text-sm text-slate-500">Sin clientes registrados</div>
+                }
+              </div>
+            }
           </div>
-          <h4 class="text-lg font-medium text-slate-800 mb-2">Crear Nueva Factura</h4>
-          <p class="text-sm text-slate-500">Esta funcionalidad está en desarrollo</p>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+            <input type="date" [(ngModel)]="invoiceForm.date" name="invoiceDate"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Dirección del cliente</label>
+            <input [(ngModel)]="invoiceForm.customerAddress" name="customerAddress"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono del cliente</label>
+            <input [(ngModel)]="invoiceForm.customerPhone" name="customerPhone"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Impuesto %</label>
+            <input type="number" step="0.01" min="0" [(ngModel)]="invoiceForm.taxRate" name="taxRate"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
         </div>
+
+        <!-- Líneas -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-medium text-slate-700">Detalle de la factura *</label>
+            <button type="button" (click)="addItem()"
+                    class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Añadir línea
+            </button>
+          </div>
+          <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="text-left px-3 py-2 font-medium text-slate-600">Descripción</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-600 w-24">Cant.</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-600 w-32">Precio</th>
+                  <th class="text-right px-3 py-2 font-medium text-slate-600 w-32">Importe</th>
+                  <th class="w-10"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                @for (item of invoiceItems(); track $index) {
+                  <tr>
+                    <td class="px-2 py-1 relative">
+                      <input [(ngModel)]="item.description" name="desc{{$index}}" placeholder="Buscar producto o escribir descripción..."
+                             autocomplete="off"
+                             (focus)="productDropIndex.set($index)" (blur)="onProductBlur()"
+                             class="w-full border-0 bg-transparent px-1 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 rounded" />
+                      @if (productDropIndex() === $index && filteredProducts(item.description).length) {
+                        <div class="absolute z-20 mt-1 left-0 w-72 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                          @for (p of filteredProducts(item.description); track p.productCode) {
+                            <button type="button" (mousedown)="selectProduct(item, p)"
+                                    class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors">
+                              <div class="font-medium text-slate-900">{{ p.productName }}</div>
+                              <div class="text-xs text-slate-500">{{ p.productCode }} · ${{ p.defaultUnitPrice | number:'1.2-2' }}</div>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </td>
+                    <td class="px-2 py-1">
+                      <input type="number" min="0" step="1" [(ngModel)]="item.quantity" name="qty{{$index}}"
+                             class="w-full border-0 bg-transparent px-1 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500 rounded" />
+                    </td>
+                    <td class="px-2 py-1">
+                      <input type="number" min="0" step="0.01" [(ngModel)]="item.unitPrice" name="price{{$index}}"
+                             class="w-full border-0 bg-transparent px-1 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500 rounded" />
+                    </td>
+                    <td class="px-3 py-1 text-right text-sm font-medium text-slate-700">${{ itemAmount(item) | number:'1.2-2' }}</td>
+                    <td class="px-2 py-1 text-center">
+                      <button type="button" (click)="removeItem($index)" class="text-red-400 hover:text-red-600" title="Quitar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Totales -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Descuento</label>
+            <input type="number" step="0.01" min="0" [(ngModel)]="invoiceForm.discount" name="discount"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="block text-sm font-medium text-slate-700 mt-3 mb-1">Notas</label>
+            <textarea [(ngModel)]="invoiceForm.notes" name="invoiceNotes" rows="2"
+                      class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-4 space-y-1.5 text-sm">
+            <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span class="font-medium">${{ invoiceSubtotal() | number:'1.2-2' }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Impuesto ({{ invoiceForm.taxRate }}%)</span><span class="font-medium">${{ invoiceTax() | number:'1.2-2' }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Descuento</span><span class="font-medium text-red-600">-${{ invoiceForm.discount | number:'1.2-2' }}</span></div>
+            <div class="flex justify-between pt-1.5 border-t border-slate-200"><span class="font-semibold">Total</span><span class="font-bold text-blue-700 text-base">${{ invoiceTotal() | number:'1.2-2' }}</span></div>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <p class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ formError() }}</p>
+        }
       </div>
     </app-modal>
   }

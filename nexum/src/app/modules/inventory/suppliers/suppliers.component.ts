@@ -35,7 +35,7 @@ export class SuppliersComponent implements OnInit, OnDestroy {
   selectedSupplier = signal<any>(null);
   formError = signal('');
 
-  newSupplier: any = { supplierCode: '', businessName: '', tradeName: '', nit: '', contactPerson: '', contactPhone: '', contactEmail: '', address: '', city: '' };
+  newSupplier: any = { supplierCode: '', reeupCode: '', businessName: '', tradeName: '', nit: '', ircc: '', province: '', country: 'Cuba', contactPhone: '', contactEmail: '', address: '', city: '' };
   editSupplier: any = {};
 
   private refreshSub!: Subscription;
@@ -119,7 +119,7 @@ export class SuppliersComponent implements OnInit, OnDestroy {
   }
 
   openCreate(): void {
-    this.newSupplier = { supplierCode: '', businessName: '', tradeName: '', nit: '', contactPerson: '', contactPhone: '', contactEmail: '', address: '', city: '' };
+    this.newSupplier = { supplierCode: '', reeupCode: '', businessName: '', tradeName: '', nit: '', ircc: '', province: '', country: 'Cuba', contactPhone: '', contactEmail: '', address: '', city: '' };
     this.formError.set('');
     this.isCreateOpen.set(true);
   }
@@ -130,8 +130,8 @@ export class SuppliersComponent implements OnInit, OnDestroy {
   }
 
   saveSupplier(): void {
-    if (!this.newSupplier.supplierCode?.trim() || !this.newSupplier.businessName?.trim()) {
-      this.formError.set('Codigo y razon social son obligatorios');
+    if (!this.newSupplier.businessName?.trim()) {
+      this.formError.set('El nombre es obligatorio');
       return;
     }
     this.formError.set('');
@@ -160,8 +160,8 @@ export class SuppliersComponent implements OnInit, OnDestroy {
   }
 
   updateSupplier(): void {
-    if (!this.editSupplier.supplierCode?.trim() || !this.editSupplier.businessName?.trim()) {
-      this.formError.set('Codigo y razon social son obligatorios');
+    if (!this.editSupplier.businessName?.trim()) {
+      this.formError.set('El nombre es obligatorio');
       return;
     }
     this.formError.set('');
