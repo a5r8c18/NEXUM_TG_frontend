@@ -272,7 +272,7 @@
               Añadir línea
             </button>
           </div>
-          <div class="border border-slate-200 rounded-lg overflow-hidden">
+          <div class="border border-slate-200 rounded-lg">
             <table class="w-full text-sm">
               <thead class="bg-slate-50">
                 <tr>
@@ -287,13 +287,14 @@
                 @for (item of invoiceItems(); track $index) {
                   <tr>
                     <td class="px-2 py-1 relative">
-                      <input [(ngModel)]="item.description" name="desc{{$index}}" placeholder="Buscar producto o escribir descripción..."
+                      <input [value]="item.description" name="desc{{$index}}" placeholder="Buscar producto o escribir descripción..."
                              autocomplete="off"
-                             (focus)="productDropIndex.set($index)" (blur)="onProductBlur()"
+                             (input)="onProductInput(item, $index, $any($event.target).value)"
+                             (focus)="item.productQuery = item.description; productDropIndex.set($index)" (blur)="onProductBlur()"
                              class="w-full border-0 bg-transparent px-1 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 rounded" />
-                      @if (productDropIndex() === $index && filteredProducts(item.description).length) {
+                      @if (productDropIndex() === $index && filteredProducts(item.productQuery ?? '').length) {
                         <div class="absolute z-20 mt-1 left-0 w-72 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
-                          @for (p of filteredProducts(item.description); track p.productCode) {
+                          @for (p of filteredProducts(item.productQuery ?? ''); track p.productCode) {
                             <button type="button" (mousedown)="selectProduct(item, p)"
                                     class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors">
                               <div class="font-medium text-slate-900">{{ p.productName }}</div>
@@ -345,6 +346,60 @@
         @if (formError()) {
           <p class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ formError() }}</p>
         }
+      </div>
+    </app-modal>
+  }
+
+  <!-- Modal: Crear Cliente -->
+  @if (isCustomerModalOpen()) {
+    <app-modal [isOpen]="isCustomerModalOpen()" title="Nuevo Cliente/Entidad" confirmText="Guardar"
+               confirmButtonClass="bg-blue-600 hover:bg-blue-700" maxWidthClass="max-w-2xl"
+               (closeEvent)="isCustomerModalOpen.set(false)" (confirmEvent)="saveCustomerInline()">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">Codigo</label>
+          <input type="text" value="CLE-(auto)" readonly class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 font-mono"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">Codigo REEUP</label>
+          <input type="text" [(ngModel)]="newCustomerForm.reeupCode" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1 sm:col-span-2">
+          <label class="text-xs font-semibold text-slate-700">Nombre <span class="text-red-500">*</span></label>
+          <input type="text" [(ngModel)]="newCustomerForm.name" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">Abreviatura</label>
+          <input type="text" [(ngModel)]="newCustomerForm.abbreviation" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">NIT</label>
+          <input type="text" [(ngModel)]="newCustomerForm.taxId" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">IRCC</label>
+          <input type="text" [(ngModel)]="newCustomerForm.ircc" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">Telefono</label>
+          <input type="text" [(ngModel)]="newCustomerForm.phone" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">Email</label>
+          <input type="email" [(ngModel)]="newCustomerForm.email" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">Provincia</label>
+          <input type="text" [(ngModel)]="newCustomerForm.province" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-700">Pais</label>
+          <input type="text" [(ngModel)]="newCustomerForm.country" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="space-y-1 sm:col-span-2">
+          <label class="text-xs font-semibold text-slate-700">Direccion</label>
+          <input type="text" [(ngModel)]="newCustomerForm.address" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
       </div>
     </app-modal>
   }

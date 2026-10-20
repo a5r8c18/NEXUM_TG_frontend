@@ -90,13 +90,28 @@ export class InvoicesComponent implements OnInit, OnDestroy {
 
   onCustomerBlur(): void { setTimeout(() => this.customerDrop.set(false), 150); }
 
+  /** Abre el modal de creación de cliente con el nombre precargado. */
+  isCustomerModalOpen = signal(false);
+  newCustomerForm: any = this.emptyCustomerForm();
+
+  private emptyCustomerForm() {
+    return { reeupCode: '', name: '', abbreviation: '', address: '', email: '', phone: '', taxId: '', ircc: '', province: '', country: 'Cuba' };
+  }
+
   createCustomerInline(): void {
-    const name = this.customerQuery.trim();
-    if (!name) return;
-    this.financeService.createCustomer({ name }).subscribe({
+    this.newCustomerForm = this.emptyCustomerForm();
+    this.newCustomerForm.name = this.customerQuery.trim();
+    this.customerDrop.set(false);
+    this.isCustomerModalOpen.set(true);
+  }
+
+  saveCustomerInline(): void {
+    if (!this.newCustomerForm.name?.trim()) return;
+    this.financeService.createCustomer(this.newCustomerForm).subscribe({
       next: (created: any) => {
         this.customers.set([...this.customers(), created]);
         this.selectCustomer(created);
+        this.isCustomerModalOpen.set(false);
       },
       error: () => this.showToast('Error al crear cliente', 'error'),
     });
@@ -110,9 +125,17 @@ export class InvoicesComponent implements OnInit, OnDestroy {
       : list).slice(0, 10);
   }
 
+  onProductInput(item: any, index: number, value: string): void {
+    item.description = value;
+    item.productCode = undefined;
+    item.productQuery = value;
+    this.productDropIndex.set(index);
+  }
+
   selectProduct(item: any, p: any): void {
     item.productCode = p.productCode;
     item.description = p.productName;
+    item.productQuery = p.productName;
     item.unitPrice = Number(p.defaultUnitPrice || 0);
     this.productDropIndex.set(null);
   }
@@ -166,6 +189,10 @@ export class InvoicesComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadInvoices();
+    this.productsService.getAll().subscribe({
+      next: (data: any) => this.products.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? data?.products ?? [])),
+      error: () => {},
+    });
   }
 
   ngOnDestroy() {
