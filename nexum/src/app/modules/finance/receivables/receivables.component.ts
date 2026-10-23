@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -17,7 +16,6 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 export class ReceivablesComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
   private notificationService = inject(NotificationService);
-  private confirmDialog = inject(ConfirmDialogService);
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -33,11 +31,16 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
 
   isCreateOpen = signal(false);
   isEditOpen = signal(false);
+  isPaymentOpen = signal(false);
+  isViewOpen = signal(false);
   selectedReceivable = signal<any>(null);
+  viewReceivable = signal<any>(null);
   formError = signal('');
 
   newReceivable: any = { customerName: '', customerId: '', originalAmount: 0, dueDate: '', description: '' };
   editReceivable: any = {};
+  paymentData: any = {};
+  bankAccounts = signal<any[]>([]);
 
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
@@ -75,6 +78,7 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadData();
     this.loadStats();
+    this.loadBankAccounts();
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
       this.loadData();
       this.loadStats();
@@ -106,6 +110,15 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
   loadStats(): void {
     this.financeService.getReceivableStats().subscribe({
       next: (s: any) => this.stats.set(s),
+      error: () => {},
+    });
+  }
+
+  loadBankAccounts(): void {
+    this.financeService.getBanks().subscribe({
+      next: (data: any) => {
+        this.bankAccounts.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? []));
+      },
       error: () => {},
     });
   }
@@ -151,6 +164,23 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
     });
   }
 
+  openView(receivable: any): void {
+    this.viewReceivable.set(null);
+    this.isViewOpen.set(true);
+    this.financeService.getReceivable(receivable.id).subscribe({
+      next: (data: any) => this.viewReceivable.set(data),
+      error: () => {
+        this.isViewOpen.set(false);
+        this.showToast('Error al cargar el detalle de la cuenta por cobrar', 'error');
+      },
+    });
+  }
+
+  closeView(): void {
+    this.isViewOpen.set(false);
+    this.viewReceivable.set(null);
+  }
+
   openEdit(receivable: any): void {
     this.selectedReceivable.set(receivable);
     this.editReceivable = { ...receivable };
@@ -180,31 +210,57 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
     });
   }
 
-  async markAsPaid(receivable: any): Promise<void> {
-    const confirmed = await this.confirmDialog.confirm({
-      title: 'Registrar cobro',
-      message: `Registrar el cobro total de "${receivable.customerName}" por $${Number(receivable.balanceAmount).toFixed(2)} en efectivo?`,
-      confirmText: 'Confirmar',
-      type: 'warning',
-    });
-    if (!confirmed) return;
-    // El cobro pasa por createPayment: genera el Payment, el comprobante
-    // contable y el movimiento de caja — no basta con cambiar el estado.
+  openPaymentModal(receivable: any): void {
+    this.selectedReceivable.set(receivable);
+    this.paymentData = {
+      amount: receivable.balanceAmount,
+      paymentMethod: 'bank_transfer',
+      bankAccountId: '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      description: `Cobro ${receivable.arNumber} - ${receivable.customerName}`,
+    };
+    this.formError.set('');
+    this.isPaymentOpen.set(true);
+  }
+
+  closePaymentModal(): void {
+    this.isPaymentOpen.set(false);
+    this.selectedReceivable.set(null);
+    this.formError.set('');
+  }
+
+  processPayment(): void {
+    const ar = this.selectedReceivable();
+    if (!ar) return;
+    const data = this.paymentData;
+    if (!data.amount || Number(data.amount) <= 0) {
+      this.formError.set('El monto a cobrar debe ser mayor que cero');
+      return;
+    }
+    if ((data.paymentMethod === 'bank_transfer' || data.paymentMethod === 'check' ||
+         data.paymentMethod === 'credit_card' || data.paymentMethod === 'debit_card') && !data.bankAccountId) {
+      this.formError.set('Seleccione una cuenta bancaria para este método de pago');
+      return;
+    }
+    this.formError.set('');
     this.financeService.createPayment({
       paymentType: 'receivable',
-      accountReceivableId: receivable.id,
-      amount: Number(receivable.balanceAmount),
-      paymentMethod: 'cash',
-      paymentDate: new Date().toISOString().split('T')[0],
-      description: `Cobro de ${receivable.arNumber || receivable.invoiceNumber}`,
-      counterpartyName: receivable.customerName,
+      accountReceivableId: ar.id,
+      amount: Number(data.amount),
+      paymentMethod: data.paymentMethod,
+      bankAccountId: data.bankAccountId || null,
+      paymentDate: data.paymentDate,
+      description: data.description,
+      counterpartyName: ar.customerName,
       performedBy: 'Usuario',
     }).subscribe({
       next: () => {
+        this.closePaymentModal();
         this.loadData();
+        this.loadStats();
         this.showToast('Cobro registrado exitosamente', 'success');
       },
-      error: (err: any) => this.showToast(err?.error?.message || 'Error al registrar el cobro', 'error'),
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al registrar el cobro'),
     });
   }
 
