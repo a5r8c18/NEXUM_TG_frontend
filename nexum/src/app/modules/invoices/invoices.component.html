@@ -28,11 +28,10 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
-            <button (click)="openCreate()"
-         class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+      <button (click)="openCreate()"
+              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 4v16m8-8H4"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
         Nueva Factura
       </button>
@@ -136,6 +135,7 @@
                 </td>
                 <td class="px-5 py-4">
                   <div class="flex justify-center gap-1">
+                    <!-- PDF -->
                     <button (click)="downloadPDF(invoice)"
                             class="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                             title="Descargar PDF">
@@ -144,12 +144,13 @@
                               d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                       </svg>
                     </button>
-                    <button (click)="downloadExcel(invoice)"
-                            class="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Descargar Excel">
+                    <!-- Ver detalle -->
+                    <button (click)="openView(invoice)"
+                            class="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Ver detalle">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-1m3-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v7m3-2h6"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                       </svg>
                     </button>
                     @if (invoice.status === 'pending') {
@@ -207,6 +208,111 @@
         </div>
       }
     </div>
+  }
+
+  <!-- Modal Ver detalle de factura -->
+  @if (isViewOpen()) {
+    <app-modal [isOpen]="isViewOpen()" [title]="'Detalle de Factura'"
+               [confirmText]="'Cerrar'" (closeEvent)="closeView()" (confirmEvent)="closeView()"
+               maxWidthClass="max-w-5xl">
+      @if (viewLoading()) {
+        <div class="flex justify-center py-8 text-sm text-slate-500">Cargando detalle...</div>
+      } @else if (viewInvoice()) {
+        <div class="space-y-6 text-sm">
+          <!-- Cabecera -->
+          <div class="bg-slate-50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 justify-items-center text-center">
+            <p><span class="font-medium">N°:</span> {{ viewInvoice().invoiceNumber }}</p>
+            <p><span class="font-medium">Cliente:</span> {{ viewInvoice().customerName }}</p>
+            <p><span class="font-medium">NIT:</span> {{ viewInvoice().customerNit || '-' }}</p>
+            <p><span class="font-medium">Fecha:</span> {{ formatDate(viewInvoice().date) }}</p>
+            <p><span class="font-medium">Dirección:</span> {{ viewInvoice().customerAddress || '-' }}</p>
+            <p><span class="font-medium">Teléfono:</span> {{ viewInvoice().customerPhone || '-' }}</p>
+            <p><span class="font-medium">Estado:</span> {{ getStatusLabel(viewInvoice().status) }}</p>
+            <p><span class="font-medium">Notas:</span> {{ viewInvoice().notes || '-' }}</p>
+          </div>
+
+          <!-- Líneas -->
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-2">Líneas de la factura</h4>
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <table class="w-full text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-500">
+                  <tr>
+                    <th class="text-left px-3 py-2">Código</th>
+                    <th class="text-left px-3 py-2">Descripción</th>
+                    <th class="text-center px-3 py-2">Cant.</th>
+                    <th class="text-right px-3 py-2">Precio</th>
+                    <th class="text-right px-3 py-2">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of (viewInvoice().items || []); track item.id) {
+                    <tr class="border-t border-slate-100">
+                      <td class="px-3 py-1.5 font-mono">{{ item.productCode || '-' }}</td>
+                      <td class="px-3 py-1.5">{{ item.description }}</td>
+                      <td class="px-3 py-1.5 text-center">{{ item.quantity }}</td>
+                      <td class="px-3 py-1.5 text-right">{{ formatCurrency(item.unitPrice) }}</td>
+                      <td class="px-3 py-1.5 text-right font-medium">{{ formatCurrency(item.amount) }}</td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="5" class="px-3 py-4 text-center text-slate-500">Sin líneas</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Totales -->
+          <div class="flex justify-end">
+            <div class="w-64 space-y-1 text-sm">
+              <div class="flex justify-between text-slate-600"><span>Subtotal</span><span class="font-medium">{{ formatCurrency(viewInvoice().subtotal) }}</span></div>
+              <div class="flex justify-between text-slate-600"><span>Descuento</span><span class="font-medium text-red-600">-{{ formatCurrency(viewInvoice().discount) }}</span></div>
+              <div class="flex justify-between text-slate-600"><span>Impuesto ({{ viewInvoice().taxRate }}%)</span><span class="font-medium">{{ formatCurrency(viewInvoice().taxAmount) }}</span></div>
+              <div class="flex justify-between border-t border-slate-200 pt-2 text-base"><span class="font-semibold">Total</span><span class="font-bold text-blue-700">{{ formatCurrency(viewInvoice().total) }}</span></div>
+            </div>
+          </div>
+
+          <!-- Comprobantes contables (solo el de VENTA) -->
+          <div class="space-y-3">
+            @if (viewInvoice().vouchers?.length) {
+              <h4 class="font-semibold text-slate-700">Comprobante(s) contable(s)</h4>
+              @for (v of viewInvoice().vouchers; track v.id) {
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                  <div class="px-3 py-2 bg-slate-50 flex justify-between text-xs text-slate-600">
+                    <span class="font-mono font-semibold">{{ v.voucherNumber }}</span>
+                    <span>{{ formatDate(v.date) }} · {{ v.description }}</span>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-xs min-w-[500px]">
+                      <thead class="border-b border-slate-200 text-slate-500">
+                        <tr>
+                          <th class="text-left px-3 py-1.5">Cuenta</th>
+                          <th class="text-left px-3 py-1.5">Subcuenta</th>
+                          <th class="text-right px-3 py-1.5">Debe</th>
+                          <th class="text-right px-3 py-1.5">Haber</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (l of (v.lines || []); track l.id) {
+                          <tr class="border-t border-slate-100">
+                            <td class="px-3 py-1.5">{{ l.accountCode }} {{ l.accountName }}</td>
+                            <td class="px-3 py-1.5">{{ l.subaccountCode ? l.subaccountCode + ' ' + (l.subaccountName || '') : '-' }}</td>
+                            <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.debit) }}</td>
+                            <td class="px-3 py-1.5 text-right">{{ formatCurrency(l.credit) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              }
+            } @else {
+              <p class="text-xs text-slate-500">Sin comprobante contable asociado.</p>
+            }
+          </div>
+        </div>
+      }
+    </app-modal>
   }
 
   <!-- Modal Crear -->

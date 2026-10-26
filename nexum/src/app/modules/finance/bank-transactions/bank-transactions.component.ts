@@ -3,9 +3,22 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { FinanceService } from '../../../core/services/finance.service';
-import { AccountingService } from '../../../core/services/accounting.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+
+interface CounterpartConcept {
+  code: string;
+  name: string;
+  description: string | null;
+  direction: 'income' | 'expense' | 'both';
+  requiresCustomer: boolean;
+  requiresSupplier: boolean;
+  requiresEmployee: boolean;
+  requiresDocument: boolean;
+  requiresExpenseElement: boolean;
+  requiresExchangeRate: boolean;
+  isActive: boolean;
+}
 
 @Component({
   selector: 'app-bank-transactions',
@@ -15,7 +28,6 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 })
 export class BankTransactionsComponent implements OnInit {
   private financeService = inject(FinanceService);
-  private accountingService = inject(AccountingService);
   private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
 
@@ -24,13 +36,13 @@ export class BankTransactionsComponent implements OnInit {
   transactionType = this.isIncome ? 'credit' : 'debit';
   pageTitle = this.isIncome ? 'Banco - Ingreso' : 'Banco - Egreso';
 
-  /** Tipos de comprobante según si la pantalla es de ingreso o egreso. */
   readonly voucherTypes = this.isIncome
     ? ['Carga Inicial', 'Transferencia Electrónica Recibida', 'Otros cobros']
     : ['Transferencia Electrónica Emitida', 'Otros pagos'];
 
   banks = signal<any[]>([]);
   customers = signal<any[]>([]);
+  counterpartConcepts = signal<CounterpartConcept[]>([]);
   selectedBankId = signal<string>('');
   transactions = signal<any[]>([]);
   isLoading = signal(false);
@@ -41,14 +53,54 @@ export class BankTransactionsComponent implements OnInit {
 
   form = {
     voucherType: '',
+    counterpartConceptCode: '',
     transactionDate: new Date().toISOString().split('T')[0],
     amount: 0,
     referenceNumber: '',
-    counterpartyAccount: '',
-    customerName: '',
+    counterpartyName: '',   // cliente, proveedor o trabajador según concepto
     exchangeRate: 1,
     notes: '',
   };
+
+  // ── Concepto seleccionado y conceptos disponibles para este flujo ──
+  conceptOptions = computed(() =>
+    this.counterpartConcepts().filter(
+      (c) => c.direction === 'both' || c.direction === (this.isIncome ? 'income' : 'expense'),
+    ),
+  );
+
+  selectedConcept = computed(
+    () => this.counterpartConcepts().find((c) => c.code === this.form.counterpartConceptCode) || null,
+  );
+
+  /** Etiqueta del campo de contrapartida según el concepto. */
+  counterpartyLabel(): string {
+    const c = this.selectedConcept();
+    if (!c) return 'Cliente/Entidad';
+    if (c.requiresCustomer) return 'Cliente/Entidad';
+    if (c.requiresSupplier) return 'Proveedor';
+    if (c.requiresEmployee) return 'Trabajador';
+    return 'Cliente/Entidad';
+  }
+
+  /** ¿El concepto exige que se indique la contrapartida? */
+  counterpartyRequired(): boolean {
+    const c = this.selectedConcept();
+    return !!(c?.requiresCustomer || c?.requiresSupplier || c?.requiresEmployee);
+  }
+
+  /** Lookup de concepto por código para la tabla del listado. */
+  conceptLabel(code: string | null | undefined): string {
+    if (!code) return '';
+    const c = this.counterpartConcepts().find((x) => x.code === code);
+    return c ? `${c.code} — ${c.name}` : code;
+  }
+
+  /** Muestra el concepto (nuevos) o la cuenta (históricos). */
+  counterpartyDisplayLabel(tx: any): string {
+    if (tx.counterpartConceptCode) return this.conceptLabel(tx.counterpartConceptCode);
+    return tx.counterpartyAccount || '-';
+  }
 
   // ── Cuenta bancaria filtrable ──
   bankQuery = '';
@@ -58,7 +110,7 @@ export class BankTransactionsComponent implements OnInit {
     const q = (query || '').toLowerCase();
     const list = this.banks();
     const label = (b: any) => `${b.bankName} - ${b.accountNumber} (${b.currency})`;
-    return q ? list.filter(b => label(b).toLowerCase().includes(q)) : list;
+    return q ? list.filter((b) => label(b).toLowerCase().includes(q)) : list;
   }
 
   bankLabel(bank: any): string {
@@ -76,17 +128,14 @@ export class BankTransactionsComponent implements OnInit {
     setTimeout(() => this.bankDrop.set(false), 150);
   }
 
-  /** La tasa solo se habilita cuando la cuenta seleccionada es USD. */
   isUsdAccount(): boolean {
     return this.selectedBank()?.currency === 'USD';
   }
 
-  /** Monto en CUP = monto × tasa (solo visible en transferencias/Otros pagos). */
   montoCup(): number {
     return Number(this.form.amount || 0) * Number(this.form.exchangeRate || 1);
   }
 
-  /** Siglas del tipo de comprobante + consecutivo asignado en el backend. */
   voucherPrefix(): string {
     const map: Record<string, string> = {
       'Carga Inicial': 'CI',
@@ -112,27 +161,23 @@ export class BankTransactionsComponent implements OnInit {
     return full || u.email || '-';
   }
 
-  /** La TER requiere seleccionar el cliente/entidad. */
-  isTransferVoucher(): boolean {
-    return this.form.voucherType.toLowerCase().includes('transferencia electrónica');
-  }
-
-  /** N° comprobante, contabilizado por, tasa y cliente en todo tipo menos Carga Inicial. */
+  /** Bloque N° Comprobante / Tasa / Contabilizado por: visible en todo menos Carga Inicial. */
   showTransferFields(): boolean {
     return !!this.form.voucherType && this.form.voucherType !== 'Carga Inicial';
   }
 
+  // ── Picker de clientes (solo cuando concept.requiresCustomer) ──
   customerQuery = '';
   customerDrop = signal(false);
 
   filteredCustomers(query: string) {
     const q = (query || '').toLowerCase();
     const list = this.customers();
-    return q ? list.filter(c => c.name.toLowerCase().includes(q)) : list;
+    return q ? list.filter((c) => c.name.toLowerCase().includes(q)) : list;
   }
 
   selectCustomer(customer: any): void {
-    this.form.customerName = customer.name;
+    this.form.counterpartyName = customer.name;
     this.customerQuery = customer.name;
     this.customerDrop.set(false);
   }
@@ -154,67 +199,20 @@ export class BankTransactionsComponent implements OnInit {
     setTimeout(() => this.customerDrop.set(false), 150);
   }
 
-  accountOptions = signal<any[]>([]);
-  subaccounts = signal<any[]>([]);
-  accountQuery = '';
-  accountDrop = signal(false);
-
-  /** Cuentas del nomenclador con sus subcuentas anidadas debajo. */
-  accountSelectOptions = computed(() => {
-    const opts: { value: string; label: string; isSub: boolean; parentCode?: string }[] = [];
-    const subs = this.subaccounts();
-    for (const a of this.accountOptions()) {
-      if (a.code?.includes('-') || Number(a.level) >= 4) continue;
-      const children = subs.filter(s => s.parentCode === a.code || s.code?.startsWith(`${a.code}-`));
-      if (!a.allowsMovements && children.length === 0) continue;
-      opts.push({ value: a.code, label: `${a.code} - ${a.name}`, isSub: false });
-      for (const s of children) {
-        const value = s.code?.includes('-') ? s.code : `${a.code}-${s.code}`;
-        opts.push({ value, label: `${s.code} - ${s.name}`, isSub: true, parentCode: a.code });
-      }
-    }
-    return opts;
-  });
-
-  filteredAccountOptions(query: string) {
-    const q = (query || '').toLowerCase();
-    const opts = this.accountSelectOptions();
-    return q ? opts.filter(o => o.label.toLowerCase().includes(q)) : opts;
-  }
-
-  counterpartyAccountLabel(value: string): string {
-    if (!value) return '';
-    const opt = this.accountSelectOptions().find(o => o.value === value);
-    if (!opt) return value;
-    if (!opt.isSub) return opt.label;
-    const parent = this.accountSelectOptions().find(o => o.value === opt.parentCode);
-    return parent ? `${parent.label} → ${opt.label}` : opt.label;
-  }
-
-  selectCounterpartyAccount(value: string): void {
-    this.form.counterpartyAccount = value;
-    this.accountQuery = this.counterpartyAccountLabel(value);
-    this.accountDrop.set(false);
-  }
-
-  onAccountBlur(): void {
-    setTimeout(() => this.accountDrop.set(false), 150);
-  }
-
-  selectedBank = computed(() => this.banks().find(b => b.id === this.selectedBankId()) || null);
+  selectedBank = computed(() => this.banks().find((b) => b.id === this.selectedBankId()) || null);
 
   ngOnInit(): void {
     this.loadBanks();
-    this.accountingService.getAccounts({ activeOnly: 'true' }).subscribe({
-      next: (accounts) => this.accountOptions.set(Array.isArray(accounts) ? accounts : []),
-      error: () => {},
-    });
-    this.accountingService.getSubaccounts().subscribe({
-      next: (subs) => this.subaccounts.set(Array.isArray(subs) ? subs : []),
-      error: () => {},
-    });
+    this.loadCounterpartConcepts();
     this.financeService.getCustomers().subscribe({
       next: (data) => this.customers.set(Array.isArray(data) ? data : []),
+      error: () => {},
+    });
+  }
+
+  loadCounterpartConcepts(): void {
+    this.financeService.getCounterpartConcepts().subscribe({
+      next: (data) => this.counterpartConcepts.set(Array.isArray(data) ? data : []),
       error: () => {},
     });
   }
@@ -265,18 +263,17 @@ export class BankTransactionsComponent implements OnInit {
     this.editingTx.set(tx);
     this.form = {
       voucherType: tx.transactionCode || '',
+      counterpartConceptCode: tx.counterpartConceptCode || '',
       transactionDate: tx.transactionDate,
       amount: Number(tx.amount || 0),
       referenceNumber: tx.referenceNumber || '',
-      counterpartyAccount: tx.counterpartyAccount || '',
-      customerName: tx.counterpartyName || '',
+      counterpartyName: tx.counterpartyName || '',
       exchangeRate: Number(tx.exchangeRate || 1),
       notes: tx.notes || '',
     };
-    this.accountQuery = this.counterpartyAccountLabel(tx.counterpartyAccount || '');
     this.customerQuery = tx.counterpartyName || '';
     this.selectedBankId.set(tx.bankAccountId);
-    const bank = this.banks().find(b => b.id === tx.bankAccountId);
+    const bank = this.banks().find((b) => b.id === tx.bankAccountId);
     this.bankQuery = bank ? this.bankLabel(bank) : '';
     this.isModalOpen.set(true);
   }
@@ -307,8 +304,12 @@ export class BankTransactionsComponent implements OnInit {
       this.showToast('Seleccione el tipo de comprobante', 'error');
       return;
     }
-    if (this.isTransferVoucher() && !this.form.customerName?.trim()) {
-      this.showToast('Seleccione el cliente/entidad', 'error');
+    if (!this.form.counterpartConceptCode) {
+      this.showToast('Seleccione un concepto de contrapartida', 'error');
+      return;
+    }
+    if (this.counterpartyRequired() && !this.form.counterpartyName?.trim()) {
+      this.showToast(`Indique ${this.counterpartyLabel().toLowerCase()}`, 'error');
       return;
     }
     if (!this.form.amount || Number(this.form.amount) <= 0 || !this.form.notes?.trim()) {
@@ -318,33 +319,34 @@ export class BankTransactionsComponent implements OnInit {
 
     const editing = this.editingTx();
     this.saving.set(true);
+
+    // Enviar el concepto (no la cuenta) y el nombre de la contrapartida unificado.
+    const basePayload = {
+      transactionCode: this.form.voucherType,
+      transactionDate: this.form.transactionDate,
+      amount: Number(this.form.amount),
+      referenceNumber: this.form.referenceNumber || undefined,
+      counterpartConceptCode: this.form.counterpartConceptCode,
+      counterpartyName: this.form.counterpartyName || undefined,
+      exchangeRate: Number(this.form.exchangeRate) || 1,
+      notes: this.form.notes || undefined,
+    };
+
     const request$ = editing
-      ? this.financeService.updateBankTransaction(editing.id, {
-          transactionCode: this.form.voucherType,
-          transactionDate: this.form.transactionDate,
-          amount: Number(this.form.amount),
-          referenceNumber: this.form.referenceNumber || undefined,
-          counterpartyAccount: this.form.counterpartyAccount || undefined,
-          counterpartyName: this.form.customerName || undefined,
-          exchangeRate: Number(this.form.exchangeRate) || 1,
-          notes: this.form.notes || undefined,
-        })
+      ? this.financeService.updateBankTransaction(editing.id, basePayload)
       : this.financeService.createBankTransaction(id, {
+          ...basePayload,
           transactionType: this.transactionType,
-          transactionCode: this.form.voucherType,
-          transactionDate: this.form.transactionDate,
-          amount: Number(this.form.amount),
-          referenceNumber: this.form.referenceNumber || undefined,
-          counterpartyAccount: this.form.counterpartyAccount || undefined,
-          counterpartyName: this.form.customerName || undefined,
           currency: this.selectedBank()?.currency || 'CUP',
-          exchangeRate: Number(this.form.exchangeRate) || 1,
-          notes: this.form.notes || undefined,
         });
+
     request$.subscribe({
       next: () => {
         this.saving.set(false);
-        this.showToast(editing ? 'Comprobante actualizado' : (this.isIncome ? 'Ingreso registrado' : 'Egreso registrado'), 'success');
+        this.showToast(
+          editing ? 'Comprobante actualizado' : this.isIncome ? 'Ingreso registrado' : 'Egreso registrado',
+          'success',
+        );
         this.closeModal();
         this.resetForm();
         this.loadTransactions();
@@ -359,15 +361,14 @@ export class BankTransactionsComponent implements OnInit {
   resetForm(): void {
     this.form = {
       voucherType: '',
+      counterpartConceptCode: '',
       transactionDate: new Date().toISOString().split('T')[0],
       amount: 0,
       referenceNumber: '',
-      counterpartyAccount: '',
-      customerName: '',
+      counterpartyName: '',
       exchangeRate: 1,
       notes: '',
     };
-    this.accountQuery = '';
     this.customerQuery = '';
     this.bankQuery = '';
   }
@@ -378,6 +379,9 @@ export class BankTransactionsComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return Number(value || 0).toLocaleString('es-CU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return Number(value || 0).toLocaleString('es-CU', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   }
 }

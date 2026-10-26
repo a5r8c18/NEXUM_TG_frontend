@@ -14,6 +14,13 @@ export class FinanceService {
     return this.http.get(`${this.apiUrl}/finance/dashboard`);
   }
 
+  // ── Conceptos de contrapartida ──
+  getCounterpartConcepts(direction?: 'income' | 'expense'): Observable<any> {
+    let params = new HttpParams();
+    if (direction) params = params.set('direction', direction);
+    return this.http.get(`${this.apiUrl}/finance/counterpart-concepts`, { params });
+  }
+
   // ── CxC ──
   getReceivables(filters?: any): Observable<any> {
     let params = new HttpParams();

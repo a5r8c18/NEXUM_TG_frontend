@@ -45,6 +45,11 @@ export class InvoicesService {
       .pipe(map(response => response.invoice));
   }
 
+  /** Detalle completo de la factura con sus comprobantes contables. */
+  getInvoiceWithVouchers(id: string): Observable<{ invoice: Invoice; vouchers: any[] }> {
+    return this.http.get<{ invoice: Invoice; vouchers: any[] }>(`${this.apiUrl}/${id}`);
+  }
+
   createInvoice(invoice: CreateInvoiceDto): Observable<Invoice> {
     return this.http.post<{ invoice: Invoice }>(this.apiUrl, invoice)
       .pipe(map(response => response.invoice));
@@ -67,13 +72,4 @@ export class InvoicesService {
   getStatistics(): Observable<any> {
     return this.http.get(`${this.apiUrl}/statistics`);
   }
-
-  downloadPDF(id: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${id}/pdf`, { responseType: 'blob' });
-  }
-
-  downloadExcel(id: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${id}/excel`, { responseType: 'blob' });
-  }
 }
-

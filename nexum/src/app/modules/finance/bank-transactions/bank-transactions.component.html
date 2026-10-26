@@ -47,7 +47,7 @@
                 <td class="px-4 py-3 dark:text-slate-300">{{ tx.transactionDate }}</td>
                 <td class="px-4 py-3 dark:text-slate-300 font-mono">{{ tx.bankAccount?.accountNumber || '-' }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ tx.description }}</td>
-                <td class="px-4 py-3 dark:text-slate-300">{{ counterpartyAccountLabel(tx.counterpartyAccount || '') || '-' }}</td>
+                <td class="px-4 py-3 dark:text-slate-300">{{ counterpartyDisplayLabel(tx) }}</td>
                 <td class="px-4 py-3 text-right dark:text-slate-300 font-semibold" [class]="isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ formatCurrency(tx.amount) }}</td>
                 <td class="px-4 py-3 text-center">
                   <div class="flex items-center justify-center gap-2">
@@ -73,6 +73,8 @@
   @if (isModalOpen()) {
     <app-modal [isOpen]="isModalOpen()" [title]="(editingTx() ? 'Editar' : 'Nuevo') + ' Comprobante de ' + (isIncome ? 'Ingreso' : 'Egreso')" [confirmText]="saving() ? 'Guardando...' : (editingTx() ? 'Guardar' : 'Registrar')" (closeEvent)="closeModal()" (confirmEvent)="submit()">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <!-- Tipo de comprobante -->
         <div class="sm:col-span-2">
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de comprobante *</label>
           <select [(ngModel)]="form.voucherType" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -82,9 +84,28 @@
             }
           </select>
         </div>
-        @if (showTransferFields()) {
+
+        <!-- Concepto de contrapartida -->
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Concepto de contrapartida *</label>
+          <select [(ngModel)]="form.counterpartConceptCode" name="counterpartConceptCode"
+                  class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Seleccionar concepto</option>
+            @for (c of conceptOptions(); track c.code) {
+              <option [value]="c.code">{{ c.code }} — {{ c.name }}</option>
+            }
+          </select>
+          @if (selectedConcept(); as concept) {
+            @if (concept.description) {
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ concept.description }}</p>
+            }
+          }
+        </div>
+
+        <!-- Cliente (solo si el concepto lo requiere) -->
+        @if (selectedConcept()?.requiresCustomer) {
           <div class="relative sm:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cliente/Entidad {{ isTransferVoucher() ? '*' : '' }}</label>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
             <input [(ngModel)]="customerQuery" name="customerName" (focus)="customerDrop.set(true)" (blur)="onCustomerBlur()"
                    placeholder="Filtrar o crear cliente/entidad" autocomplete="off"
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -110,10 +131,40 @@
             }
           </div>
         }
+
+        <!-- Proveedor (solo si el concepto lo requiere) -->
+        @if (selectedConcept()?.requiresSupplier) {
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
+            <input [(ngModel)]="form.counterpartyName" name="supplierName"
+                   placeholder="Nombre del proveedor"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Próximamente se podrá seleccionar desde el catálogo de proveedores.
+            </p>
+          </div>
+        }
+
+        <!-- Trabajador (solo si el concepto lo requiere) -->
+        @if (selectedConcept()?.requiresEmployee) {
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
+            <input [(ngModel)]="form.counterpartyName" name="employeeName"
+                   placeholder="Nombre del trabajador"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Próximamente se podrá seleccionar desde el catálogo de trabajadores.
+            </p>
+          </div>
+        }
+
+        <!-- Referencia -->
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Referencia</label>
           <input [(ngModel)]="form.referenceNumber" name="referenceNumber" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
+
+        <!-- N° Comprobante -->
         @if (showTransferFields()) {
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">N° Comprobante</label>
@@ -121,6 +172,8 @@
                    class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm text-slate-500 dark:text-slate-400 font-mono" />
           </div>
         }
+
+        <!-- Cuenta bancaria -->
         <div class="relative sm:col-span-2">
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta Bancaria *</label>
           <input [(ngModel)]="bankQuery" name="bankAccount" (focus)="!editingTx() && bankDrop.set(true)" (blur)="onBankBlur()"
@@ -139,10 +192,14 @@
             </div>
           }
         </div>
+
+        <!-- Monto -->
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto *</label>
           <input type="number" step="0.01" [(ngModel)]="form.amount" name="amount" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
+
+        <!-- Tasa y Monto CUP -->
         @if (showTransferFields()) {
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tasa</label>
@@ -155,29 +212,14 @@
                    class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm text-slate-500 dark:text-slate-400" />
           </div>
         }
+
+        <!-- Fecha -->
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha *</label>
           <input type="date" [(ngModel)]="form.transactionDate" name="transactionDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <div class="relative">
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contrapartida</label>
-          <input [(ngModel)]="accountQuery" name="counterpartyAccount" (focus)="accountDrop.set(true)" (blur)="onAccountBlur()"
-                 placeholder="Filtrar cuenta o subcuenta" autocomplete="off"
-                 class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          @if (accountDrop()) {
-            <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
-              @for (opt of filteredAccountOptions(accountQuery); track opt.value) {
-                <button type="button" (mousedown)="selectCounterpartyAccount(opt.value)"
-                        class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
-                        [class.pl-6]="opt.isSub" [class.font-semibold]="!opt.isSub" [class.text-slate-900]="!opt.isSub" [class.dark:text-white]="!opt.isSub" [class.text-slate-600]="opt.isSub" [class.dark:text-slate-300]="opt.isSub">
-                  {{ opt.label }}
-                </button>
-              } @empty {
-                <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin resultados</div>
-              }
-            </div>
-          }
-        </div>
+
+        <!-- Contabilizado por -->
         @if (showTransferFields()) {
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contabilizado por</label>
@@ -185,6 +227,8 @@
                    class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm text-slate-500 dark:text-slate-400" />
           </div>
         }
+
+        <!-- Comentario -->
         <div class="sm:col-span-2">
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Comentario *</label>
           <textarea [(ngModel)]="form.notes" name="notes" rows="2" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>

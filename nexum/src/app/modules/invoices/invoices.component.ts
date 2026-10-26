@@ -30,7 +30,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   isLoading = signal(false);
   hasError = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  
+
   // Pagination data
   paginationData = signal<PaginationResult<Invoice> | null>(null);
 
@@ -40,6 +40,11 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   searchTerm = signal('');
   statusFilter = signal('');
   isCreateOpen = signal(false);
+
+  // ── Modal Ver detalle de factura ──
+  isViewOpen = signal(false);
+  viewLoading = signal(false);
+  viewInvoice = signal<any>(null);
 
   // ── Modal crear factura ──
   customers = signal<any[]>([]);
@@ -67,7 +72,6 @@ export class InvoicesComponent implements OnInit, OnDestroy {
 
   invoiceSubtotal = computed(() =>
     this.invoiceItems().reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0));
-  // El impuesto se calcula sobre el subtotal menos descuento, igual que el backend.
   invoiceTax = computed(() => Math.max(0, this.invoiceSubtotal() - Number(this.invoiceForm.discount || 0)) * (Number(this.invoiceForm.taxRate) / 100));
   invoiceTotal = computed(() => this.invoiceSubtotal() - Number(this.invoiceForm.discount || 0) + this.invoiceTax());
 
@@ -90,7 +94,6 @@ export class InvoicesComponent implements OnInit, OnDestroy {
 
   onCustomerBlur(): void { setTimeout(() => this.customerDrop.set(false), 150); }
 
-  /** Abre el modal de creación de cliente con el nombre precargado. */
   isCustomerModalOpen = signal(false);
   newCustomerForm: any = this.emptyCustomerForm();
 
@@ -158,25 +161,13 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     return Number(item.quantity || 0) * Number(item.unitPrice || 0);
   }
 
-  // Computed
-  filteredInvoices = computed(() => {
-    return this.invoices(); // Server-side filtering, no client-side filtering needed
-  });
-
-  pagedInvoices = computed(() => {
-    return this.invoices(); // Server-side pagination, no client-side pagination needed
-  });
+  filteredInvoices = computed(() => this.invoices());
+  pagedInvoices = computed(() => this.invoices());
 
   paginationConfig = computed(() => {
     const pagination = this.paginationData();
     if (!pagination) {
-      return {
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 0,
-        pageSize: this.pageSize,
-        itemsPerPage: this.pageSize
-      };
+      return { currentPage: 1, totalPages: 1, totalItems: 0, pageSize: this.pageSize, itemsPerPage: this.pageSize };
     }
     return {
       currentPage: pagination.pagination.page,
@@ -195,9 +186,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() {
-    // Cleanup if needed
-  }
+  ngOnDestroy() {}
 
   loadInvoices() {
     this.isLoading.set(true);
@@ -224,22 +213,9 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
-  applyFilters() {
-    this.currentPage.set(1);
-    this.loadInvoices();
-  }
-
-  resetFilters() {
-    this.searchTerm.set('');
-    this.statusFilter.set('');
-    this.currentPage.set(1);
-    this.loadInvoices();
-  }
-
-  onPageChange(page: number) {
-    this.currentPage.set(page);
-    this.loadInvoices();
-  }
+  applyFilters() { this.currentPage.set(1); this.loadInvoices(); }
+  resetFilters() { this.searchTerm.set(''); this.statusFilter.set(''); this.currentPage.set(1); this.loadInvoices(); }
+  onPageChange(page: number) { this.currentPage.set(page); this.loadInvoices(); }
 
   updateStatus(invoice: Invoice, status: 'paid' | 'cancelled') {
     this.invoicesService.updateStatus(invoice.id, status).subscribe({
@@ -269,38 +245,143 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
-  downloadPDF(invoice: Invoice) {
-    this.invoicesService.downloadPDF(invoice.id).subscribe({
-      next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `factura_${invoice.invoiceNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        this.showToast('PDF descargado', 'success');
+  // ── Ver detalle (modal) ──
+  openView(invoice: Invoice): void {
+    this.viewInvoice.set(null);
+    this.isViewOpen.set(true);
+    this.viewLoading.set(true);
+
+    this.invoicesService.getInvoiceWithVouchers(invoice.id).subscribe({
+      next: (data: any) => {
+        this.viewInvoice.set({
+          ...(data.invoice ?? data),
+          vouchers: data.vouchers || [],
+        });
+        this.viewLoading.set(false);
       },
-      error: () => this.showToast('Error al descargar PDF', 'error')
+      error: () => {
+        this.viewLoading.set(false);
+        this.isViewOpen.set(false);
+        this.showToast('Error al cargar el detalle', 'error');
+      }
     });
   }
 
-  downloadExcel(invoice: Invoice) {
-    this.invoicesService.downloadExcel(invoice.id).subscribe({
-      next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `factura_${invoice.invoiceNumber}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        this.showToast('Excel descargado', 'success');
+  closeView(): void {
+    this.isViewOpen.set(false);
+    this.viewInvoice.set(null);
+  }
+
+  // ── PDF cliente-side (marca de agua MIDAS, NIT del cliente) ──
+  downloadPDF(invoice: Invoice) {
+    this.invoicesService.getInvoiceById(invoice.id).subscribe({
+      next: (data: any) => {
+        const inv = data?.invoice ?? data;
+        this.generateInvoicePDF(inv);
       },
-      error: () => this.showToast('Error al descargar Excel', 'error')
+      error: () => this.showToast('Error al generar PDF', 'error')
     });
+  }
+
+  private generateInvoicePDF(invoice: any) {
+    const items = invoice.items || [];
+    const itemsHtml = items.length
+      ? items.map((i: any) => `
+          <tr>
+            <td>${i.productCode || '-'}</td>
+            <td>${i.description || ''}</td>
+            <td style="text-align:center">${i.quantity}</td>
+            <td style="text-align:right">$${Number(i.unitPrice || 0).toFixed(2)}</td>
+            <td style="text-align:right">$${Number(i.amount || 0).toFixed(2)}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="5" style="text-align:center;color:#666;">Sin líneas</td></tr>';
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Factura ${invoice.invoiceNumber}</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; padding: 20px; margin: 0; color: #000; }
+        h1 { text-align: center; font-size: 18px; margin: 0 0 4px; font-weight: bold; letter-spacing: 1px; }
+        h2 { text-align: center; font-size: 12px; margin: 0 0 20px; font-weight: normal; color: #555; }
+        .header-box { border: 1px solid #333; padding: 10px 12px; margin-bottom: 15px; border-radius: 3px; }
+        .header-row { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 6px; }
+        .header-row:last-child { margin-bottom: 0; }
+        .header-field { flex: 1; }
+        .header-label { font-weight: bold; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { border: 1px solid #333; padding: 5px 6px; font-size: 10px; }
+        th { background: #f0f0f0; text-align: center; font-weight: bold; }
+        .total-section { margin-left: auto; width: 260px; }
+        .total-line { display: flex; justify-content: space-between; padding: 3px 0; }
+        .total-line.total { font-size: 14px; font-weight: bold; border-top: 1px solid #333; margin-top: 5px; padding-top: 6px; }
+        .notes { margin-top: 20px; padding-top: 10px; border-top: 1px dashed #666; font-size: 10px; }
+        .signatures { display: flex; justify-content: space-around; margin-top: 60px; gap: 30px; }
+        .signature-box { flex: 1; text-align: center; }
+        .signature-line { border-bottom: 1px solid #000; height: 40px; margin-bottom: 5px; }
+        .signature-label { font-size: 10px; }
+        .footer { margin-top: 20px; text-align: center; font-size: 9px; color: #888; }
+      </style>
+    </head><body>
+      <h1>FACTURA</h1>
+      <h2>N° ${invoice.invoiceNumber}</h2>
+
+      <div class="header-box">
+        <div class="header-row">
+          <div class="header-field"><span class="header-label">Cliente:</span> ${invoice.customerName || '-'}</div>
+          <div class="header-field"><span class="header-label">NIT:</span> ${invoice.customerNit || '-'}</div>
+        </div>
+        <div class="header-row">
+          <div class="header-field"><span class="header-label">Fecha:</span> ${this.formatDate(invoice.date)}</div>
+          <div class="header-field"><span class="header-label">Estado:</span> ${this.getStatusLabel(invoice.status)}</div>
+        </div>
+        ${invoice.customerAddress ? `<div class="header-row"><div class="header-field"><span class="header-label">Dirección:</span> ${invoice.customerAddress}</div></div>` : ''}
+        ${invoice.customerPhone ? `<div class="header-row"><div class="header-field"><span class="header-label">Teléfono:</span> ${invoice.customerPhone}</div></div>` : ''}
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px;">Código</th>
+            <th>Descripción</th>
+            <th style="width:60px;">Cant.</th>
+            <th style="width:90px;">P. Unit.</th>
+            <th style="width:100px;">Importe</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+
+      <div class="total-section">
+        <div class="total-line"><span>Subtotal:</span><span>$${Number(invoice.subtotal || 0).toFixed(2)}</span></div>
+        <div class="total-line"><span>Descuento:</span><span>-$${Number(invoice.discount || 0).toFixed(2)}</span></div>
+        <div class="total-line"><span>Impuesto (${Number(invoice.taxRate || 0)}%):</span><span>$${Number(invoice.taxAmount || 0).toFixed(2)}</span></div>
+        <div class="total-line total"><span>TOTAL:</span><span>$${Number(invoice.total || 0).toFixed(2)}</span></div>
+      </div>
+
+      ${invoice.notes ? `<div class="notes"><strong>Notas:</strong> ${invoice.notes}</div>` : ''}
+
+      <div class="signatures">
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div class="signature-label">Firma del Vendedor</div>
+        </div>
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div class="signature-label">Firma del Cliente</div>
+        </div>
+      </div>
+
+      <div class="footer">Documento generado automáticamente por MIDAS</div>
+
+      <script>window.onload = function() { window.print(); }</script>
+    </body></html>`;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      this.showToast('No se pudo abrir ventana de impresión', 'error');
+      return;
+    }
+    printWindow.document.write(html);
+    printWindow.document.close();
   }
 
   getStatusLabel(status: string): string {
@@ -329,7 +410,11 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Modal methods
+  formatCurrency(value: number | undefined): string {
+    if (!value) return '$0.00';
+    return new Intl.NumberFormat('es-CU', { style: 'currency', currency: 'CUP' }).format(value);
+  }
+
   openCreate(): void {
     this.invoiceForm = this.emptyInvoiceForm();
     this.invoiceItems.set([]);
@@ -347,9 +432,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
     this.isCreateOpen.set(true);
   }
 
-  closeCreate(): void {
-    this.isCreateOpen.set(false);
-  }
+  closeCreate(): void { this.isCreateOpen.set(false); }
 
   createInvoice(): void {
     if (!this.invoiceForm.customerName?.trim()) {
