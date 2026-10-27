@@ -118,6 +118,10 @@ export class FinanceService {
     return this.http.delete(`${this.apiUrl}/finance/bank-transactions/${id}`);
   }
 
+  getLinkedReceivable(txId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/bank-transactions/${txId}/linked-receivable`);
+  }
+
   // ── Clientes / Entidades ──
   getCustomers(): Observable<any> {
     return this.http.get(`${this.apiUrl}/finance/customers`);

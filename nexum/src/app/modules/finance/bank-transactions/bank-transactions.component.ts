@@ -2,7 +2,9 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
+import { AccountingService } from '../../../core/services/accounting.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -28,6 +30,7 @@ interface CounterpartConcept {
 })
 export class BankTransactionsComponent implements OnInit {
   private financeService = inject(FinanceService);
+  private accountingService = inject(AccountingService);
   private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
 
@@ -51,31 +54,55 @@ export class BankTransactionsComponent implements OnInit {
   editingTx = signal<any | null>(null);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Obligaciones de cobro (CxC) para liquidar desde el comprobante bancario.
+  receivables = signal<any[]>([]);
+  loadingReceivables = signal(false);
+  showReceivablesPanel = signal(false);
+  selectedReceivableId = signal<string>('');
+  originalReceivableId = '';
+
   form = {
     voucherType: '',
     counterpartConceptCode: '',
+    counterpartyAccount: '',
     transactionDate: new Date().toISOString().split('T')[0],
     amount: 0,
     referenceNumber: '',
-    counterpartyName: '',   // cliente, proveedor o trabajador según concepto
+    counterpartyName: '',
     exchangeRate: 1,
     notes: '',
   };
 
-  // ── Concepto seleccionado y conceptos disponibles para este flujo ──
+  get isOpeningEntry(): boolean {
+    return this.form.voucherType === 'Carga Inicial';
+  }
+
   conceptOptions = computed(() =>
     this.counterpartConcepts().filter(
       (c) => c.direction === 'both' || c.direction === (this.isIncome ? 'income' : 'expense'),
     ),
   );
 
-  selectedConcept = computed(
-    () => this.counterpartConcepts().find((c) => c.code === this.form.counterpartConceptCode) || null,
-  );
+  get selectedConcept(): CounterpartConcept | null {
+    return this.counterpartConcepts().find((c) => c.code === this.form.counterpartConceptCode) || null;
+  }
 
-  /** Etiqueta del campo de contrapartida según el concepto. */
+  /**
+   * Concepto "20" = liquidación de obligación de cobro (CxC).
+   * Aplica en creación y en edición de ingresos.
+   */
+  get isReceivableSettlement(): boolean {
+    return this.isIncome && this.form.counterpartConceptCode === '20';
+  }
+
+  get selectedReceivable(): any | null {
+    return (
+      this.receivables().find((r) => r.id === this.selectedReceivableId()) || null
+    );
+  }
+
   counterpartyLabel(): string {
-    const c = this.selectedConcept();
+    const c = this.selectedConcept;
     if (!c) return 'Cliente/Entidad';
     if (c.requiresCustomer) return 'Cliente/Entidad';
     if (c.requiresSupplier) return 'Proveedor';
@@ -83,23 +110,35 @@ export class BankTransactionsComponent implements OnInit {
     return 'Cliente/Entidad';
   }
 
-  /** ¿El concepto exige que se indique la contrapartida? */
   counterpartyRequired(): boolean {
-    const c = this.selectedConcept();
+    const c = this.selectedConcept;
     return !!(c?.requiresCustomer || c?.requiresSupplier || c?.requiresEmployee);
   }
 
-  /** Lookup de concepto por código para la tabla del listado. */
   conceptLabel(code: string | null | undefined): string {
     if (!code) return '';
     const c = this.counterpartConcepts().find((x) => x.code === code);
     return c ? `${c.code} — ${c.name}` : code;
   }
 
-  /** Muestra el concepto (nuevos) o la cuenta (históricos). */
   counterpartyDisplayLabel(tx: any): string {
     if (tx.counterpartConceptCode) return this.conceptLabel(tx.counterpartConceptCode);
-    return tx.counterpartyAccount || '-';
+    if (tx.counterpartyAccount) return this.accountingAccountLabel(tx.counterpartyAccount);
+    return '-';
+  }
+
+  onVoucherTypeChange(): void {
+    this.selectedReceivableId.set('');
+    this.receivables.set([]);
+    this.showReceivablesPanel.set(false);
+    if (this.isOpeningEntry) {
+      this.form.counterpartConceptCode = '';
+      this.customerQuery = '';
+      this.form.counterpartyName = '';
+    } else {
+      this.form.counterpartyAccount = '';
+      this.accountQuery = '';
+    }
   }
 
   // ── Cuenta bancaria filtrable ──
@@ -161,12 +200,11 @@ export class BankTransactionsComponent implements OnInit {
     return full || u.email || '-';
   }
 
-  /** Bloque N° Comprobante / Tasa / Contabilizado por: visible en todo menos Carga Inicial. */
   showTransferFields(): boolean {
     return !!this.form.voucherType && this.form.voucherType !== 'Carga Inicial';
   }
 
-  // ── Picker de clientes (solo cuando concept.requiresCustomer) ──
+  // ── Picker de clientes ──
   customerQuery = '';
   customerDrop = signal(false);
 
@@ -180,6 +218,9 @@ export class BankTransactionsComponent implements OnInit {
     this.form.counterpartyName = customer.name;
     this.customerQuery = customer.name;
     this.customerDrop.set(false);
+    this.selectedReceivableId.set('');
+    this.receivables.set([]);
+    this.showReceivablesPanel.set(false);
   }
 
   createCustomerInline(): void {
@@ -199,11 +240,106 @@ export class BankTransactionsComponent implements OnInit {
     setTimeout(() => this.customerDrop.set(false), 150);
   }
 
+  // ── Obligaciones de cobro (CxC) para concepto 20 ──
+  openReceivablesPanel(): void {
+    const customerName = this.form.counterpartyName?.trim();
+    if (!customerName) {
+      this.showToast('Seleccione primero el cliente', 'error');
+      return;
+    }
+    this.loadingReceivables.set(true);
+    this.showReceivablesPanel.set(true);
+    this.financeService.getReceivables({ customerName }).subscribe({
+      next: (data) => {
+        const all = Array.isArray(data) ? data : [];
+        const filtered = all.filter(
+          (r) => !['paid', 'written_off', 'cancelled'].includes(r.status),
+        );
+        // La CxC ya vinculada debe seguir visible aunque esté saldada.
+        if (
+          this.originalReceivableId &&
+          !filtered.some((r) => r.id === this.originalReceivableId)
+        ) {
+          const current = this.receivables().find(
+            (r) => r.id === this.originalReceivableId,
+          );
+          if (current) filtered.unshift(current);
+        }
+        this.receivables.set(filtered);
+        this.loadingReceivables.set(false);
+      },
+      error: () => {
+        this.loadingReceivables.set(false);
+        this.showToast('Error cargando obligaciones de cobro', 'error');
+      },
+    });
+  }
+
+  selectReceivable(rec: any): void {
+    this.selectedReceivableId.set(rec.id);
+    if (!this.form.amount || Number(this.form.amount) <= 0) {
+      this.form.amount = Number(rec.balanceAmount);
+    }
+    this.showReceivablesPanel.set(false);
+  }
+
+  clearSelectedReceivable(): void {
+    this.selectedReceivableId.set('');
+  }
+
+  // ── Picker de cuentas contables (Carga Inicial) ──
+  accountOptions = signal<any[]>([]);
+  subaccounts = signal<any[]>([]);
+  accountQuery = '';
+  accountDrop = signal(false);
+
+  accountSelectOptions = computed(() => {
+    const opts: { value: string; label: string; isSub: boolean; parentCode?: string }[] = [];
+    const subs = this.subaccounts();
+    for (const a of this.accountOptions()) {
+      if (a.code?.includes('-') || Number(a.level) >= 4) continue;
+      const children = subs.filter(s => s.parentCode === a.code || s.code?.startsWith(`${a.code}-`));
+      if (!a.allowsMovements && children.length === 0) continue;
+      opts.push({ value: a.code, label: `${a.code} - ${a.name}`, isSub: false });
+      for (const s of children) {
+        const value = s.code?.includes('-') ? s.code : `${a.code}-${s.code}`;
+        opts.push({ value, label: `${s.code} - ${s.name}`, isSub: true, parentCode: a.code });
+      }
+    }
+    return opts;
+  });
+
+  filteredAccountOptions(query: string) {
+    const q = (query || '').toLowerCase();
+    const opts = this.accountSelectOptions();
+    return q ? opts.filter(o => o.label.toLowerCase().includes(q)) : opts;
+  }
+
+  accountingAccountLabel(value: string): string {
+    if (!value) return '';
+    const opt = this.accountSelectOptions().find(o => o.value === value);
+    if (!opt) return value;
+    if (!opt.isSub) return opt.label;
+    const parent = this.accountSelectOptions().find(o => o.value === opt.parentCode);
+    return parent ? `${parent.label} → ${opt.label}` : opt.label;
+  }
+
+  selectCounterpartyAccount(value: string): void {
+    this.form.counterpartyAccount = value;
+    this.accountQuery = this.accountingAccountLabel(value);
+    this.accountDrop.set(false);
+  }
+
+  onAccountBlur(): void {
+    setTimeout(() => this.accountDrop.set(false), 150);
+  }
+
   selectedBank = computed(() => this.banks().find((b) => b.id === this.selectedBankId()) || null);
 
   ngOnInit(): void {
     this.loadBanks();
     this.loadCounterpartConcepts();
+    this.loadAccountingAccounts();
     this.financeService.getCustomers().subscribe({
       next: (data) => this.customers.set(Array.isArray(data) ? data : []),
       error: () => {},
@@ -217,9 +353,13 @@ export class BankTransactionsComponent implements OnInit {
     });
   }
 
-  loadCustomers(): void {
-    this.financeService.getCustomers().subscribe({
-      next: (data) => this.customers.set(Array.isArray(data) ? data : []),
+  loadAccountingAccounts(): void {
+    this.accountingService.getAccounts({ activeOnly: 'true' }).subscribe({
+      next: (accounts) => this.accountOptions.set(Array.isArray(accounts) ? accounts : []),
+      error: (err) => this.showToast(err?.error?.message || 'Error cargando cuentas contables', 'error'),
+    });
+    this.accountingService.getSubaccounts().subscribe({
+      next: (subs) => this.subaccounts.set(Array.isArray(subs) ? subs : []),
       error: () => {},
     });
   }
@@ -264,6 +404,7 @@ export class BankTransactionsComponent implements OnInit {
     this.form = {
       voucherType: tx.transactionCode || '',
       counterpartConceptCode: tx.counterpartConceptCode || '',
+      counterpartyAccount: tx.counterpartyAccount || '',
       transactionDate: tx.transactionDate,
       amount: Number(tx.amount || 0),
       referenceNumber: tx.referenceNumber || '',
@@ -271,11 +412,62 @@ export class BankTransactionsComponent implements OnInit {
       exchangeRate: Number(tx.exchangeRate || 1),
       notes: tx.notes || '',
     };
+    this.accountQuery = tx.counterpartyAccount
+      ? this.accountingAccountLabel(tx.counterpartyAccount)
+      : '';
     this.customerQuery = tx.counterpartyName || '';
     this.selectedBankId.set(tx.bankAccountId);
     const bank = this.banks().find((b) => b.id === tx.bankAccountId);
     this.bankQuery = bank ? this.bankLabel(bank) : '';
+    this.selectedReceivableId.set('');
+    this.originalReceivableId = '';
+    this.receivables.set([]);
+    this.showReceivablesPanel.set(false);
     this.isModalOpen.set(true);
+
+    if (this.isIncome && tx.counterpartConceptCode === '20') {
+      this.loadReceivablesForEdit(tx);
+    }
+  }
+
+  /** Carga la CxC ya vinculada al comprobante + las disponibles del cliente. */
+  private loadReceivablesForEdit(tx: any): void {
+    this.loadingReceivables.set(true);
+    this.financeService.getLinkedReceivable(tx.id).subscribe({
+      next: (linked) => {
+        const currentAr = linked?.accountReceivable || null;
+        this.originalReceivableId = currentAr?.id || '';
+
+        const query = tx.counterpartyName?.trim();
+        const all$ = query
+          ? this.financeService.getReceivables({ customerName: query })
+          : of([]);
+
+        all$.subscribe({
+          next: (all) => {
+            const list = (Array.isArray(all) ? all : []).filter(
+              (r) => !['paid', 'written_off', 'cancelled'].includes(r.status),
+            );
+            if (currentAr && !list.some((r) => r.id === currentAr.id)) {
+              list.unshift(currentAr);
+            }
+            this.receivables.set(list);
+            if (currentAr) this.selectedReceivableId.set(currentAr.id);
+            this.loadingReceivables.set(false);
+          },
+          error: () => {
+            if (currentAr) {
+              this.receivables.set([currentAr]);
+              this.selectedReceivableId.set(currentAr.id);
+            }
+            this.loadingReceivables.set(false);
+          },
+        });
+      },
+      error: () => {
+        this.loadingReceivables.set(false);
+      },
+    });
   }
 
   closeModal(): void {
@@ -304,36 +496,77 @@ export class BankTransactionsComponent implements OnInit {
       this.showToast('Seleccione el tipo de comprobante', 'error');
       return;
     }
-    if (!this.form.counterpartConceptCode) {
-      this.showToast('Seleccione un concepto de contrapartida', 'error');
-      return;
+
+    const opening = this.isOpeningEntry;
+    const editing = this.editingTx();
+
+    if (opening) {
+      if (!this.form.counterpartyAccount?.trim()) {
+        this.showToast('Seleccione una cuenta contable', 'error');
+        return;
+      }
+    } else {
+      if (!this.form.counterpartConceptCode) {
+        this.showToast('Seleccione un concepto de contrapartida', 'error');
+        return;
+      }
+      if (this.counterpartyRequired() && !this.form.counterpartyName?.trim()) {
+        this.showToast(`Indique ${this.counterpartyLabel().toLowerCase()}`, 'error');
+        return;
+      }
+      if (this.isReceivableSettlement && !this.selectedReceivableId()) {
+        this.showToast('Seleccione la obligación de cobro a liquidar', 'error');
+        return;
+      }
     }
-    if (this.counterpartyRequired() && !this.form.counterpartyName?.trim()) {
-      this.showToast(`Indique ${this.counterpartyLabel().toLowerCase()}`, 'error');
-      return;
-    }
+
     if (!this.form.amount || Number(this.form.amount) <= 0 || !this.form.notes?.trim()) {
       this.showToast('Monto y comentario son obligatorios', 'error');
       return;
     }
 
-    const editing = this.editingTx();
     this.saving.set(true);
 
-    // Enviar el concepto (no la cuenta) y el nombre de la contrapartida unificado.
-    const basePayload = {
+    const basePayload: any = {
       transactionCode: this.form.voucherType,
       transactionDate: this.form.transactionDate,
       amount: Number(this.form.amount),
       referenceNumber: this.form.referenceNumber || undefined,
-      counterpartConceptCode: this.form.counterpartConceptCode,
-      counterpartyName: this.form.counterpartyName || undefined,
       exchangeRate: Number(this.form.exchangeRate) || 1,
       notes: this.form.notes || undefined,
     };
 
+    if (opening) {
+      basePayload.counterpartyAccount = this.form.counterpartyAccount;
+      basePayload.counterpartConceptCode = null;
+      basePayload.counterpartyName = null;
+    } else {
+      basePayload.counterpartConceptCode = this.form.counterpartConceptCode;
+      basePayload.counterpartyAccount = null;
+      basePayload.counterpartyName = this.form.counterpartyName || null;
+
+      // Enviar `accountReceivableId` si el comprobante es (o era) liquidación
+      // de CxC, tanto en creación como en edición:
+      //   - concepto 20 hoy      → id seleccionado (o null si no hay)
+      //   - concepto 20 antes    → null (para revertir el pago previo)
+      const wasReceivable = editing?.counterpartConceptCode === '20';
+      const isReceivableNow = this.isReceivableSettlement;
+      if (wasReceivable || isReceivableNow) {
+        basePayload.accountReceivableId = isReceivableNow
+          ? this.selectedReceivableId() || null
+          : null;
+      }
+    }
+
+    // En edición, solo enviamos bankAccountId si realmente cambió. En creación
+    // el banco va en la URL, por eso no se incluye en el payload.
+    const payloadForUpdate =
+      editing && this.selectedBankId() && this.selectedBankId() !== editing.bankAccountId
+        ? { ...basePayload, bankAccountId: this.selectedBankId() }
+        : basePayload;
+
     const request$ = editing
-      ? this.financeService.updateBankTransaction(editing.id, basePayload)
+      ? this.financeService.updateBankTransaction(editing.id, payloadForUpdate)
       : this.financeService.createBankTransaction(id, {
           ...basePayload,
           transactionType: this.transactionType,
@@ -362,6 +595,7 @@ export class BankTransactionsComponent implements OnInit {
     this.form = {
       voucherType: '',
       counterpartConceptCode: '',
+      counterpartyAccount: '',
       transactionDate: new Date().toISOString().split('T')[0],
       amount: 0,
       referenceNumber: '',
@@ -369,8 +603,13 @@ export class BankTransactionsComponent implements OnInit {
       exchangeRate: 1,
       notes: '',
     };
+    this.accountQuery = '';
     this.customerQuery = '';
     this.bankQuery = '';
+    this.selectedReceivableId.set('');
+    this.originalReceivableId = '';
+    this.receivables.set([]);
+    this.showReceivablesPanel.set(false);
   }
 
   showToast(message: string, type: 'success' | 'error'): void {

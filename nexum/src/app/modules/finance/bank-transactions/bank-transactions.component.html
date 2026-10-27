@@ -77,7 +77,8 @@
         <!-- Tipo de comprobante -->
         <div class="sm:col-span-2">
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de comprobante *</label>
-          <select [(ngModel)]="form.voucherType" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select [(ngModel)]="form.voucherType" (ngModelChange)="onVoucherTypeChange()"
+                  class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">Seleccionar tipo de comprobante</option>
             @for (vt of voucherTypes; track vt) {
               <option [value]="vt">{{ vt }}</option>
@@ -85,77 +86,197 @@
           </select>
         </div>
 
-        <!-- Concepto de contrapartida -->
-        <div class="sm:col-span-2">
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Concepto de contrapartida *</label>
-          <select [(ngModel)]="form.counterpartConceptCode" name="counterpartConceptCode"
-                  class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Seleccionar concepto</option>
-            @for (c of conceptOptions(); track c.code) {
-              <option [value]="c.code">{{ c.code }} — {{ c.name }}</option>
-            }
-          </select>
-          @if (selectedConcept(); as concept) {
-            @if (concept.description) {
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ concept.description }}</p>
-            }
-          }
-        </div>
-
-        <!-- Cliente (solo si el concepto lo requiere) -->
-        @if (selectedConcept()?.requiresCustomer) {
+        <!-- CARGA INICIAL: Cuenta contable del nomenclador -->
+        @if (isOpeningEntry) {
           <div class="relative sm:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
-            <input [(ngModel)]="customerQuery" name="customerName" (focus)="customerDrop.set(true)" (blur)="onCustomerBlur()"
-                   placeholder="Filtrar o crear cliente/entidad" autocomplete="off"
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contrapartida*</label>
+            <input [(ngModel)]="accountQuery" name="counterpartyAccount"
+                   (focus)="accountDrop.set(true)" (blur)="onAccountBlur()"
+                   placeholder="Filtrar cuenta o subcuenta..." autocomplete="off"
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            @if (customerDrop()) {
+            @if (accountDrop()) {
               <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
-                @for (c of filteredCustomers(customerQuery); track c.id) {
-                  <button type="button" (mousedown)="selectCustomer(c)"
-                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
-                    {{ c.name }}
-                    @if (c.taxId) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ c.taxId }}</span> }
+                @for (opt of filteredAccountOptions(accountQuery); track opt.value) {
+                  <button type="button" (mousedown)="selectCounterpartyAccount(opt.value)"
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+                          [class.pl-6]="opt.isSub"
+                          [class.font-semibold]="!opt.isSub"
+                          [class.text-slate-900]="!opt.isSub"
+                          [class.dark:text-white]="!opt.isSub"
+                          [class.text-slate-600]="opt.isSub"
+                          [class.dark:text-slate-300]="opt.isSub">
+                    {{ opt.label }}
                   </button>
-                }
-                @if (customerQuery.trim() && !filteredCustomers(customerQuery).some(c => c.name.toLowerCase() === customerQuery.trim().toLowerCase())) {
-                  <button type="button" (mousedown)="createCustomerInline()"
-                          class="w-full text-left px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors font-medium">
-                    + Crear "{{ customerQuery.trim() }}"
-                  </button>
-                }
-                @if (!filteredCustomers(customerQuery).length && !customerQuery.trim()) {
-                  <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin clientes registrados</div>
+                } @empty {
+                  <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin resultados</div>
                 }
               </div>
             }
           </div>
         }
 
-        <!-- Proveedor (solo si el concepto lo requiere) -->
-        @if (selectedConcept()?.requiresSupplier) {
+        <!-- OTROS COMPROBANTES: Concepto de contrapartida -->
+        @if (!isOpeningEntry) {
           <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
-            <input [(ngModel)]="form.counterpartyName" name="supplierName"
-                   placeholder="Nombre del proveedor"
-                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Próximamente se podrá seleccionar desde el catálogo de proveedores.
-            </p>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Concepto de contrapartida *</label>
+            <select [(ngModel)]="form.counterpartConceptCode" name="counterpartConceptCode"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Seleccionar concepto</option>
+              @for (c of conceptOptions(); track c.code) {
+                <option [value]="c.code">{{ c.code }} — {{ c.name }}</option>
+              }
+            </select>
+            @if (selectedConcept; as concept) {
+              @if (concept.description) {
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ concept.description }}</p>
+              }
+            }
           </div>
-        }
 
-        <!-- Trabajador (solo si el concepto lo requiere) -->
-        @if (selectedConcept()?.requiresEmployee) {
-          <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
-            <input [(ngModel)]="form.counterpartyName" name="employeeName"
-                   placeholder="Nombre del trabajador"
-                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Próximamente se podrá seleccionar desde el catálogo de trabajadores.
-            </p>
-          </div>
+          <!-- Cliente -->
+          @if (selectedConcept?.requiresCustomer) {
+            <div class="relative sm:col-span-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
+              <input [(ngModel)]="customerQuery" name="customerName" (focus)="customerDrop.set(true)" (blur)="onCustomerBlur()"
+                     placeholder="Filtrar o crear cliente/entidad" autocomplete="off"
+                     class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              @if (customerDrop()) {
+                <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                  @for (c of filteredCustomers(customerQuery); track c.id) {
+                    <button type="button" (mousedown)="selectCustomer(c)"
+                            class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                      {{ c.name }}
+                      @if (c.taxId) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ c.taxId }}</span> }
+                    </button>
+                  }
+                  @if (customerQuery.trim() && !filteredCustomers(customerQuery).some(c => c.name.toLowerCase() === customerQuery.trim().toLowerCase())) {
+                    <button type="button" (mousedown)="createCustomerInline()"
+                            class="w-full text-left px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors font-medium">
+                      + Crear "{{ customerQuery.trim() }}"
+                    </button>
+                  }
+                  @if (!filteredCustomers(customerQuery).length && !customerQuery.trim()) {
+                    <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin clientes registrados</div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Obligación de cobro (concepto 20 en ingresos, creación y edición) -->
+          @if (isReceivableSettlement) {
+            <div class="sm:col-span-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/20 p-3">
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Obligación de cobro {{ editingTx() ? 'vinculada' : 'a liquidar' }} *
+              </label>
+
+              @if (selectedReceivable; as rec) {
+                <div class="flex items-start justify-between gap-3 bg-white dark:bg-slate-700 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                  <div class="min-w-0">
+                    <div class="font-semibold text-slate-900 dark:text-white font-mono text-sm">
+                      {{ rec.arNumber }}
+                    </div>
+                    <div class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                      {{ rec.customerName }}
+                      @if (rec.dueDate) { · Vence: {{ rec.dueDate }} }
+                    </div>
+                    <div class="text-sm font-semibold text-green-600 dark:text-green-400 mt-1">
+                      Saldo pendiente: {{ formatCurrency(rec.balanceAmount) }}
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-1 shrink-0">
+                    <button type="button" (click)="openReceivablesPanel()"
+                            class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                      Cambiar
+                    </button>
+                    <button type="button" (click)="clearSelectedReceivable()"
+                            class="text-xs text-red-500 hover:underline">
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <button type="button" (click)="openReceivablesPanel()"
+                        class="w-full inline-flex items-center justify-center gap-2 border border-dashed border-blue-300 dark:border-blue-700 rounded-lg px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/>
+                  </svg>
+                  Seleccionar obligación de cobro del cliente
+                </button>
+              }
+
+              @if (showReceivablesPanel()) {
+                <div class="mt-2 max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-sm">
+                  @if (loadingReceivables()) {
+                    <div class="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+                      Cargando obligaciones...
+                    </div>
+                  } @else {
+                    @for (rec of receivables(); track rec.id) {
+                      <button type="button" (click)="selectReceivable(rec)"
+                              class="w-full text-left px-3 py-2 border-b border-slate-100 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600/60 transition-colors last:border-b-0">
+                        <div class="flex justify-between items-baseline gap-2">
+                          <span class="font-mono text-xs font-semibold text-slate-900 dark:text-white">
+                            {{ rec.arNumber }}
+                          </span>
+                          <span class="text-xs text-slate-500 dark:text-slate-400">
+                            Vence: {{ rec.dueDate || '—' }}
+                          </span>
+                        </div>
+                        <div class="flex justify-between items-baseline gap-2 mt-0.5">
+                          <span class="text-xs text-slate-600 dark:text-slate-300 truncate">
+                            {{ rec.customerName }}
+                          </span>
+                          <span class="text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
+                            {{ formatCurrency(rec.balanceAmount) }}
+                          </span>
+                        </div>
+                      </button>
+                    } @empty {
+                      <div class="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+                        El cliente no tiene obligaciones de cobro pendientes.
+                      </div>
+                    }
+                  }
+                </div>
+              }
+
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                @if (editingTx()) {
+                  Si cambias o quitas la obligación, el pago anterior se revierte y la factura vuelve a su estado anterior.
+                } @else {
+                  La obligación seleccionada se liquidará automáticamente al guardar el comprobante.
+                }
+              </p>
+            </div>
+          }
+
+          <!-- Proveedor -->
+          @if (selectedConcept?.requiresSupplier) {
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
+              <input [(ngModel)]="form.counterpartyName" name="supplierName"
+                     placeholder="Nombre del proveedor"
+                     class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Próximamente se podrá seleccionar desde el catálogo de proveedores.
+              </p>
+            </div>
+          }
+
+          <!-- Trabajador -->
+          @if (selectedConcept?.requiresEmployee) {
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
+              <input [(ngModel)]="form.counterpartyName" name="employeeName"
+                     placeholder="Nombre del trabajador"
+                     class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Próximamente se podrá seleccionar desde el catálogo de trabajadores.
+              </p>
+            </div>
+          }
         }
 
         <!-- Referencia -->
@@ -176,9 +297,10 @@
         <!-- Cuenta bancaria -->
         <div class="relative sm:col-span-2">
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta Bancaria *</label>
-          <input [(ngModel)]="bankQuery" name="bankAccount" (focus)="!editingTx() && bankDrop.set(true)" (blur)="onBankBlur()"
-                 placeholder="Filtrar cuenta bancaria" autocomplete="off" [readonly]="!!editingTx()"
-                 class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 read-only:opacity-60" />
+          <input [(ngModel)]="bankQuery" name="bankAccount"
+                 (focus)="bankDrop.set(true)" (blur)="onBankBlur()"
+                 placeholder="Filtrar cuenta bancaria" autocomplete="off"
+                 class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           @if (bankDrop()) {
             <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
               @for (bank of filteredBanks(bankQuery); track bank.id) {
@@ -190,6 +312,11 @@
                 <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin resultados</div>
               }
             </div>
+          }
+          @if (editingTx() && selectedBankId() !== editingTx()!.bankAccountId) {
+            <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              Cambiaste de banco: al guardar se revierte el saldo del banco original y se aplica al nuevo.
+            </p>
           }
         </div>
 
