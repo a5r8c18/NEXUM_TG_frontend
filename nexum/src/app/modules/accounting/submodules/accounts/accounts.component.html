@@ -756,9 +756,22 @@
 
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Código de Subcuenta *</label>
-              <input type="text" formControlName="subaccountCode" required
-                     class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                     placeholder="Ej: 1.1.1.1.01">
+              <div class="flex items-stretch">
+                @if (selectedAccountForSubaccount()) {
+                  <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 text-sm font-mono text-slate-600">
+                    {{ selectedAccountForSubaccount()!.code }}-
+                  </span>
+                }
+                <input type="text" formControlName="subaccountCode" required
+                       [class.rounded-l-none]="!!selectedAccountForSubaccount()"
+                       class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                       placeholder="Ej: 0010">
+              </div>
+              @if (showSubaccountCreateModal() && selectedAccountForSubaccount() && subaccountForm.get('subaccountCode')?.value) {
+                <div class="text-xs text-slate-500 mt-1">
+                  Se registrará como <span class="font-mono font-semibold">{{ subaccountCodePreview() }}</span>, igual que las subcuentas del nomenclador.
+                </div>
+              }
               @if (subaccountForm.get('subaccountCode')?.invalid && subaccountForm.get('subaccountCode')?.touched) {
                 <div class="text-xs text-red-600 mt-1">El código es requerido</div>
               }

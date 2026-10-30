@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { InvoicesService, Invoice, InvoiceFilters, PaginationResult } from '../../core/services/invoices.service';
@@ -24,6 +25,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
   private confirmDialog = inject(ConfirmDialogService);
   private offlineFirst = inject(OfflineFirstService);
+  private route = inject(ActivatedRoute);
 
   // Signals
   invoices = signal<Invoice[]>([]);
@@ -179,6 +181,8 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    const openId = this.route.snapshot.queryParamMap.get('open');
+    if (openId) this.openView({ id: openId } as Invoice);
     this.loadInvoices();
     this.productsService.getAll().subscribe({
       next: (data: any) => this.products.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? data?.products ?? [])),
@@ -387,6 +391,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   getStatusLabel(status: string): string {
     const labels: { [key: string]: string } = {
       pending: 'Pendiente',
+      partial: 'Cobro parcial',
       paid: 'Pagada',
       cancelled: 'Anulada'
     };
@@ -396,6 +401,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   getStatusClass(status: string): string {
     const classes: { [key: string]: string } = {
       pending: 'bg-yellow-100 text-yellow-800',
+      partial: 'bg-blue-100 text-blue-800',
       paid: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800'
     };

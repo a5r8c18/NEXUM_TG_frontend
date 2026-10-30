@@ -751,6 +751,15 @@ export class AccountsComponent implements OnInit {
     this.subaccountForm.reset();
   }
 
+  /** Código tal como lo guardará el backend: `<cuenta>-<subcuenta>` (sufijo numérico a 4 dígitos). */
+  subaccountCodePreview(): string {
+    const parentCode = this.selectedAccountForSubaccount()?.code || '';
+    let suffix = String(this.subaccountForm.get('subaccountCode')?.value || '').trim();
+    if (parentCode && suffix.startsWith(`${parentCode}-`)) suffix = suffix.slice(parentCode.length + 1);
+    if (/^\d{1,3}$/.test(suffix)) suffix = suffix.padStart(4, '0');
+    return parentCode ? `${parentCode}-${suffix}` : suffix;
+  }
+
   createSubaccount() {
     if (this.subaccountForm.invalid) {
       this.subaccountForm.markAllAsTouched();

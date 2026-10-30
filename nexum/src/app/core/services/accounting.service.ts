@@ -408,6 +408,16 @@ export class AccountingService {
     return this.http.get<Voucher>(`${this.baseUrl}/vouchers/${id}`);
   }
 
+  /** Pantalla y documento del módulo que generó el comprobante. */
+  getVoucherOrigin(id: string) {
+    return this.http.get<{
+      module: string;
+      label: string;
+      route: string;
+      queryParams?: Record<string, string>;
+    }>(`${this.baseUrl}/vouchers/${id}/origin`);
+  }
+
   createVoucher(data: any) {
     return this.http.post<Voucher>(`${this.baseUrl}/vouchers`, data);
   }
@@ -587,6 +597,13 @@ export class AccountingService {
     if (fromDate) params.fromDate = fromDate;
     if (toDate) params.toDate = toDate;
     return this.http.get<any>(`${this.baseUrl}/reports/general-ledger`, { params });
+  }
+
+  getAccountHistory(accountCode: string, subaccountCode?: string, includeDrafts = false) {
+    const params: any = { accountCode };
+    if (subaccountCode) params.subaccountCode = subaccountCode;
+    if (includeDrafts) params.includeDrafts = 'true';
+    return this.http.get<any>(`${this.baseUrl}/reports/account-history`, { params });
   }
 
   getGeneralJournal(fromDate?: string, toDate?: string) {

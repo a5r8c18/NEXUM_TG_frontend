@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -16,6 +17,9 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 export class PaymentsComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
   private notificationService = inject(NotificationService);
+  private route = inject(ActivatedRoute);
+  /** Pago a abrir al cargar (llega como `?open=<id>`, p. ej. desde el Historial contable). */
+  private pendingOpenId: string | null = null;
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -67,6 +71,7 @@ export class PaymentsComponent implements OnInit, OnDestroy {
   }));
 
   ngOnInit(): void {
+    this.pendingOpenId = this.route.snapshot.queryParamMap.get('open');
     this.loadData();
     this.loadStats();
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
@@ -92,6 +97,11 @@ export class PaymentsComponent implements OnInit, OnDestroy {
         this.items.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? []));
         this.currentPage.set(1);
         this.isLoading.set(false);
+        if (this.pendingOpenId) {
+          const payment = this.items().find((p) => p.id === this.pendingOpenId);
+          this.pendingOpenId = null;
+          if (payment) this.viewDetails(payment);
+        }
       },
       error: () => { this.hasError.set(true); this.isLoading.set(false); },
     });

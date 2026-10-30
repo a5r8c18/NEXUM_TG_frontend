@@ -1,0 +1,163 @@
+<div class="p-6 space-y-5">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Historial</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+      Movimientos de la cuenta y subcuenta seleccionadas desde la carga inicial del sistema hasta la fecha.
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-4 items-end">
+      <!-- Cuenta -->
+      <div class="relative">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta *</label>
+        <input [(ngModel)]="accountQuery" name="account"
+               (focus)="accountDrop.set(true)" (blur)="closeLater(accountDrop)"
+               placeholder="Filtrar cuenta..." autocomplete="off"
+               class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        @if (accountDrop()) {
+          <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+            @for (opt of filter(accountOptions(), accountQuery); track opt.value) {
+              <button type="button" (mousedown)="selectAccount(opt)"
+                      class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                {{ opt.label }}
+              </button>
+            } @empty {
+              <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin resultados</div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Subcuenta -->
+      <div class="relative">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta</label>
+        <input [(ngModel)]="subaccountQuery" name="subaccount"
+               [disabled]="!selectedAccount()"
+               (focus)="subaccountDrop.set(true)" (blur)="closeLater(subaccountDrop)"
+               [placeholder]="selectedAccount() ? (subaccountOptions().length ? 'Todas las subcuentas' : 'La cuenta no tiene subcuentas') : 'Seleccione primero la cuenta'"
+               autocomplete="off"
+               class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" />
+        @if (subaccountDrop() && selectedAccount()) {
+          <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+            <button type="button" (mousedown)="selectSubaccount(null)"
+                    class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-500 dark:text-slate-300 italic">
+              Todas las subcuentas
+            </button>
+            @for (opt of filter(subaccountOptions(), subaccountQuery); track opt.value) {
+              <button type="button" (mousedown)="selectSubaccount(opt)"
+                      class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                {{ opt.label }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 pb-2">
+        <input type="checkbox" [(ngModel)]="includeDrafts" name="includeDrafts" class="rounded border-slate-300" />
+        Incluir sin contabilizar
+      </label>
+
+      <button (click)="search()" [disabled]="!selectedAccount() || isLoading()"
+              class="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm disabled:opacity-50">
+        {{ isLoading() ? 'Consultando...' : 'Consultar' }}
+      </button>
+    </div>
+    @if (error()) {
+      <p class="text-sm text-red-600 dark:text-red-400 mt-3">{{ error() }}</p>
+    }
+  </div>
+
+  @if (history(); as h) {
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <p class="text-xs text-slate-500 dark:text-slate-400">Período</p>
+        <p class="text-sm font-semibold text-slate-900 dark:text-white mt-1">{{ h.fromDate || '—' }} → {{ h.toDate }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <p class="text-xs text-slate-500 dark:text-slate-400">Total Débito</p>
+        <p class="text-lg font-semibold text-slate-900 dark:text-white mt-1">{{ h.totalDebit | number:'1.2-2' }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <p class="text-xs text-slate-500 dark:text-slate-400">Total Crédito</p>
+        <p class="text-lg font-semibold text-slate-900 dark:text-white mt-1">{{ h.totalCredit | number:'1.2-2' }}</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <p class="text-xs text-slate-500 dark:text-slate-400">Saldo actual ({{ h.nature }})</p>
+        <p class="text-lg font-semibold mt-1" [class]="h.finalBalance < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
+          {{ h.finalBalance | number:'1.2-2' }}
+        </p>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+          {{ h.accountCode }} - {{ h.accountName }}
+          @if (h.subaccountCode) { <span class="text-slate-500 dark:text-slate-400">→ {{ h.subaccountCode }} - {{ h.subaccountName }}</span> }
+        </h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400">{{ h.entries.length }} movimiento(s)</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fecha</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Comprobante</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Origen</th>
+              @if (!h.subaccountCode) {
+                <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Subcuenta</th>
+              }
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Descripción</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Débito</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Crédito</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (e of h.entries; track e.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-4 py-2 dark:text-slate-300 whitespace-nowrap">{{ e.date }}</td>
+                <td class="px-4 py-2 font-mono text-xs whitespace-nowrap">
+                  <button type="button" (click)="goToOrigin(e)" [disabled]="openingOriginId() === e.voucherId"
+                          [title]="'Ir al documento de origen (' + sourceLabel(e.sourceModule) + ')'"
+                          class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-60 disabled:cursor-wait">
+                    {{ e.voucherNumber }}
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </button>
+                  @if (e.voucherStatus === 'draft') {
+                    <span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Sin contabilizar</span>
+                  }
+                </td>
+                <td class="px-4 py-2 dark:text-slate-300">{{ sourceLabel(e.sourceModule) }}</td>
+                @if (!h.subaccountCode) {
+                  <td class="px-4 py-2 dark:text-slate-300 font-mono text-xs">{{ e.subaccountCode || (e.accountCode !== h.accountCode ? e.accountCode : '—') }}</td>
+                }
+                <td class="px-4 py-2 dark:text-slate-300">
+                  {{ e.description }}
+                  @if (e.reference) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ e.reference }}</span> }
+                </td>
+                <td class="px-4 py-2 text-right dark:text-slate-300">{{ e.debit ? (e.debit | number:'1.2-2') : '' }}</td>
+                <td class="px-4 py-2 text-right dark:text-slate-300">{{ e.credit ? (e.credit | number:'1.2-2') : '' }}</td>
+                <td class="px-4 py-2 text-right font-semibold dark:text-slate-200">{{ e.balance | number:'1.2-2' }}</td>
+              </tr>
+            } @empty {
+              <tr><td [attr.colspan]="h.subaccountCode ? 7 : 8" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay movimientos registrados</td></tr>
+            }
+          </tbody>
+          @if (h.entries.length) {
+            <tfoot class="bg-slate-50 dark:bg-slate-900/50 font-semibold">
+              <tr>
+                <td [attr.colspan]="h.subaccountCode ? 4 : 5" class="px-4 py-3 text-right text-slate-600 dark:text-slate-300">Totales</td>
+                <td class="px-4 py-3 text-right dark:text-white">{{ h.totalDebit | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-right dark:text-white">{{ h.totalCredit | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-right dark:text-white">{{ h.finalBalance | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+    </div>
+  }
+</div>

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { Subject } from 'rxjs';
 import { AccountingService, Voucher, VoucherLineItem, Account, ExpenseType, CostCenter } from '../../../../core/services/accounting.service';
@@ -20,6 +21,7 @@ export class JournalEntriesComponent implements OnInit {
   private subelementsService = inject(SubelementsService);
   private fb = inject(FormBuilder);
   private confirmDialog = inject(ConfirmDialogService);
+  private route = inject(ActivatedRoute);
 
   // Signals
   comprobantes = signal<Voucher[]>([]);
@@ -258,6 +260,14 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Comprobante a abrir al cargar (llega como `?open=<id>`, p. ej. desde el Historial contable).
+    const openId = this.route.snapshot.queryParamMap.get('open');
+    if (openId) {
+      this.accountingService.getVoucher(openId).subscribe({
+        next: (voucher) => this.viewEntries(voucher),
+        error: () => {},
+      });
+    }
     this.loadComprobantes();
     this.loadAccounts();
     this.loadExpenseTypes();

@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -16,6 +17,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 export class PayablesComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
   private notificationService = inject(NotificationService);
+  private route = inject(ActivatedRoute);
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -77,6 +79,8 @@ export class PayablesComponent implements OnInit, OnDestroy {
   }));
 
   ngOnInit(): void {
+    const openId = this.route.snapshot.queryParamMap.get('open');
+    if (openId) this.openView({ id: openId });
     this.loadData();
     this.loadStats();
     this.loadBankAccounts();

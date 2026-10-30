@@ -132,7 +132,8 @@ export class SidebarComponent {
         { icon: 'Layers', label: 'Elementos', route: '/accounting/elementos' },
         { icon: 'Building', label: 'Centro de Costo', route: '/accounting/cost-centers' },
         { icon: 'BookOpen', label: 'Ejercicio Económico', route: '/accounting/fiscal-years' },
-        { icon: 'BarChart3', label: 'Presupuesto', route: '/accounting/budget' }
+        { icon: 'BarChart3', label: 'Presupuesto', route: '/accounting/budget' },
+        { icon: 'Clock', label: 'Historial', route: '/accounting/history' }
       ]
     },
     {

@@ -118,6 +118,14 @@ export class FinanceService {
     return this.http.delete(`${this.apiUrl}/finance/bank-transactions/${id}`);
   }
 
+  generateMissingOpeningVouchers(): Observable<{
+    created: string[];
+    skipped: number;
+    errors: { transactionNumber: string; message: string }[];
+  }> {
+    return this.http.post<any>(`${this.apiUrl}/finance/bank-transactions/opening-vouchers`, {});
+  }
+
   getLinkedReceivable(txId: string): Observable<any> {
     return this.http.get(`${this.apiUrl}/finance/bank-transactions/${txId}/linked-receivable`);
   }

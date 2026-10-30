@@ -35,6 +35,8 @@ export class BankTransactionsComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   type = this.route.snapshot.data['type'] as 'income' | 'expense';
+  /** Comprobante a abrir al cargar (llega como `?open=<id>`, p. ej. desde el Historial contable). */
+  private pendingOpenId: string | null = this.route.snapshot.queryParamMap.get('open');
   isIncome = this.type === 'income';
   transactionType = this.isIncome ? 'credit' : 'debit';
   pageTitle = this.isIncome ? 'Banco - Ingreso' : 'Banco - Egreso';
@@ -57,7 +59,7 @@ export class BankTransactionsComponent implements OnInit {
   // Obligaciones de cobro (CxC) para liquidar desde el comprobante bancario.
   receivables = signal<any[]>([]);
   loadingReceivables = signal(false);
-  showReceivablesPanel = signal(false);
+  receivablesModalOpen = signal(false);
   selectedReceivableId = signal<string>('');
   originalReceivableId = '';
 
@@ -130,7 +132,7 @@ export class BankTransactionsComponent implements OnInit {
   onVoucherTypeChange(): void {
     this.selectedReceivableId.set('');
     this.receivables.set([]);
-    this.showReceivablesPanel.set(false);
+    this.receivablesModalOpen.set(false);
     if (this.isOpeningEntry) {
       this.form.counterpartConceptCode = '';
       this.customerQuery = '';
@@ -204,6 +206,11 @@ export class BankTransactionsComponent implements OnInit {
     return !!this.form.voucherType && this.form.voucherType !== 'Carga Inicial';
   }
 
+  /** Tasa y Monto CUP: comprobantes normales y Carga Inicial de cuentas USD. */
+  showExchangeFields(): boolean {
+    return this.showTransferFields() || (this.isOpeningEntry && this.isUsdAccount());
+  }
+
   // ── Picker de clientes ──
   customerQuery = '';
   customerDrop = signal(false);
@@ -220,7 +227,7 @@ export class BankTransactionsComponent implements OnInit {
     this.customerDrop.set(false);
     this.selectedReceivableId.set('');
     this.receivables.set([]);
-    this.showReceivablesPanel.set(false);
+    this.receivablesModalOpen.set(false);
   }
 
   createCustomerInline(): void {
@@ -241,14 +248,17 @@ export class BankTransactionsComponent implements OnInit {
   }
 
   // ── Obligaciones de cobro (CxC) para concepto 20 ──
-  openReceivablesPanel(): void {
+  receivableFilter = '';
+
+  openReceivablesModal(): void {
     const customerName = this.form.counterpartyName?.trim();
     if (!customerName) {
       this.showToast('Seleccione primero el cliente', 'error');
       return;
     }
+    this.receivableFilter = '';
     this.loadingReceivables.set(true);
-    this.showReceivablesPanel.set(true);
+    this.receivablesModalOpen.set(true);
     this.financeService.getReceivables({ customerName }).subscribe({
       next: (data) => {
         const all = Array.isArray(data) ? data : [];
@@ -280,11 +290,55 @@ export class BankTransactionsComponent implements OnInit {
     if (!this.form.amount || Number(this.form.amount) <= 0) {
       this.form.amount = Number(rec.balanceAmount);
     }
-    this.showReceivablesPanel.set(false);
+    this.receivablesModalOpen.set(false);
   }
 
   clearSelectedReceivable(): void {
     this.selectedReceivableId.set('');
+  }
+
+  /**
+   * Saldo cobrable de la obligación seleccionada. En edición, si sigue siendo
+   * la misma CxC, su saldo ya descuenta el cobro de este comprobante.
+   */
+  receivableAvailable(): number {
+    const rec = this.selectedReceivable;
+    if (!rec) return 0;
+    const editing = this.editingTx();
+    const ownPayment = editing && rec.id === this.originalReceivableId ? Number(editing.amount || 0) : 0;
+    return Math.round((Number(rec.balanceAmount) + ownPayment) * 100) / 100;
+  }
+
+  remainingAfterPayment(): number {
+    return Math.round((this.receivableAvailable() - Number(this.form.amount || 0)) * 100) / 100;
+  }
+
+  closeReceivablesModal(): void {
+    this.receivablesModalOpen.set(false);
+  }
+
+  filteredReceivables(): any[] {
+    const q = this.receivableFilter.trim().toLowerCase();
+    const list = this.receivables();
+    if (!q) return list;
+    return list.filter((r) =>
+      `${r.arNumber || ''} ${r.invoiceNumber || ''}`.toLowerCase().includes(q),
+    );
+  }
+
+  isReceivableOverdue(rec: any): boolean {
+    return (
+      rec.status === 'overdue' ||
+      (!!rec.dueDate && rec.dueDate < new Date().toISOString().split('T')[0] && Number(rec.balanceAmount) > 0)
+    );
+  }
+
+  receivableStatus(rec: any): { label: string; css: string } {
+    if (rec.status === 'paid') return { label: 'Cobrada', css: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' };
+    if (this.isReceivableOverdue(rec)) return { label: 'Vencida', css: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' };
+    if (rec.status === 'partial') return { label: 'Parcial', css: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+    if (rec.status === 'disputed') return { label: 'En disputa', css: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' };
+    return { label: 'Pendiente', css: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' };
   }
 
   // ── Picker de cuentas contables (Carga Inicial) ──
@@ -336,6 +390,33 @@ export class BankTransactionsComponent implements OnInit {
 
   selectedBank = computed(() => this.banks().find((b) => b.id === this.selectedBankId()) || null);
 
+  // ── Contabilización de Cargas Iniciales registradas sin comprobante ──
+  generatingOpening = signal(false);
+  hasOpeningEntries = computed(() =>
+    this.isIncome && this.transactions().some((tx) => tx.transactionCode === 'Carga Inicial'),
+  );
+
+  generateOpeningVouchers(): void {
+    this.generatingOpening.set(true);
+    this.financeService.generateMissingOpeningVouchers().subscribe({
+      next: (res) => {
+        this.generatingOpening.set(false);
+        if (res.errors.length) {
+          const detail = res.errors.map((e) => `${e.transactionNumber}: ${e.message}`).join(' | ');
+          this.showToast(`Generados: ${res.created.length}. Con error: ${detail}`, 'error');
+        } else if (res.created.length) {
+          this.showToast(`Se generaron ${res.created.length} comprobante(s) en Contabilidad (pendientes de contabilizar)`, 'success');
+        } else {
+          this.showToast('Todas las Cargas Iniciales ya tienen su comprobante contable', 'success');
+        }
+      },
+      error: (err) => {
+        this.generatingOpening.set(false);
+        this.showToast(err?.error?.message || 'Error generando los comprobantes', 'error');
+      },
+    });
+  }
+
   ngOnInit(): void {
     this.loadBanks();
     this.loadCounterpartConcepts();
@@ -385,6 +466,11 @@ export class BankTransactionsComponent implements OnInit {
       next: (data) => {
         this.transactions.set(Array.isArray(data) ? data : []);
         this.isLoading.set(false);
+        if (this.pendingOpenId) {
+          const tx = this.transactions().find((t) => t.id === this.pendingOpenId);
+          this.pendingOpenId = null;
+          if (tx) this.openEditModal(tx);
+        }
       },
       error: () => {
         this.isLoading.set(false);
@@ -422,7 +508,7 @@ export class BankTransactionsComponent implements OnInit {
     this.selectedReceivableId.set('');
     this.originalReceivableId = '';
     this.receivables.set([]);
-    this.showReceivablesPanel.set(false);
+    this.receivablesModalOpen.set(false);
     this.isModalOpen.set(true);
 
     if (this.isIncome && tx.counterpartConceptCode === '20') {
@@ -471,6 +557,7 @@ export class BankTransactionsComponent implements OnInit {
   }
 
   closeModal(): void {
+    this.receivablesModalOpen.set(false);
     this.isModalOpen.set(false);
     this.editingTx.set(null);
   }
@@ -505,6 +592,10 @@ export class BankTransactionsComponent implements OnInit {
         this.showToast('Seleccione una cuenta contable', 'error');
         return;
       }
+      if (this.isUsdAccount() && !(Number(this.form.exchangeRate) > 1)) {
+        this.showToast('Indique la tasa de cambio de la cuenta en USD', 'error');
+        return;
+      }
     } else {
       if (!this.form.counterpartConceptCode) {
         this.showToast('Seleccione un concepto de contrapartida', 'error');
@@ -516,6 +607,13 @@ export class BankTransactionsComponent implements OnInit {
       }
       if (this.isReceivableSettlement && !this.selectedReceivableId()) {
         this.showToast('Seleccione la obligación de cobro a liquidar', 'error');
+        return;
+      }
+      if (this.isReceivableSettlement && this.remainingAfterPayment() < -0.009) {
+        this.showToast(
+          `El monto excede el saldo pendiente de la obligación (${this.formatCurrency(this.receivableAvailable())})`,
+          'error',
+        );
         return;
       }
     }
@@ -609,7 +707,7 @@ export class BankTransactionsComponent implements OnInit {
     this.selectedReceivableId.set('');
     this.originalReceivableId = '';
     this.receivables.set([]);
-    this.showReceivablesPanel.set(false);
+    this.receivablesModalOpen.set(false);
   }
 
   showToast(message: string, type: 'success' | 'error'): void {

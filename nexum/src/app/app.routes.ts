@@ -247,6 +247,10 @@ export const routes: Routes = [
         path: 'accounting/budget',
         loadComponent: () => import('./modules/accounting/submodules/budget/budget.component').then(m => m.BudgetComponent)
       },
+      {
+        path: 'accounting/history',
+        loadComponent: () => import('./modules/accounting/submodules/history/history.component').then(m => m.HistoryComponent)
+      },
       // HR Module
       {
         path: 'hr',

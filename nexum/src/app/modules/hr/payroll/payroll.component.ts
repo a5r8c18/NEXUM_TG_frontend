@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { PayrollService } from '../../../core/services/payroll.service';
 import { HrService, Employee } from '../../../core/services/hr.service';
 import { FinanceService } from '../../../core/services/finance.service';
@@ -658,6 +659,9 @@ export class PayrollComponent implements OnInit {
   private hrService = inject(HrService);
   private financeService = inject(FinanceService);
   private confirmDialog = inject(ConfirmDialogService);
+  private route = inject(ActivatedRoute);
+  /** Nómina a abrir al cargar (llega como `?open=<id>`, p. ej. desde el Historial contable). */
+  private pendingOpenId: string | null = this.route.snapshot.queryParamMap.get('open');
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -805,7 +809,16 @@ export class PayrollComponent implements OnInit {
       startDate: this.fromDate || undefined,
       endDate: this.toDate || undefined,
     }).subscribe({
-      next: (data) => { this.items.set(data?.payrolls || []); this.currentPage.set(1); this.isLoading.set(false); },
+      next: (data) => {
+        this.items.set(data?.payrolls || []);
+        this.currentPage.set(1);
+        this.isLoading.set(false);
+        if (this.pendingOpenId) {
+          const payroll = this.items().find((p: any) => String(p.id) === this.pendingOpenId);
+          this.pendingOpenId = null;
+          if (payroll) this.openDetail(payroll);
+        }
+      },
       error: () => { this.isLoading.set(false); this.showToast('Error al cargar nóminas', 'error'); },
     });
   }
