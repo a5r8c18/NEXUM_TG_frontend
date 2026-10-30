@@ -38,6 +38,7 @@ export class PaymentsComponent implements OnInit, OnDestroy {
   isDetailsOpen = signal(false);
   selectedPayment = signal<any>(null);
   formError = signal('');
+  bankAccounts = signal<any[]>([]);
 
   newPayment: any = { paymentType: 'receivable', amount: 0, paymentMethod: 'cash', paymentDate: '', referenceNumber: '', relatedAccountId: '', description: '' };
 
@@ -74,6 +75,7 @@ export class PaymentsComponent implements OnInit, OnDestroy {
     this.pendingOpenId = this.route.snapshot.queryParamMap.get('open');
     this.loadData();
     this.loadStats();
+    this.loadBankAccounts();
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
       this.loadData();
       this.loadStats();
@@ -138,6 +140,11 @@ export class PaymentsComponent implements OnInit, OnDestroy {
       this.formError.set('Monto y fecha son obligatorios');
       return;
     }
+    if (this.isBankMethod(this.newPayment.paymentMethod) && !this.newPayment.bankAccountId) {
+      this.formError.set('Seleccione la cuenta bancaria de la operación');
+      return;
+    }
+    if (!this.isBankMethod(this.newPayment.paymentMethod)) delete this.newPayment.bankAccountId;
     this.formError.set('');
     this.financeService.createPayment(this.newPayment).subscribe({
       next: () => {
@@ -147,6 +154,17 @@ export class PaymentsComponent implements OnInit, OnDestroy {
         this.showToast('Pago creado exitosamente', 'success');
       },
       error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear pago'),
+    });
+  }
+
+  isBankMethod(method: string): boolean {
+    return ['bank_transfer', 'check', 'credit_card', 'debit_card'].includes(method);
+  }
+
+  loadBankAccounts(): void {
+    this.financeService.getBanks().subscribe({
+      next: (data: any) => this.bankAccounts.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),
+      error: () => {},
     });
   }
 

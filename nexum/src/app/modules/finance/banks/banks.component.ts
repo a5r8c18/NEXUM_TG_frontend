@@ -282,6 +282,10 @@ export class BanksComponent implements OnInit, OnDestroy {
       this.formError.set('Banco, número de cuenta y titular son obligatorios');
       return;
     }
+    if (!this.newBank.accountingAccount?.trim()) {
+      this.formError.set('Seleccione la cuenta contable a la que se vincula la cuenta bancaria');
+      return;
+    }
     this.formError.set('');
     this.financeService.createBank(this.newBank).subscribe({
       next: () => {
@@ -312,6 +316,10 @@ export class BanksComponent implements OnInit, OnDestroy {
   updateBank(): void {
     if (!this.editBank.bankName?.trim() || !this.editBank.holderName?.trim()) {
       this.formError.set('Banco y titular son obligatorios');
+      return;
+    }
+    if (!this.editBank.accountingAccount?.trim()) {
+      this.formError.set('Seleccione la cuenta contable a la que se vincula la cuenta bancaria');
       return;
     }
     this.formError.set('');
