@@ -160,4 +160,49 @@
       </div>
     </div>
   }
+
+  <!-- Comprobante del cobro -->
+  @if (voucherDetail(); as v) {
+    <app-modal [isOpen]="true" [title]="'Comprobante ' + v.voucherNumber" maxWidthClass="max-w-3xl"
+               [showConfirm]="false" (closeEvent)="closeVoucherDetail()">
+      <div class="space-y-3 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-slate-700 dark:text-slate-300">
+          <p><span class="font-medium">Fecha:</span> {{ v.date }}</p>
+          <p><span class="font-medium">Origen:</span> {{ sourceLabel(v.sourceModule) }}</p>
+          <p><span class="font-medium">Estado:</span> {{ v.status === 'posted' ? 'Contabilizado' : v.status === 'draft' ? 'Sin contabilizar' : 'Anulado' }}</p>
+          @if (v.reference) { <p><span class="font-medium">Referencia:</span> {{ v.reference }}</p> }
+          <p class="sm:col-span-2"><span class="font-medium">Descripción:</span> {{ v.description }}</p>
+        </div>
+
+        <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+          <div class="px-3 py-2 bg-slate-50 dark:bg-slate-900/50 flex justify-between text-xs text-slate-600 dark:text-slate-400">
+            <span class="font-mono font-semibold">{{ v.voucherNumber }}</span>
+            <span>{{ v.date }}</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs min-w-[500px]">
+              <thead class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                <tr>
+                  <th class="text-left px-3 py-1.5">Cuenta</th>
+                  <th class="text-left px-3 py-1.5">Subcuenta</th>
+                  <th class="text-right px-3 py-1.5">Debe</th>
+                  <th class="text-right px-3 py-1.5">Haber</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of v.lines || []; track l.id) {
+                  <tr class="border-t border-slate-100 dark:border-slate-700/50 dark:text-slate-300">
+                    <td class="px-3 py-1.5">{{ l.accountCode }} {{ l.accountName }}</td>
+                    <td class="px-3 py-1.5">{{ l.subaccountCode ? l.subaccountCode + ' ' + (l.subaccountName || '') : '-' }}</td>
+                    <td class="px-3 py-1.5 text-right">{{ l.debit | number:'1.2-2' }}</td>
+                    <td class="px-3 py-1.5 text-right">{{ l.credit | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </app-modal>
+  }
 </div>

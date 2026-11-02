@@ -415,6 +415,8 @@ export class AccountingService {
       label: string;
       route: string;
       queryParams?: Record<string, string>;
+      /** 'voucher': mostrar el propio comprobante (p. ej. cobros) en lugar de navegar. */
+      display?: 'voucher';
     }>(`${this.baseUrl}/vouchers/${id}/origin`);
   }
 

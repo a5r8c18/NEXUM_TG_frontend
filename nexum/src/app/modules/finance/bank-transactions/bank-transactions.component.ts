@@ -73,10 +73,25 @@ export class BankTransactionsComponent implements OnInit {
     counterpartyName: '',
     exchangeRate: 1,
     notes: '',
+    incomeAccount: '',
+    incomeAmount: 0,
+    feeAccount: '',
+    feeAmount: 0,
   };
 
   get isOpeningEntry(): boolean {
     return this.form.voucherType === 'Carga Inicial';
+  }
+
+  /** Concepto "19" = Ingresos por Pago en Línea (comisión bancaria). */
+  get isOnlinePayment(): boolean {
+    return this.isIncome && !this.isOpeningEntry && this.form.counterpartConceptCode === '19';
+  }
+
+  /** Lo que entra al banco: ingreso bruto menos la comisión. */
+  get onlineNetAmount(): number {
+    const net = Number(this.form.incomeAmount || 0) - Number(this.form.feeAmount || 0);
+    return Math.round(net * 100) / 100;
   }
 
   conceptOptions = computed(() =>
@@ -113,8 +128,10 @@ export class BankTransactionsComponent implements OnInit {
   }
 
   counterpartyRequired(): boolean {
+    // El campo se muestra siempre que el concepto lo defina, pero solo es
+    // obligatorio para proveedores y trabajadores. Con clientes es opcional.
     const c = this.selectedConcept;
-    return !!(c?.requiresCustomer || c?.requiresSupplier || c?.requiresEmployee);
+    return !!(c?.requiresSupplier || c?.requiresEmployee);
   }
 
   conceptLabel(code: string | null | undefined): string {
@@ -348,16 +365,16 @@ export class BankTransactionsComponent implements OnInit {
   accountDrop = signal(false);
 
   accountSelectOptions = computed(() => {
-    const opts: { value: string; label: string; isSub: boolean; parentCode?: string }[] = [];
+    const opts: { value: string; label: string; isSub: boolean; parentCode?: string; type?: string }[] = [];
     const subs = this.subaccounts();
     for (const a of this.accountOptions()) {
       if (a.code?.includes('-') || Number(a.level) >= 4) continue;
       const children = subs.filter(s => s.parentCode === a.code || s.code?.startsWith(`${a.code}-`));
       if (!a.allowsMovements && children.length === 0) continue;
-      opts.push({ value: a.code, label: `${a.code} - ${a.name}`, isSub: false });
+      opts.push({ value: a.code, label: `${a.code} - ${a.name}`, isSub: false, type: a.type });
       for (const s of children) {
         const value = s.code?.includes('-') ? s.code : `${a.code}-${s.code}`;
-        opts.push({ value, label: `${s.code} - ${s.name}`, isSub: true, parentCode: a.code });
+        opts.push({ value, label: `${s.code} - ${s.name}`, isSub: true, parentCode: a.code, type: a.type });
       }
     }
     return opts;
@@ -386,6 +403,46 @@ export class BankTransactionsComponent implements OnInit {
 
   onAccountBlur(): void {
     setTimeout(() => this.accountDrop.set(false), 150);
+  }
+
+  // ── Pickers de cuenta de ingreso y gasto (concepto 19) ──
+  incomeAccountQuery = '';
+  incomeAccountDrop = signal(false);
+  feeAccountQuery = '';
+  feeAccountDrop = signal(false);
+
+  typedAccountOptions(accountType: string, query: string) {
+    const q = (query || '').toLowerCase();
+    const opts = this.accountSelectOptions().filter((o) => o.type === accountType);
+    return q ? opts.filter((o) => o.label.toLowerCase().includes(q)) : opts;
+  }
+
+  incomeAccountOptions() {
+    return this.typedAccountOptions('income', this.incomeAccountQuery);
+  }
+
+  feeAccountOptions() {
+    return this.typedAccountOptions('expense', this.feeAccountQuery);
+  }
+
+  selectIncomeAccount(value: string): void {
+    this.form.incomeAccount = value;
+    this.incomeAccountQuery = this.accountingAccountLabel(value);
+    this.incomeAccountDrop.set(false);
+  }
+
+  selectFeeAccount(value: string): void {
+    this.form.feeAccount = value;
+    this.feeAccountQuery = this.accountingAccountLabel(value);
+    this.feeAccountDrop.set(false);
+  }
+
+  onIncomeAccountBlur(): void {
+    setTimeout(() => this.incomeAccountDrop.set(false), 150);
+  }
+
+  onFeeAccountBlur(): void {
+    setTimeout(() => this.feeAccountDrop.set(false), 150);
   }
 
   selectedBank = computed(() => this.banks().find((b) => b.id === this.selectedBankId()) || null);
@@ -497,10 +554,16 @@ export class BankTransactionsComponent implements OnInit {
       counterpartyName: tx.counterpartyName || '',
       exchangeRate: Number(tx.exchangeRate || 1),
       notes: tx.notes || '',
+      incomeAccount: tx.incomeAccount || '',
+      incomeAmount: Number(tx.incomeAmount || 0),
+      feeAccount: tx.feeAccount || '',
+      feeAmount: Number(tx.feeAmount || 0),
     };
     this.accountQuery = tx.counterpartyAccount
       ? this.accountingAccountLabel(tx.counterpartyAccount)
       : '';
+    this.incomeAccountQuery = tx.incomeAccount ? this.accountingAccountLabel(tx.incomeAccount) : '';
+    this.feeAccountQuery = tx.feeAccount ? this.accountingAccountLabel(tx.feeAccount) : '';
     this.customerQuery = tx.counterpartyName || '';
     this.selectedBankId.set(tx.bankAccountId);
     const bank = this.banks().find((b) => b.id === tx.bankAccountId);
@@ -616,6 +679,30 @@ export class BankTransactionsComponent implements OnInit {
         );
         return;
       }
+      if (this.isOnlinePayment) {
+        if (!this.form.incomeAccount || !this.form.feeAccount) {
+          this.showToast('Seleccione la cuenta de ingreso y la cuenta de gasto (comisión)', 'error');
+          return;
+        }
+        if (!(Number(this.form.incomeAmount) > 0)) {
+          this.showToast('Indique el importe del ingreso por pago en línea', 'error');
+          return;
+        }
+        if (!(Number(this.form.feeAmount) > 0)) {
+          this.showToast('Indique el importe de la comisión bancaria', 'error');
+          return;
+        }
+        if (this.onlineNetAmount <= 0) {
+          this.showToast('La comisión no puede ser mayor o igual que el ingreso', 'error');
+          return;
+        }
+        if (this.isUsdAccount() && !(Number(this.form.exchangeRate) > 1)) {
+          this.showToast('Indique la tasa de cambio de la cuenta en USD', 'error');
+          return;
+        }
+        // En el concepto 19 el monto del comprobante es el neto que entra al banco.
+        this.form.amount = this.onlineNetAmount;
+      }
     }
 
     if (!this.form.amount || Number(this.form.amount) <= 0 || !this.form.notes?.trim()) {
@@ -642,6 +729,18 @@ export class BankTransactionsComponent implements OnInit {
       basePayload.counterpartConceptCode = this.form.counterpartConceptCode;
       basePayload.counterpartyAccount = null;
       basePayload.counterpartyName = this.form.counterpartyName || null;
+
+      if (this.isOnlinePayment) {
+        basePayload.incomeAccount = this.form.incomeAccount;
+        basePayload.incomeAmount = Number(this.form.incomeAmount);
+        basePayload.feeAccount = this.form.feeAccount;
+        basePayload.feeAmount = Number(this.form.feeAmount);
+      } else {
+        basePayload.incomeAccount = null;
+        basePayload.incomeAmount = null;
+        basePayload.feeAccount = null;
+        basePayload.feeAmount = null;
+      }
 
       // Enviar `accountReceivableId` si el comprobante es (o era) liquidación
       // de CxC, tanto en creación como en edición:
@@ -700,8 +799,14 @@ export class BankTransactionsComponent implements OnInit {
       counterpartyName: '',
       exchangeRate: 1,
       notes: '',
+      incomeAccount: '',
+      incomeAmount: 0,
+      feeAccount: '',
+      feeAmount: 0,
     };
     this.accountQuery = '';
+    this.incomeAccountQuery = '';
+    this.feeAccountQuery = '';
     this.customerQuery = '';
     this.bankQuery = '';
     this.selectedReceivableId.set('');

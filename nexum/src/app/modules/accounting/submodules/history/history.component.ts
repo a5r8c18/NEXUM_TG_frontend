@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { AccountingService } from '../../../../core/services/accounting.service';
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 
 interface PickerOption {
   value: string;
@@ -13,7 +14,7 @@ interface PickerOption {
 @Component({
   selector: 'app-accounting-history',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ModalComponent],
   templateUrl: './history.component.html',
 })
 export class HistoryComponent implements OnInit {
@@ -29,6 +30,7 @@ export class HistoryComponent implements OnInit {
   isLoading = signal(false);
   error = signal<string | null>(null);
   openingOriginId = signal<string | null>(null);
+  voucherDetail = signal<any | null>(null);
 
   accountQuery = '';
   subaccountQuery = '';
@@ -138,6 +140,10 @@ export class HistoryComponent implements OnInit {
     this.openingOriginId.set(entry.voucherId);
     this.accountingService.getVoucherOrigin(entry.voucherId).subscribe({
       next: (origin) => {
+        if (origin.display === 'voucher') {
+          this.openVoucherDetail(entry.voucherId);
+          return;
+        }
         this.openingOriginId.set(null);
         this.router.navigate([origin.route], { queryParams: origin.queryParams || {} });
       },
@@ -146,6 +152,24 @@ export class HistoryComponent implements OnInit {
         this.error.set(err?.error?.message || 'No se pudo determinar el origen del comprobante');
       },
     });
+  }
+
+  /** Muestra el comprobante con sus partidas (cobros). */
+  private openVoucherDetail(voucherId: string): void {
+    this.accountingService.getVoucher(voucherId).subscribe({
+      next: (voucher) => {
+        this.openingOriginId.set(null);
+        this.voucherDetail.set(voucher);
+      },
+      error: (err) => {
+        this.openingOriginId.set(null);
+        this.error.set(err?.error?.message || 'No se pudo cargar el comprobante');
+      },
+    });
+  }
+
+  closeVoucherDetail(): void {
+    this.voucherDetail.set(null);
   }
 
   sourceLabel(source?: string): string {
