@@ -129,7 +129,7 @@
         @if (!isOpeningEntry) {
           <div class="sm:col-span-2">
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Concepto de contrapartida *</label>
-            <select [(ngModel)]="form.counterpartConceptCode" name="counterpartConceptCode"
+            <select [(ngModel)]="form.counterpartConceptCode" name="counterpartConceptCode" (ngModelChange)="onConceptChange()"
                     class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Seleccionar concepto</option>
               @for (c of conceptOptions(); track c.code) {
@@ -245,8 +245,8 @@
             </div>
           }
 
-          <!-- Ingresos por Pago en Línea (concepto 19): ingreso bruto y comisión -->
-          @if (isOnlinePayment) {
+          <!-- Conceptos con cuenta de ingreso del nomenclador (19 con comisión, 23 sin ella) -->
+          @if (isIncomeAccountConcept) {
             <div class="sm:col-span-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="relative flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta de ingreso *</label>
@@ -274,6 +274,7 @@
                 <input type="number" step="0.01" min="0" [(ngModel)]="form.incomeAmount" name="incomeAmount"
                        class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
+              @if (isOnlinePayment) {
               <div class="relative flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta de gasto (comisión) *</label>
                 <input [(ngModel)]="feeAccountQuery" name="feeAccountQuery"
@@ -300,9 +301,14 @@
                 <input type="number" step="0.01" min="0" [(ngModel)]="form.feeAmount" name="feeAmount"
                        class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
+              }
               <p class="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400">
-                Al banco ingresa el neto: ingreso menos comisión. El asiento debita la cuenta del banco y
-                la comisión, y acredita la cuenta de ingreso por el importe total.
+                @if (isOnlinePayment) {
+                  Al banco ingresa el neto: ingreso menos comisión. El asiento debita la cuenta del banco y
+                  la comisión, y acredita la cuenta de ingreso por el importe total.
+                } @else {
+                  El asiento debita la cuenta del banco y acredita la cuenta de ingreso seleccionada.
+                }
               </p>
             </div>
           }
@@ -328,12 +334,12 @@
           <ng-container *ngTemplateOutlet="bankAccountField"></ng-container>
         }
 
-        <!-- Monto: en pago en línea es el neto calculado (ingreso - comisión) -->
+        <!-- Monto: con cuenta de ingreso es el neto calculado (ingreso - comisión) -->
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             {{ isOnlinePayment ? 'Monto neto al banco' : 'Monto' }} *
           </label>
-          @if (isOnlinePayment) {
+          @if (isIncomeAccountConcept) {
             <input [value]="formatCurrency(onlineNetAmount)" readonly
                    class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm text-slate-500 dark:text-slate-400" />
           } @else {

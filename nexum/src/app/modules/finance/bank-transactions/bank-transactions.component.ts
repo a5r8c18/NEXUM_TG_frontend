@@ -6,6 +6,7 @@ import { of } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { AccountingService } from '../../../core/services/accounting.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 interface CounterpartConcept {
@@ -32,6 +33,7 @@ export class BankTransactionsComponent implements OnInit {
   private financeService = inject(FinanceService);
   private accountingService = inject(AccountingService);
   private authService = inject(AuthService);
+  private confirmDialog = inject(ConfirmDialogService);
   private route = inject(ActivatedRoute);
 
   type = this.route.snapshot.data['type'] as 'income' | 'expense';
@@ -86,6 +88,11 @@ export class BankTransactionsComponent implements OnInit {
   /** Concepto "19" = Ingresos por Pago en Línea (comisión bancaria). */
   get isOnlinePayment(): boolean {
     return this.isIncome && !this.isOpeningEntry && this.form.counterpartConceptCode === '19';
+  }
+
+  /** Conceptos que piden cuenta de ingreso del nomenclador: 19 y 23 (cafetería). */
+  get isIncomeAccountConcept(): boolean {
+    return this.isIncome && !this.isOpeningEntry && ['19', '23'].includes(this.form.counterpartConceptCode);
   }
 
   /** Lo que entra al banco: ingreso bruto menos la comisión. */
@@ -158,6 +165,18 @@ export class BankTransactionsComponent implements OnInit {
       this.form.counterpartyAccount = '';
       this.accountQuery = '';
     }
+  }
+
+  onConceptChange(): void {
+    this.selectedReceivableId.set('');
+    this.receivables.set([]);
+    this.receivablesModalOpen.set(false);
+    this.form.incomeAccount = '';
+    this.form.incomeAmount = 0;
+    this.form.feeAccount = '';
+    this.form.feeAmount = 0;
+    this.incomeAccountQuery = '';
+    this.feeAccountQuery = '';
   }
 
   // ── Cuenta bancaria filtrable ──
@@ -625,8 +644,15 @@ export class BankTransactionsComponent implements OnInit {
     this.editingTx.set(null);
   }
 
-  deleteTransaction(tx: any): void {
-    if (!confirm(`¿Eliminar el comprobante ${tx.transactionNumber}? Se revertirá su efecto en el saldo.`)) return;
+  async deleteTransaction(tx: any): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Eliminar comprobante',
+      message: `¿Eliminar el comprobante ${tx.transactionNumber}? Se revertirá su efecto en el saldo.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+    });
+    if (!confirmed) return;
     this.financeService.deleteBankTransaction(tx.id).subscribe({
       next: () => {
         this.showToast('Comprobante eliminado', 'success');
@@ -679,28 +705,34 @@ export class BankTransactionsComponent implements OnInit {
         );
         return;
       }
-      if (this.isOnlinePayment) {
-        if (!this.form.incomeAccount || !this.form.feeAccount) {
-          this.showToast('Seleccione la cuenta de ingreso y la cuenta de gasto (comisión)', 'error');
+      if (this.isIncomeAccountConcept) {
+        if (!this.form.incomeAccount) {
+          this.showToast('Seleccione la cuenta de ingreso', 'error');
           return;
         }
         if (!(Number(this.form.incomeAmount) > 0)) {
-          this.showToast('Indique el importe del ingreso por pago en línea', 'error');
+          this.showToast('Indique el importe del ingreso', 'error');
           return;
         }
-        if (!(Number(this.form.feeAmount) > 0)) {
-          this.showToast('Indique el importe de la comisión bancaria', 'error');
-          return;
-        }
-        if (this.onlineNetAmount <= 0) {
-          this.showToast('La comisión no puede ser mayor o igual que el ingreso', 'error');
-          return;
+        if (this.isOnlinePayment) {
+          if (!this.form.feeAccount) {
+            this.showToast('Seleccione la cuenta de gasto de la comisión', 'error');
+            return;
+          }
+          if (!(Number(this.form.feeAmount) > 0)) {
+            this.showToast('Indique el importe de la comisión bancaria', 'error');
+            return;
+          }
+          if (this.onlineNetAmount <= 0) {
+            this.showToast('La comisión no puede ser mayor o igual que el ingreso', 'error');
+            return;
+          }
         }
         if (this.isUsdAccount() && !(Number(this.form.exchangeRate) > 1)) {
           this.showToast('Indique la tasa de cambio de la cuenta en USD', 'error');
           return;
         }
-        // En el concepto 19 el monto del comprobante es el neto que entra al banco.
+        // El monto del comprobante es el neto que entra al banco.
         this.form.amount = this.onlineNetAmount;
       }
     }
@@ -730,11 +762,11 @@ export class BankTransactionsComponent implements OnInit {
       basePayload.counterpartyAccount = null;
       basePayload.counterpartyName = this.form.counterpartyName || null;
 
-      if (this.isOnlinePayment) {
+      if (this.isIncomeAccountConcept) {
         basePayload.incomeAccount = this.form.incomeAccount;
         basePayload.incomeAmount = Number(this.form.incomeAmount);
-        basePayload.feeAccount = this.form.feeAccount;
-        basePayload.feeAmount = Number(this.form.feeAmount);
+        basePayload.feeAccount = this.isOnlinePayment ? this.form.feeAccount : null;
+        basePayload.feeAmount = this.isOnlinePayment ? Number(this.form.feeAmount) : null;
       } else {
         basePayload.incomeAccount = null;
         basePayload.incomeAmount = null;
