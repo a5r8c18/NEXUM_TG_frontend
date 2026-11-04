@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription, forkJoin, map, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ReportsService } from '../../../../core/services/reports.service';
+import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ReportFilters, ReceptionReport, DeliveryReport, TransferReport, ReturnReport } from '../../../../models/report.models';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
@@ -20,6 +21,7 @@ type Report = ReceptionReport | DeliveryReport | TransferReport | ReturnReport;
 })
 export class ReportsComponent implements OnInit, OnDestroy {
   private reportsService = inject(ReportsService);
+  private offlineFirst = inject(OfflineFirstService);
   private notificationService = inject(NotificationService);
   private route = inject(ActivatedRoute);
 
@@ -80,12 +82,12 @@ export class ReportsComponent implements OnInit, OnDestroy {
     const tab = this.activeTab();
     const f = this.filters();
     const serviceCall = tab === 'reception'
-      ? this.reportsService.getReceptionReports(f)
+      ? this.offlineFirst.getReceptionReports(f)
       : tab === 'delivery'
         // Los vales de entrega incluyen las devoluciones (mismo tipo de documento de salida).
         ? forkJoin({
-            delivery: this.reportsService.getDeliveryReports(f).pipe(catchError(() => of([]))),
-            returns: this.reportsService.getReturnReports(f).pipe(catchError(() => of([]))),
+            delivery: this.offlineFirst.getDeliveryReports(f).pipe(catchError(() => of([]))),
+            returns: this.offlineFirst.getReturnReports(f).pipe(catchError(() => of([]))),
           }).pipe(
             map(({ delivery, returns }) =>
               [...delivery, ...returns].sort(
@@ -94,7 +96,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
               ),
             ),
           )
-        : this.reportsService.getTransferReports({
+        : this.offlineFirst.getTransferReports({
             fromDate: f.fromDate,
             toDate: f.toDate,
             product: f.product,

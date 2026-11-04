@@ -29,6 +29,7 @@ export class OfflineDataService {
         this.syncFixedAssets(companyId),
         this.syncStockLimits(companyId),
         this.syncMovements(companyId),
+        this.syncPurchases(companyId),
       ]);
     } finally {
       this.networkStatus.setSyncing(false);
@@ -307,6 +308,71 @@ export class OfflineDataService {
     return offlineDb.stockLimits.where('companyId').equals(companyId).toArray();
   }
 
+  // ─── Compras (recepciones de mercancía) ───
+
+  async syncPurchases(companyId: number): Promise<void> {
+    try {
+      const params = new HttpParams().set('companyId', companyId.toString());
+      const items = await firstValueFrom(
+        this.http.get<any[]>(`${this.apiUrl}/purchases`, { params })
+      );
+      const now = new Date().toISOString();
+
+      await offlineDb.transaction('rw', offlineDb.purchases, async () => {
+        await offlineDb.purchases.where('companyId').equals(companyId).delete();
+        for (const item of items ?? []) {
+          await offlineDb.purchases.put({ ...item, companyId, lastSyncedAt: now });
+        }
+      });
+
+      await this.updateSyncMeta('purchases', companyId, (items ?? []).length);
+    } catch (error) {
+      console.warn('Sync purchases failed:', error);
+    }
+  }
+
+  async getPurchasesOffline(companyId: number): Promise<any[]> {
+    return offlineDb.purchases.where('companyId').equals(companyId).toArray();
+  }
+
+  async getPurchaseOfflineById(id: string): Promise<any | undefined> {
+    return offlineDb.purchases.get(id);
+  }
+
+  // ─── Informes de inventario (recepción, entrega, traslado, devolución) ───
+
+  async cacheReports(
+    kind: 'reception' | 'delivery' | 'transfer' | 'return',
+    companyId: number,
+    items: any[],
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    try {
+      await offlineDb.transaction('rw', offlineDb.reports, async () => {
+        await offlineDb.reports
+          .where('[kind+companyId]')
+          .equals([kind, companyId])
+          .delete();
+        for (const item of items ?? []) {
+          await offlineDb.reports.put({ ...item, kind, companyId, lastSyncedAt: now });
+        }
+      });
+      await this.updateSyncMeta(`reports:${kind}`, companyId, (items ?? []).length);
+    } catch {
+      // silently fail cache
+    }
+  }
+
+  async getReportsOffline(
+    kind: 'reception' | 'delivery' | 'transfer' | 'return',
+    companyId: number,
+  ): Promise<any[]> {
+    return offlineDb.reports
+      .where('[kind+companyId]')
+      .equals([kind, companyId])
+      .toArray();
+  }
+
   // ─── Empresas ───
 
   async syncCompanies(tenantId?: string): Promise<void> {
@@ -380,6 +446,8 @@ export class OfflineDataService {
                 offlineDb.employees,
         offlineDb.fixedAssets,
         offlineDb.stockLimits,
+        offlineDb.purchases,
+        offlineDb.reports,
         offlineDb.syncMetadata,
       ],
       async () => {
@@ -392,6 +460,8 @@ export class OfflineDataService {
                 await offlineDb.employees.clear();
         await offlineDb.fixedAssets.clear();
         await offlineDb.stockLimits.clear();
+        await offlineDb.purchases.clear();
+        await offlineDb.reports.clear();
         await offlineDb.syncMetadata.clear();
       }
     );

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
 import { ReturnDto, InventoryCategory, InventoryItem } from '../../../../../../models/inventory.models';
 import { PurchasesService } from '../../../../../../core/services/purchases.service';
+import { OfflineFirstService } from '../../../../../../core/offline/offline-first.service';
 import { InventoryService } from '../../../../../../core/services/inventory.service';
 import { Purchase } from '../../../../../../models/purchase.models';
 
@@ -32,6 +33,7 @@ export class ReturnWizardComponent implements OnChanges {
   @Output() submitReturn = new EventEmitter<ReturnDto>();
 
   private purchasesService = inject(PurchasesService);
+  private offlineFirst = inject(OfflineFirstService);
   private inventoryService = inject(InventoryService);
 
   isLoadingPurchases = signal(false);
@@ -60,7 +62,7 @@ export class ReturnWizardComponent implements OnChanges {
 
   private loadPurchases(): void {
     this.isLoadingPurchases.set(true);
-    this.purchasesService.getPurchases().subscribe({
+    this.offlineFirst.getPurchases().subscribe({
       next: (data) => {
         this.purchases.set(data || []);
         this.isLoadingPurchases.set(false);
@@ -79,11 +81,11 @@ export class ReturnWizardComponent implements OnChanges {
     if (!this.selectedPurchaseId) return;
 
     this.isLoading.set(true);
-    this.purchasesService.getPurchaseById(this.selectedPurchaseId).subscribe({
+    this.offlineFirst.getPurchaseById(this.selectedPurchaseId).subscribe({
       next: (res) => {
         const products = res?.products || [];
         this.lines.set(
-          products.map((p) => ({
+          products.map((p: any) => ({
             productCode: p.productCode,
             productName: p.productName,
             productUnit: p.productUnit || 'und',

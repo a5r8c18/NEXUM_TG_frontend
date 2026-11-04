@@ -10,6 +10,7 @@ import { InvoicesService } from '../services/invoices.service';
 import { CompanyService } from '../services/company.service';
 import { WarehouseService } from '../services/warehouse.service';
 import { PurchasesService } from '../services/purchases.service';
+import { ReportsService } from '../services/reports.service';
 import { offlineDb } from './offline-database';
 
 /**
@@ -32,6 +33,7 @@ export class OfflineFirstService {
   private companyService = inject(CompanyService);
   private warehouseService = inject(WarehouseService);
   private purchasesService = inject(PurchasesService);
+  private reportsService = inject(ReportsService);
 
   private get companyId(): number {
     return this.auth.getCurrentCompanyId();
@@ -425,6 +427,41 @@ export class OfflineFirstService {
   //  COMPRAS
   // ═══════════════════════════════════════════════════════
 
+  getPurchases(): Observable<any[]> {
+    if (this.network.isOnline()) {
+      return this.purchasesService.getPurchases(this.companyId).pipe(
+        tap(items => this.cachePurchases(items)),
+        catchError(() => from(this.offlineData.getPurchasesOffline(this.companyId)))
+      );
+    }
+    return from(this.offlineData.getPurchasesOffline(this.companyId));
+  }
+
+  getPurchaseById(id: string): Observable<any> {
+    if (this.network.isOnline()) {
+      return this.purchasesService.getPurchaseById(id).pipe(
+        catchError(() => from(this.offlineData.getPurchaseOfflineById(id)).pipe(
+          map(p => (p ? { purchase: p, products: p.products ?? [] } : { purchase: null, products: [] }))
+        ))
+      );
+    }
+    return from(this.offlineData.getPurchaseOfflineById(id)).pipe(
+      map(p => (p ? { purchase: p, products: p.products ?? [] } : { purchase: null, products: [] }))
+    );
+  }
+
+  private async cachePurchases(items: any[]): Promise<void> {
+    const now = new Date().toISOString();
+    try {
+      await offlineDb.transaction('rw', offlineDb.purchases, async () => {
+        await offlineDb.purchases.where('companyId').equals(this.companyId).delete();
+        for (const item of items ?? []) {
+          await offlineDb.purchases.put({ ...item, companyId: this.companyId, lastSyncedAt: now });
+        }
+      });
+    } catch { /* silently fail cache */ }
+  }
+
   createPurchase(data: any): Observable<any> {
     console.log('📦 offline-first: createPurchase llamado con:', data);
     if (this.network.isOnline()) {
@@ -445,8 +482,92 @@ export class OfflineFirstService {
   }
 
   private async createPurchaseOffline(data: any): Promise<any> {
+    const id = crypto.randomUUID();
+    const purchase = {
+      ...data,
+      id,
+      companyId: this.companyId,
+      createdAt: new Date().toISOString(),
+      isInvoiced: false,
+      isReconciled: false,
+      _offline: true,
+    };
+    try {
+      await offlineDb.purchases.put(purchase as any);
+    } catch { /* silently fail cache */ }
     await this.syncQueue.enqueue('purchases', 'create', { ...data, companyId: this.companyId }, this.companyId);
-    return { ...data, id: crypto.randomUUID(), _offline: true };
+    return purchase;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  INFORMES DE INVENTARIO (recepción, entrega, traslado, devolución)
+  // ═══════════════════════════════════════════════════════
+
+  getReceptionReports(filters?: any): Observable<any[]> {
+    if (this.network.isOnline()) {
+      return this.reportsService.getReceptionReports(filters).pipe(
+        tap(items => this.offlineData.cacheReports('reception', this.companyId, items)),
+        catchError(() => from(this.offlineReports('reception', filters)))
+      );
+    }
+    return from(this.offlineReports('reception', filters));
+  }
+
+  getDeliveryReports(filters?: any): Observable<any[]> {
+    if (this.network.isOnline()) {
+      return this.reportsService.getDeliveryReports(filters).pipe(
+        tap(items => this.offlineData.cacheReports('delivery', this.companyId, items)),
+        catchError(() => from(this.offlineReports('delivery', filters)))
+      );
+    }
+    return from(this.offlineReports('delivery', filters));
+  }
+
+  getTransferReports(filters?: any): Observable<any[]> {
+    if (this.network.isOnline()) {
+      return this.reportsService.getTransferReports(filters).pipe(
+        tap(items => this.offlineData.cacheReports('transfer', this.companyId, items)),
+        catchError(() => from(this.offlineReports('transfer', filters)))
+      );
+    }
+    return from(this.offlineReports('transfer', filters));
+  }
+
+  getReturnReports(filters?: any): Observable<any[]> {
+    if (this.network.isOnline()) {
+      return this.reportsService.getReturnReports(filters).pipe(
+        tap(items => this.offlineData.cacheReports('return', this.companyId, items)),
+        catchError(() => from(this.offlineReports('return', filters)))
+      );
+    }
+    return from(this.offlineReports('return', filters));
+  }
+
+  /**
+   * Aplica en local los mismos filtros que el backend recibe por query:
+   * rango de fechas sobre la fecha del informe y búsqueda de producto.
+   */
+  private async offlineReports(
+    kind: 'reception' | 'delivery' | 'transfer' | 'return',
+    filters?: any,
+  ): Promise<any[]> {
+    let items = await this.offlineData.getReportsOffline(kind, this.companyId);
+    const dateOf = (r: any) => (r.date || r.created_at || '').substring(0, 10);
+    if (filters?.fromDate) {
+      items = items.filter(r => dateOf(r) >= filters.fromDate);
+    }
+    if (filters?.toDate) {
+      items = items.filter(r => dateOf(r) <= filters.toDate);
+    }
+    if (filters?.product) {
+      const s = String(filters.product).toLowerCase();
+      items = items.filter(r =>
+        r.details?.products?.some((p: any) =>
+          p.description?.toLowerCase().includes(s) || p.code?.toLowerCase().includes(s),
+        ),
+      );
+    }
+    return items;
   }
 
   // ═══════════════════════════════════════════════════════

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { PurchasesService } from '../../../core/services/purchases.service';
+import { OfflineFirstService } from '../../../core/offline/offline-first.service';
 
 @Component({
   selector: 'app-purchase-reconcile',
@@ -251,6 +252,7 @@ export class PurchaseReconcileComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private purchasesService = inject(PurchasesService);
+  private offlineFirst = inject(OfflineFirstService);
 
   purchase = signal<any>(null);
   isLoading = signal(true);
@@ -269,7 +271,7 @@ export class PurchaseReconcileComponent implements OnInit {
   async loadPurchase(id: string) {
     this.isLoading.set(true);
     try {
-      const res = await firstValueFrom(this.purchasesService.getPurchaseById(id));
+      const res = await firstValueFrom(this.offlineFirst.getPurchaseById(id));
       this.purchase.set(res.purchase ?? res);
     } catch {
       this.purchase.set(null);

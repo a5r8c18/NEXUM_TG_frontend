@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { PurchasesService } from '../../../core/services/purchases.service';
+import { OfflineFirstService } from '../../../core/offline/offline-first.service';
 
 @Component({
   selector: 'app-purchases-list',
@@ -135,7 +135,7 @@ import { PurchasesService } from '../../../core/services/purchases.service';
   `,
 })
 export class PurchasesListComponent implements OnInit {
-  private purchasesService = inject(PurchasesService);
+  private offlineFirst = inject(OfflineFirstService);
 
   purchases = signal<any[]>([]);
   isLoading = signal(true);
@@ -147,7 +147,7 @@ export class PurchasesListComponent implements OnInit {
   async load() {
     this.isLoading.set(true);
     try {
-      const data = await firstValueFrom(this.purchasesService.getPurchases());
+      const data = await firstValueFrom(this.offlineFirst.getPurchases());
       this.purchases.set(Array.isArray(data) ? data : []);
     } catch {
       this.purchases.set([]);

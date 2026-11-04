@@ -138,6 +138,36 @@ export interface OfflineStockLimit {
   lastSyncedAt?: string;
 }
 
+export interface OfflinePurchase {
+  id?: string;
+  companyId: number;
+  entity?: string;
+  warehouse?: string;
+  supplier?: string;
+  document?: string;
+  status?: string;
+  invoiceNumber?: string | null;
+  invoiceDate?: string | null;
+  isInvoiced?: boolean;
+  isReconciled?: boolean;
+  products?: any[];
+  createdAt?: string;
+  lastSyncedAt?: string;
+}
+
+/**
+ * Informes de inventario (recepción, entrega, traslado, devolución) cacheados
+ * con la forma exacta que consume la pantalla de Reportes. `kind` discrimina
+ * la pestaña a la que pertenecen.
+ */
+export interface OfflineReport {
+  id?: string;
+  companyId: number;
+  kind: 'reception' | 'delivery' | 'transfer' | 'return';
+  [key: string]: any;
+  lastSyncedAt?: string;
+}
+
 // ─── Cola de sincronización ───
 
 export interface SyncQueueItem {
@@ -175,6 +205,8 @@ export class OfflineDatabase extends Dexie {
     employees!: Table<OfflineEmployee, string>;
   fixedAssets!: Table<OfflineFixedAsset, number>;
   stockLimits!: Table<OfflineStockLimit, string>;
+  purchases!: Table<OfflinePurchase, string>;
+  reports!: Table<OfflineReport, string>;
   syncQueue!: Table<SyncQueueItem, number>;
   syncMetadata!: Table<SyncMetadata, number>;
 
@@ -194,6 +226,11 @@ export class OfflineDatabase extends Dexie {
       stockLimits: 'id, companyId, productCode, warehouseId',
       syncQueue: '++id, entity, action, status, timestamp, companyId',
       syncMetadata: '++id, [entity+companyId]',
+    });
+
+    this.version(2).stores({
+      purchases: 'id, companyId, document, supplier, createdAt',
+      reports: 'id, companyId, kind, [kind+companyId]',
     });
   }
 }
