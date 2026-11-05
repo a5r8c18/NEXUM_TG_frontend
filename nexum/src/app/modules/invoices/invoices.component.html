@@ -336,7 +336,7 @@
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
     <app-modal [isOpen]="isCreateOpen()" (closeEvent)="closeCreate()" (confirmEvent)="createInvoice()" title="Crear Nueva Factura" [confirmText]="saving() ? 'Guardando...' : 'Crear Factura'" confirmButtonClass="bg-blue-600 hover:bg-blue-700" maxWidthClass="max-w-4xl">
-      <div class="space-y-4">
+      <div class="space-y-4" appEnterAsTab>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="relative sm:col-span-2">
             <label class="block text-sm font-medium text-slate-700 mb-1">Cliente/Entidad *</label>

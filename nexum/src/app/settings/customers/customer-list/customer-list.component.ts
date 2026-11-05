@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../../core/services/finance.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { EnterAsTabDirective } from '../../../shared/directives/enter-as-tab.directive';
 
 @Component({
   selector: 'app-customer-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, EnterAsTabDirective],
   templateUrl: './customer-list.component.html',
 })
 export class CustomerListComponent implements OnInit {

@@ -7,11 +7,12 @@ import { NotificationService } from '../../../core/services/notification.service
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { EnterAsTabDirective } from '../../../shared/directives/enter-as-tab.directive';
 
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent, EnterAsTabDirective],
   templateUrl: './suppliers.component.html',
 })
 export class SuppliersComponent implements OnInit, OnDestroy {

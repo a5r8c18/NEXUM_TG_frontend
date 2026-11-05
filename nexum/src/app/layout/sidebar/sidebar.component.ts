@@ -276,8 +276,14 @@ export class SidebarComponent {
           route: '/settings/companies' 
         });
       }
-    } else if (user?.role === 'user' || user?.role === 'facturador') {
-      // User y facturador solo ven "General", no ven "Usuarios" ni "Empresas"
+    } else if (user?.role === 'user') {
+      // User ve Clientes, Proveedores y General; no "Usuarios" ni "Empresas"
+      baseMenu.push({ icon: 'Users', label: 'Clientes', route: '/settings/customers' });
+      baseMenu.push({ icon: 'Truck', label: 'Proveedores', route: '/settings/suppliers' });
+      baseMenu.push({ icon: 'Cog', label: 'General', route: '/settings/general' });
+    } else if (user?.role === 'facturador') {
+      // Facturador ve Clientes y General
+      baseMenu.push({ icon: 'Users', label: 'Clientes', route: '/settings/customers' });
       baseMenu.push({ icon: 'Cog', label: 'General', route: '/settings/general' });
     }
     

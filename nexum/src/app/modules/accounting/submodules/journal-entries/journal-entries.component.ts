@@ -9,11 +9,12 @@ import { SubelementsService, Subelement } from '../../../../core/services/subele
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { VoucherLineFormComponent } from './voucher-line-form.component';
+import { EnterAsTabDirective } from '../../../../shared/directives/enter-as-tab.directive';
 
 @Component({
   selector: 'app-journal-entries',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, PaginationComponent, VoucherLineFormComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, PaginationComponent, VoucherLineFormComponent, EnterAsTabDirective],
   templateUrl: './journal-entries.component.html',
 })
 export class JournalEntriesComponent implements OnInit {

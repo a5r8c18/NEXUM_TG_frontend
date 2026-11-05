@@ -5,11 +5,12 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { Subject } from 'rxjs';
 import { AccountingService, Account, AccountFilters, AccountStatistics, Subaccount } from '../../../../core/services/accounting.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { EnterAsTabDirective } from '../../../../shared/directives/enter-as-tab.directive';
 
 @Component({
   selector: 'app-accounts',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, EnterAsTabDirective],
   templateUrl: './accounts.component.html',
 })
 export class AccountsComponent implements OnInit {

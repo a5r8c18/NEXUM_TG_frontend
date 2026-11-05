@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { EnterAsTabDirective } from '../../shared/directives/enter-as-tab.directive';
 import { InvoicesService, Invoice, InvoiceFilters, PaginationResult } from '../../core/services/invoices.service';
 import { FinanceService } from '../../core/services/finance.service';
 import { ProductsService } from '../../core/services/products.service';
@@ -15,7 +16,7 @@ import { signal, computed } from '@angular/core';
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent, EnterAsTabDirective],
   templateUrl: './invoices.component.html'
 })
 export class InvoicesComponent implements OnInit, OnDestroy {

@@ -64,7 +64,7 @@
 
   @if (isModalOpen()) {
     <app-modal [isOpen]="isModalOpen()" [title]="editing() ? 'Editar Cliente' : 'Nuevo Cliente'" [confirmText]="editing() ? 'Guardar' : 'Crear'" (closeEvent)="closeModal()" (confirmEvent)="save()">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" appEnterAsTab>
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Código</label>
           <input [value]="editing() ? form.code : 'CLE-(auto)'" readonly class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-slate-400 text-sm font-mono text-slate-500" />

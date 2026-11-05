@@ -619,7 +619,7 @@
           </div>
         } @else {
           <!-- Create/Edit Mode -->
-          <form [formGroup]="accountForm" (ngSubmit)="saveAccount()">
+          <form [formGroup]="accountForm" (ngSubmit)="saveAccount()" appEnterAsTab>
             <div class="space-y-4">
               <div>
                 <label class="block text-xs font-medium text-slate-600 mb-1">Código *</label>
@@ -742,7 +742,7 @@
           </button>
         </div>
 
-        <form [formGroup]="subaccountForm" (ngSubmit)="showSubaccountCreateModal() ? createSubaccount() : updateSubaccount()">
+        <form [formGroup]="subaccountForm" (ngSubmit)="showSubaccountCreateModal() ? createSubaccount() : updateSubaccount()" appEnterAsTab>
           <div class="space-y-4">
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Cuenta Padre *</label>
