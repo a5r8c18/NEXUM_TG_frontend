@@ -250,25 +250,43 @@
             <div class="sm:col-span-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="relative flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta de ingreso *</label>
-                <input [(ngModel)]="incomeAccountQuery" name="incomeAccountQuery"
-                       (focus)="incomeAccountDrop.set(true)" (blur)="onIncomeAccountBlur()"
-                       placeholder="Filtrar cuenta de ingreso" autocomplete="off"
-                       class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                @if (incomeAccountDrop()) {
-                  <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
-                    @for (o of incomeAccountOptions(); track o.value) {
-                      <button type="button" (mousedown)="selectIncomeAccount(o.value)"
-                              class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white"
-                              [class.pl-6]="o.isSub">
-                        {{ o.label }}
-                      </button>
-                    }
-                    @if (!incomeAccountOptions().length) {
-                      <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin cuentas de ingreso en el nomenclador</div>
-                    }
-                  </div>
+                @if (isOnlinePayment) {
+                  <!-- Concepto 19: la cuenta queda fijada en la 835 -->
+                  <input value="835" readonly
+                         class="mt-auto w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-900/50 dark:text-white text-sm" />
+                } @else {
+                  <input [(ngModel)]="incomeAccountQuery" name="incomeAccountQuery"
+                         (focus)="incomeAccountDrop.set(true)" (blur)="onIncomeAccountBlur()"
+                         placeholder="Filtrar cuenta de ingreso" autocomplete="off"
+                         class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  @if (incomeAccountDrop()) {
+                    <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                      @for (o of incomeAccountOptions(); track o.value) {
+                        <button type="button" (mousedown)="selectIncomeAccount(o.value)"
+                                class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white"
+                                [class.pl-6]="o.isSub">
+                          {{ o.label }}
+                        </button>
+                      }
+                      @if (!incomeAccountOptions().length) {
+                        <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin cuentas de ingreso en el nomenclador</div>
+                      }
+                    </div>
+                  }
                 }
               </div>
+              @if (isOnlinePayment) {
+                <div class="flex flex-col">
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta de la 835</label>
+                  <select [(ngModel)]="form.incomeSubaccount" name="incomeSubaccount"
+                          class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">835 (sin subcuenta)</option>
+                    @for (o of incomeSubaccountOptions(); track o.value) {
+                      <option [value]="o.value">{{ o.label }}</option>
+                    }
+                  </select>
+                </div>
+              }
               <div class="flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Importe del ingreso *</label>
                 <input type="number" step="0.01" min="0" [(ngModel)]="form.incomeAmount" name="incomeAmount"

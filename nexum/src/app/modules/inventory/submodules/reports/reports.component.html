@@ -426,6 +426,18 @@
     </div>
   }
   <div modal-actions class="flex gap-2">
+    @if (selectedReport() && canEditReport(selectedReport()!)) {
+      <button (click)="openEditReport(selectedReport())"
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+        Editar
+      </button>
+    }
+    @if (selectedReport() && canCancelReport(selectedReport()!)) {
+      <button (click)="askCancelReport(selectedReport())"
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-600 text-red-600 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+        Cancelar informe
+      </button>
+    }
     <button (click)="exportToPdf(selectedReport()!)"
             class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
             title="Exportar a PDF">
@@ -444,3 +456,57 @@
     </button>
   </div>
 </app-modal>
+
+<!-- Modal de edición del informe de recepción -->
+@if (editingReport()) {
+  <app-modal [isOpen]="true" title="Editar informe de recepción"
+             [showConfirm]="false" (closeEvent)="closeEditReport()">
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Documento</label>
+        <input [(ngModel)]="editForm.document" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Proveedor</label>
+        <input [(ngModel)]="editForm.supplier" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Entidad</label>
+        <input [(ngModel)]="editForm.entity" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Transportista</label>
+        <input [(ngModel)]="editForm.transportista" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Recepcionado por</label>
+        <input [(ngModel)]="editForm.receivedBy" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+    </div>
+    <div modal-actions class="flex gap-2 justify-end">
+      <button (click)="closeEditReport()" class="px-4 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
+      <button (click)="saveEditReport()" [disabled]="savingReport()"
+              class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+        {{ savingReport() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- Confirmación de cancelación del informe -->
+@if (cancelTarget(); as r) {
+  <app-modal [isOpen]="true" title="Cancelar informe de recepción"
+             [showConfirm]="false" (closeEvent)="closeCancelReport()">
+    <div class="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+      <p>Se cancelará la recepción <strong>{{ r.document || r.reportNumber }}</strong> del proveedor <strong>{{ r.supplier || r.entity }}</strong>.</p>
+      <p>Se generará una salida por devolución de compra con el concepto <strong>{{ returnConceptFor(r) }}</strong> (según su categoría), lo que descargará el stock, creará el informe de devolución, asentará el comprobante y ajustará la cuenta por pagar.</p>
+    </div>
+    <div modal-actions class="flex gap-2 justify-end">
+      <button (click)="closeCancelReport()" class="px-4 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">Volver</button>
+      <button (click)="confirmCancelReport()" [disabled]="cancellingReport()"
+              class="px-4 py-2 text-sm rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
+        {{ cancellingReport() ? 'Cancelando...' : 'Confirmar cancelación' }}
+      </button>
+    </div>
+  </app-modal>
+}

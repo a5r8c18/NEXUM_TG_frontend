@@ -69,6 +69,10 @@ export class InvoicesService {
       .pipe(map(response => response.invoice));
   }
 
+  restoreAnnulment(id: string): Observable<{ invoice: Invoice }> {
+    return this.http.post<{ invoice: Invoice }>(`${this.apiUrl}/${id}/restore-annulment`, {});
+  }
+
   getStatistics(): Observable<any> {
     return this.http.get(`${this.apiUrl}/statistics`);
   }

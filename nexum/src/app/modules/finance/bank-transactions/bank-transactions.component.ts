@@ -76,6 +76,7 @@ export class BankTransactionsComponent implements OnInit {
     exchangeRate: 1,
     notes: '',
     incomeAccount: '',
+    incomeSubaccount: '',
     incomeAmount: 0,
     feeAccount: '',
     feeAmount: 0,
@@ -171,11 +172,12 @@ export class BankTransactionsComponent implements OnInit {
     this.selectedReceivableId.set('');
     this.receivables.set([]);
     this.receivablesModalOpen.set(false);
-    this.form.incomeAccount = '';
+    this.form.incomeAccount = this.isOnlinePayment ? '835' : '';
+    this.form.incomeSubaccount = '';
     this.form.incomeAmount = 0;
     this.form.feeAccount = '';
     this.form.feeAmount = 0;
-    this.incomeAccountQuery = '';
+    this.incomeAccountQuery = this.isOnlinePayment ? '835' : '';
     this.feeAccountQuery = '';
   }
 
@@ -440,6 +442,11 @@ export class BankTransactionsComponent implements OnInit {
     return this.typedAccountOptions('income', this.incomeAccountQuery);
   }
 
+  /** Subcuentas de la 835 (concepto 19 fija la cuenta y se elige la subcuenta). */
+  incomeSubaccountOptions = computed(() =>
+    this.accountSelectOptions().filter((o) => o.isSub && o.parentCode === '835'),
+  );
+
   feeAccountOptions() {
     return this.typedAccountOptions('expense', this.feeAccountQuery);
   }
@@ -574,6 +581,7 @@ export class BankTransactionsComponent implements OnInit {
       exchangeRate: Number(tx.exchangeRate || 1),
       notes: tx.notes || '',
       incomeAccount: tx.incomeAccount || '',
+      incomeSubaccount: tx.incomeSubaccount || '',
       incomeAmount: Number(tx.incomeAmount || 0),
       feeAccount: tx.feeAccount || '',
       feeAmount: Number(tx.feeAmount || 0),
@@ -764,6 +772,7 @@ export class BankTransactionsComponent implements OnInit {
 
       if (this.isIncomeAccountConcept) {
         basePayload.incomeAccount = this.form.incomeAccount;
+        basePayload.incomeSubaccount = this.isOnlinePayment ? this.form.incomeSubaccount || null : null;
         basePayload.incomeAmount = Number(this.form.incomeAmount);
         basePayload.feeAccount = this.isOnlinePayment ? this.form.feeAccount : null;
         basePayload.feeAmount = this.isOnlinePayment ? Number(this.form.feeAmount) : null;
@@ -832,6 +841,7 @@ export class BankTransactionsComponent implements OnInit {
       exchangeRate: 1,
       notes: '',
       incomeAccount: '',
+    incomeSubaccount: '',
       incomeAmount: 0,
       feeAccount: '',
       feeAmount: 0,

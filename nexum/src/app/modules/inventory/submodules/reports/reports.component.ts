@@ -6,6 +6,7 @@ import { Subscription, forkJoin, map, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ReportsService } from '../../../../core/services/reports.service';
 import { OfflineFirstService } from '../../../../core/offline/offline-first.service';
+import { PurchasesService } from '../../../../core/services/purchases.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ReportFilters, ReceptionReport, DeliveryReport, TransferReport, ReturnReport } from '../../../../models/report.models';
 import { PaginationComponent, PaginationConfig } from '../../../../shared/components/pagination/pagination.component';
@@ -22,6 +23,7 @@ type Report = ReceptionReport | DeliveryReport | TransferReport | ReturnReport;
 export class ReportsComponent implements OnInit, OnDestroy {
   private reportsService = inject(ReportsService);
   private offlineFirst = inject(OfflineFirstService);
+  private purchasesService = inject(PurchasesService);
   private notificationService = inject(NotificationService);
   private route = inject(ActivatedRoute);
 
@@ -198,6 +200,89 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   closeDetails(): void {
     this.selectedReport.set(null);
+  }
+
+  // ── Edición / cancelación de informes de recepción ──
+  editingReport = signal<any | null>(null);
+  editForm = { document: '', supplier: '', entity: '', transportista: '', receivedBy: '' };
+  cancelTarget = signal<any | null>(null);
+  savingReport = signal(false);
+  cancellingReport = signal(false);
+
+  canEditReport(r: any): boolean {
+    return this.isReception(r) && !!r.purchaseId && (r as any).status !== 'cancelled' && !(r as any).isReconciled;
+  }
+
+  canCancelReport(r: any): boolean {
+    return this.canEditReport(r);
+  }
+
+  /** Concepto de devolución de compra según la categoría de la recepción. */
+  returnConceptFor(r: any): string {
+    const cat = (r as any).category || 'mercancia';
+    const map: Record<string, string> = { insumo: '1107', mercancia: '2107', produccion: '3107' };
+    return map[cat] || '2107';
+  }
+
+  openEditReport(report: any): void {
+    this.editForm = {
+      document: report.document || '',
+      supplier: report.supplier || '',
+      entity: report.entity || '',
+      transportista: report.transportista || '',
+      receivedBy: report.responsables?.recepcionadoPor || report.receivedBy || '',
+    };
+    this.editingReport.set(report);
+  }
+
+  closeEditReport(): void {
+    this.editingReport.set(null);
+  }
+
+  saveEditReport(): void {
+    const r = this.editingReport();
+    if (!r) return;
+    this.savingReport.set(true);
+    this.purchasesService.updateReception(r.purchaseId, { ...this.editForm }).subscribe({
+      next: () => {
+        this.savingReport.set(false);
+        this.editingReport.set(null);
+        this.closeDetails();
+        this.showToast('Informe actualizado', 'success');
+        this.loadReports();
+      },
+      error: (e) => {
+        this.savingReport.set(false);
+        this.showToast(e?.error?.message || 'Error al actualizar el informe', 'error');
+      },
+    });
+  }
+
+  askCancelReport(report: any): void {
+    this.cancelTarget.set(report);
+  }
+
+  closeCancelReport(): void {
+    this.cancelTarget.set(null);
+  }
+
+  confirmCancelReport(): void {
+    const r = this.cancelTarget();
+    if (!r) return;
+    this.cancellingReport.set(true);
+    this.purchasesService.cancelReception(r.purchaseId).subscribe({
+      next: () => {
+        this.cancellingReport.set(false);
+        this.cancelTarget.set(null);
+        this.closeDetails();
+        this.showToast('Recepción cancelada: se generó la devolución de compra', 'success');
+        this.loadReports();
+      },
+      error: (e) => {
+        this.cancellingReport.set(false);
+        this.showToast(e?.error?.message || 'Error al cancelar la recepción', 'error');
+      },
+    });
   }
 
   formatDate(date: string): string {

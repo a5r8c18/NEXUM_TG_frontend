@@ -221,6 +221,22 @@ export class InvoicesComponent implements OnInit, OnDestroy {
   resetFilters() { this.searchTerm.set(''); this.statusFilter.set(''); this.currentPage.set(1); this.loadInvoices(); }
   onPageChange(page: number) { this.currentPage.set(page); this.loadInvoices(); }
 
+  async restoreAnnulment(invoice: Invoice) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Cancelar anulación',
+      message: `¿Cancelar la anulación de la factura ${invoice.invoiceNumber}? Se restaurará su flujo completo (CxC, inventario y comprobantes).`,
+      confirmText: 'Restaurar',
+    });
+    if (!confirmed) return;
+    this.invoicesService.restoreAnnulment(invoice.id).subscribe({
+      next: () => {
+        this.showToast('Anulación cancelada: la factura vuelve a pendiente', 'success');
+        this.loadInvoices();
+      },
+      error: (err) => this.showToast(err?.error?.message || 'Error al cancelar la anulación', 'error'),
+    });
+  }
+
   updateStatus(invoice: Invoice, status: 'paid' | 'cancelled') {
     this.invoicesService.updateStatus(invoice.id, status).subscribe({
       next: () => {
