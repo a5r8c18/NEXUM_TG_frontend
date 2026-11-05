@@ -250,10 +250,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 
-  selectCompany(company: Company): void {
-    this.contextService.setCurrentCompany(company as any);
+  async selectCompany(company: Company): Promise<void> {
+    // Renovar el JWT: getCompanyId valida contra companyIds del token,
+    // que puede no incluir asignaciones hechas tras el login.
+    try {
+      await this.authService.refreshSession();
+    } catch { /* si falla se continúa con el token actual */ }
+    this.contextService.switchCompany(company as any);
     this.showCompanyDropdown.set(false);
-    // Opcional: Recargar la página para actualizar el contexto
     window.location.reload();
   }
 
@@ -301,6 +305,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
   switchCompany(): void {
     this.showUserMenu.set(false);
     this.router.navigate(['/company-selection']);
+  }
+
+  goToProfile(): void {
+    this.showUserMenu.set(false);
+    this.router.navigate(['/profile']);
+  }
+
+  goToSettings(): void {
+    this.showUserMenu.set(false);
+    this.router.navigate(['/settings']);
   }
 
   logout(): void {

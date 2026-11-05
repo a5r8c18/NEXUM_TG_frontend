@@ -145,6 +145,14 @@ export class UsersService {
     }, { headers });
   }
 
+  // Cambiar la propia contraseña (autoservicio, cualquier rol)
+  changeOwnPassword(currentPassword: string, newPassword: string): Observable<User> {
+    return this.http.post<User>(`${this.apiUrl}/users/me/password`, {
+      currentPassword,
+      newPassword,
+    });
+  }
+
   // Asignar empresas a un usuario
   assignCompaniesToUser(userId: string, request: AssignCompaniesRequest): Observable<UserCompany[]> {
     // Combinar headers del contexto y del usuario autenticado

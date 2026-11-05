@@ -102,9 +102,13 @@ export class CompanySelectorComponent {
     }
   }
 
-  selectCompany(company: Company) {
-    this.contextService.setCurrentCompany(company as any);
-    this.router.navigate(['/dashboard']);
+  async selectCompany(company: Company) {
+    // Renovar el JWT para que incluya las asignaciones de empresa actuales
+    try {
+      await this.authService.refreshSession();
+    } catch { /* si falla se continúa con el token actual */ }
+    this.contextService.switchCompany(company as any);
+    window.location.href = '/dashboard';
   }
 
   isActiveCompany(company: Company): boolean {

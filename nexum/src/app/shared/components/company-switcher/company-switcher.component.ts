@@ -115,11 +115,15 @@ export class CompanySwitcherComponent implements OnInit {
     }
   }
 
-  selectCompany(company: Company) {
+  async selectCompany(company: Company) {
+    // Renovar el JWT para que incluya las asignaciones de empresa actuales
+    try {
+      await this.authService.refreshSession();
+    } catch { /* si falla se continúa con el token actual */ }
     this.contextService.switchCompany(company);
     this.showDropdown.set(false);
-    
-    // Optional: reload page or navigate to dashboard to refresh data
+
+    // Reload page to refresh data with the new company context
     window.location.href = '/dashboard';
   }
 

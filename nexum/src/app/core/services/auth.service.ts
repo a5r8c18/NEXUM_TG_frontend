@@ -553,8 +553,13 @@ export class AuthService {
           user
         });
         
-        // Restaurar el contexto de la empresa si el usuario tiene companyId
-        const restoredCompanyId = user.currentCompanyId ?? user.companyId;
+        // Restaurar el contexto de la empresa: priorizar la empresa que el
+        // usuario seleccionó (persistida por ContextService en localStorage);
+        // solo caer en la empresa por defecto si no hay selección previa.
+        const persistedCompany = this.contextService.currentCompany();
+        const restoredCompanyId = persistedCompany?.id
+          ? parseInt(persistedCompany.id as any, 10)
+          : (user.currentCompanyId ?? user.companyId);
         if (restoredCompanyId) {
           // Síncrono primero (header X-Company-ID disponible al instante),
           // luego enriquecer con los datos completos de la empresa.

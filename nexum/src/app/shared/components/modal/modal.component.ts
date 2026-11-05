@@ -45,6 +45,7 @@ import { CommonModule } from '@angular/common';
         </div>
 
         <!-- Actions -->
+        @if (!hideActions) {
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
           <ng-content select="[modal-actions]"></ng-content>
           <div class="flex-1"></div>
@@ -64,6 +65,7 @@ import { CommonModule } from '@angular/common';
             </button>
           }
         </div>
+        }
       </div>
     </div>
   `,
@@ -78,6 +80,7 @@ export class ModalComponent {
   @Input() confirmButtonClass = 'bg-blue-600 hover:bg-blue-700';
   @Input() maxWidthClass = 'max-w-md';
   @Input() showConfirm = true;
+  @Input() hideActions = false;
 
   @Output() closeEvent = new EventEmitter<void>();
   @Output() confirmEvent = new EventEmitter<void>();

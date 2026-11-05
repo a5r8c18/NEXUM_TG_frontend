@@ -1,6 +1,7 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { UsersService, User, CreateUserRequest, UpdateUserRequest, UserCompany, AssignCompaniesRequest } from '../../core/services/users.service';
 import { CompanyService } from '../../core/services/company.service';
 import { ContextService } from '../../core/services/context.service';
@@ -19,7 +20,7 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
   ],
   templateUrl: './users.component.html',
 })
-export class UsersComponent implements OnInit {
+export class UsersComponent implements OnInit, OnDestroy {
   users = signal<User[]>([]);
   loading = signal(false);
   showCreateModal = signal(false);
@@ -75,8 +76,30 @@ export class UsersComponent implements OnInit {
     });
   }
 
+  private toastSub?: Subscription;
+  private toastTimeout: any;
+
   ngOnInit() {
     this.loadUsers();
+    // El template renderiza el signal local `toast`: alimentarlo desde el
+    // servicio de notificaciones (sin esto los mensajes nunca se ven).
+    this.toastSub = this.notificationService.toasts$.subscribe(t => {
+      this.toast.set({ type: t.type === 'info' ? 'success' : t.type, message: t.message });
+      clearTimeout(this.toastTimeout);
+      this.toastTimeout = setTimeout(() => this.toast.set(null), 4000);
+    });
+  }
+
+  ngOnDestroy() {
+    this.toastSub?.unsubscribe();
+    clearTimeout(this.toastTimeout);
+  }
+
+  /** Extrae el mensaje real del backend (Nest {message} puede ser string o array). */
+  private errMsg(error: any): string {
+    const msg = error?.error?.message;
+    if (Array.isArray(msg)) return msg.join(', ');
+    return msg || error?.message || 'Error desconocido';
   }
 
   loadUsers() {
@@ -93,7 +116,7 @@ export class UsersComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error) => {
-        this.notificationService.showError('Error cargando usuarios: ' + error.message);
+        this.notificationService.showError('Error cargando usuarios: ' + this.errMsg(error));
         this.loading.set(false);
       },
     });
@@ -170,7 +193,7 @@ export class UsersComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error) => {
-        this.notificationService.showError('Error creando usuario: ' + error.message);
+        this.notificationService.showError('Error creando usuario: ' + this.errMsg(error));
         this.loading.set(false);
       },
     });
@@ -201,7 +224,7 @@ export class UsersComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error) => {
-        this.notificationService.showError('Error actualizando usuario: ' + error.message);
+        this.notificationService.showError('Error actualizando usuario: ' + this.errMsg(error));
         this.loading.set(false);
       },
     });
@@ -223,7 +246,7 @@ export class UsersComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error) => {
-        this.notificationService.showError('Error eliminando usuario: ' + error.message);
+        this.notificationService.showError('Error eliminando usuario: ' + this.errMsg(error));
         this.loading.set(false);
       },
     });
@@ -238,7 +261,7 @@ export class UsersComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error) => {
-        this.notificationService.showError('Error reactivando usuario: ' + error.message);
+        this.notificationService.showError('Error reactivando usuario: ' + this.errMsg(error));
         this.loading.set(false);
       },
     });
@@ -264,7 +287,7 @@ export class UsersComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error) => {
-        this.notificationService.showError('Error cambiando contraseña: ' + error.message);
+        this.notificationService.showError('Error cambiando contraseña: ' + this.errMsg(error));
         this.loading.set(false);
       },
     });
@@ -333,7 +356,7 @@ export class UsersComponent implements OnInit {
         }
       },
       error: (error) => {
-        this.notificationService.showError('Error cargando empresas: ' + error.message);
+        this.notificationService.showError('Error cargando empresas: ' + this.errMsg(error));
         this.loadingCompanies.set(false);
       }
     });
@@ -374,7 +397,7 @@ export class UsersComponent implements OnInit {
         this.assigning.set(false);
       },
       error: (error) => {
-        this.notificationService.showError('Error asignando empresas: ' + error.message);
+        this.notificationService.showError('Error asignando empresas: ' + this.errMsg(error));
         this.assigning.set(false);
       }
     });
