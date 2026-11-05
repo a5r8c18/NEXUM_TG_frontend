@@ -30,6 +30,10 @@ import { RouterModule } from '@angular/router';
         loadComponent: () => import('./tenant-requests/tenant-requests.component').then(m => m.TenantRequestsComponent)
       },
       {
+        path: 'audit',
+        loadComponent: () => import('./audit/audit-logs.component').then(m => m.AuditLogsComponent)
+      },
+      {
         path: 'companies',
         loadComponent: () => import('./companies/company-list/company-list.component').then(m => m.CompanyListComponent)
       },

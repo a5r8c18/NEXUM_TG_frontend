@@ -100,11 +100,12 @@ export class SidebarComponent {
 
     let items = [...this.navItems];
 
-    // Solo superadmin ve "Solicitudes" y "Suscripciones"
+    // Solo superadmin ve "Solicitudes", "Suscripciones" y "Auditoría"
     if (user.role === 'superadmin') {
       items.splice(1, 0, 
         { icon: 'ClipboardList', label: 'Solicitudes', route: '/admin/tenant-requests' },
-        { icon: 'CreditCard', label: 'Suscripciones', route: '/admin/subscriptions' }
+        { icon: 'CreditCard', label: 'Suscripciones', route: '/admin/subscriptions' },
+        { icon: 'ShieldCheck', label: 'Auditoría', route: '/admin/audit' }
       );
     }
 
