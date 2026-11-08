@@ -118,6 +118,14 @@ export class FinanceService {
     return this.http.delete(`${this.apiUrl}/finance/bank-transactions/${id}`);
   }
 
+  cancelBankTransaction(id: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/bank-transactions/${id}/cancel`, {});
+  }
+
+  restoreBankTransactionAnnulment(id: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/bank-transactions/${id}/restore-annulment`, {});
+  }
+
   generateMissingOpeningVouchers(): Observable<{
     created: string[];
     skipped: number;
@@ -128,6 +136,22 @@ export class FinanceService {
 
   getLinkedReceivable(txId: string): Observable<any> {
     return this.http.get(`${this.apiUrl}/finance/bank-transactions/${txId}/linked-receivable`);
+  }
+
+  getLinkedPayable(txId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/bank-transactions/${txId}/linked-payable`);
+  }
+
+  applyAdvance(txId: string, data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/bank-transactions/${txId}/apply-advance`, data);
+  }
+
+  getAdvanceApplications(txId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/finance/bank-transactions/${txId}/advance-applications`);
+  }
+
+  cancelAdvanceApplication(paymentId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/payments/${paymentId}/cancel`, {});
   }
 
   // ── Clientes / Entidades ──

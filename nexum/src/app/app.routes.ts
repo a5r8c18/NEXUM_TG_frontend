@@ -192,6 +192,16 @@ export const routes: Routes = [
         data: { type: 'expense' }
       },
       {
+        path: 'finance/advance-collections',
+        loadComponent: () => import('./modules/finance/bank-transactions/bank-transactions.component').then(m => m.BankTransactionsComponent),
+        data: { type: 'income', concept: '26' }
+      },
+      {
+        path: 'finance/advance-payments',
+        loadComponent: () => import('./modules/finance/bank-transactions/bank-transactions.component').then(m => m.BankTransactionsComponent),
+        data: { type: 'expense', concept: '27' }
+      },
+      {
         path: 'finance/payments',
         loadComponent: () => import('./modules/finance/payments/payments.component').then(m => m.PaymentsComponent)
       },

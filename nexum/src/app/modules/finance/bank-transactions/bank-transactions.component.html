@@ -51,7 +51,19 @@
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             @for (tx of transactions(); track tx.id) {
               <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                <td class="px-4 py-3 dark:text-slate-300 font-mono">{{ tx.transactionNumber }}</td>
+                <td class="px-4 py-3 dark:text-slate-300 font-mono">
+                  {{ tx.transactionNumber }}
+                  @if (isCancelled(tx)) {
+                    <span class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 align-middle">Anulado</span>
+                  }
+                  @if (isAdvanceTx(tx) && !isCancelled(tx)) {
+                    @if (advancePending(tx) <= 0.009) {
+                      <span class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 align-middle">Liquidado</span>
+                    } @else if (hasAdvanceApplied(tx)) {
+                      <span class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 align-middle">Parcial</span>
+                    }
+                  }
+                </td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ tx.transactionCode || '-' }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ tx.transactionDate }}</td>
                 <td class="px-4 py-3 dark:text-slate-300 font-mono">{{ tx.bankAccount?.accountNumber || '-' }}</td>
@@ -59,13 +71,35 @@
                 <td class="px-4 py-3 dark:text-slate-300">{{ counterpartyDisplayLabel(tx) }}</td>
                 <td class="px-4 py-3 text-right dark:text-slate-300 font-semibold" [class]="isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ formatCurrency(tx.amount) }}</td>
                 <td class="px-4 py-3 text-center">
-                  <div class="flex items-center justify-center gap-2">
-                    <button (click)="openEditModal(tx)" title="Editar" class="text-blue-500 hover:text-blue-600 transition-colors">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  <div class="inline-flex items-center justify-center gap-2">
+                    <button (click)="openViewTx(tx)" title="Ver detalle" class="text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     </button>
-                    <button (click)="deleteTransaction(tx)" title="Eliminar" class="text-red-500 hover:text-red-600 transition-colors">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
+                    @if (canEditTx(tx)) {
+                      <button (click)="openEditModal(tx)" title="Editar" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                      </button>
+                    }
+                    @if (canCancelTx(tx)) {
+                      <button (click)="cancelTransaction(tx)" title="Anular" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                      </button>
+                    }
+                    @if (canLiquidateAdvance(tx)) {
+                      <button (click)="openAdvanceModal(tx)" title="Liquidar anticipo contra una obligación del tercero" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                      </button>
+                    }
+                    @if (canRestoreTx(tx)) {
+                      <button (click)="restoreAnnulment(tx)" title="Anular cancelación" class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l-4-4 4-4m-4 4h11a4 4 0 010 8h-1"/></svg>
+                      </button>
+                    }
+                    @if (!canEditTx(tx) && !canCancelTx(tx) && !canRestoreTx(tx)) {
+                      <span [title]="moduleSourceHint(tx)" class="text-slate-400 dark:text-slate-500 p-1 cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 10V7a4 4 0 00-8 0v3m-2 0h12a1 1 0 011 1v8a1 1 0 01-1 1H6a1 1 0 01-1-1v-8a1 1 0 011-1z"/></svg>
+                      </span>
+                    }
                   </div>
                 </td>
               </tr>
@@ -80,7 +114,7 @@
 
   <!-- Modal nuevo comprobante -->
   @if (isModalOpen()) {
-    <app-modal [isOpen]="isModalOpen()" [title]="(editingTx() ? 'Editar' : 'Nuevo') + ' Comprobante de ' + (isIncome ? 'Ingreso' : 'Egreso')" [confirmText]="saving() ? 'Guardando...' : (editingTx() ? 'Guardar' : 'Registrar')" (closeEvent)="closeModal()" (confirmEvent)="submit()">
+    <app-modal [isOpen]="isModalOpen()" [title]="(editingTx() ? 'Editar' : 'Nuevo') + ' ' + typeLabel" [confirmText]="saving() ? 'Guardando...' : (editingTx() ? 'Guardar' : 'Registrar')" (closeEvent)="closeModal()" (confirmEvent)="submit()">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
         <!-- Tipo de comprobante -->
@@ -101,6 +135,35 @@
           <div class="relative sm:col-span-2">
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contrapartida*</label>
             <input [(ngModel)]="accountQuery" name="counterpartyAccount"
+                   (focus)="accountDrop.set(true)" (blur)="onAccountBlur()"
+                   placeholder="Filtrar cuenta o subcuenta..." autocomplete="off"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            @if (accountDrop()) {
+              <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                @for (opt of filteredAccountOptions(accountQuery); track opt.value) {
+                  <button type="button" (mousedown)="selectCounterpartyAccount(opt.value)"
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+                          [class.pl-6]="opt.isSub"
+                          [class.font-semibold]="!opt.isSub"
+                          [class.text-slate-900]="!opt.isSub"
+                          [class.dark:text-white]="!opt.isSub"
+                          [class.text-slate-600]="opt.isSub"
+                          [class.dark:text-slate-300]="opt.isSub">
+                    {{ opt.label }}
+                  </button>
+                } @empty {
+                  <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin resultados</div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Concepto 27 (Pagos anticipados): cuenta deudora del nomenclador -->
+        @if (isAdvancePayment) {
+          <div class="relative sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta deudora *</label>
+            <input [(ngModel)]="accountQuery" name="advanceDebitAccount"
                    (focus)="accountDrop.set(true)" (blur)="onAccountBlur()"
                    placeholder="Filtrar cuenta o subcuenta..." autocomplete="off"
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -219,6 +282,52 @@
             </div>
           }
 
+          <!-- Obligación de pago (concepto 21 en egresos, creación y edición) -->
+          @if (isPayableSettlement) {
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Obligación de pago {{ editingTx() ? 'vinculada' : 'a liquidar' }} *
+              </label>
+              <div class="flex items-stretch gap-2">
+                <div class="flex-1 min-w-0 flex items-center gap-2 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/40 text-sm">
+                  @if (selectedPayable; as ap) {
+                    <span class="font-mono font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ ap.apNumber }}</span>
+                    @if (ap.invoiceNumber || ap.purchaseNumber) {
+                      <span class="text-slate-500 dark:text-slate-400 truncate">· {{ ap.invoiceNumber || ap.purchaseNumber }}</span>
+                    }
+                    <span class="ml-auto font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">{{ formatCurrency(ap.balanceAmount) }}</span>
+                    <button type="button" (click)="clearSelectedPayable()" title="Quitar obligación"
+                            class="shrink-0 text-slate-400 hover:text-red-500 transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  } @else {
+                    <span class="text-slate-400 dark:text-slate-500">Ninguna obligación seleccionada</span>
+                  }
+                </div>
+                <button type="button" (click)="openPayablesModal()" title="Buscar obligaciones de pago del proveedor"
+                        class="shrink-0 inline-flex items-center justify-center w-10 rounded-lg border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                  </svg>
+                </button>
+              </div>
+
+              @if (selectedPayable && payableRemaining() > 0.009) {
+                <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                  Pago parcial: tras este pago la obligación quedará con un saldo pendiente de
+                  <span class="font-semibold">{{ formatCurrency(payableRemaining()) }}</span>.
+                </p>
+              }
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                @if (editingTx()) {
+                  Si cambias o quitas la obligación, el pago anterior se revierte.
+                } @else {
+                  La obligación seleccionada se liquidará automáticamente al guardar el comprobante.
+                }
+              </p>
+            </div>
+          }
+
           <!-- Proveedor -->
           @if (selectedConcept?.requiresSupplier) {
             <div class="sm:col-span-2">
@@ -251,36 +360,36 @@
               <div class="relative flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta de ingreso *</label>
                 @if (isOnlinePayment) {
-                  <!-- Concepto 19: la cuenta queda fijada en la 835 -->
-                  <input value="835" readonly
+                  <!-- Concepto 19: la cuenta de ingreso queda fijada en la 900 -->
+                  <input value="900" readonly
                          class="mt-auto w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-900/50 dark:text-white text-sm" />
                 } @else {
-                  <input [(ngModel)]="incomeAccountQuery" name="incomeAccountQuery"
-                         (focus)="incomeAccountDrop.set(true)" (blur)="onIncomeAccountBlur()"
-                         placeholder="Filtrar cuenta de ingreso" autocomplete="off"
-                         class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  @if (incomeAccountDrop()) {
-                    <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
-                      @for (o of incomeAccountOptions(); track o.value) {
-                        <button type="button" (mousedown)="selectIncomeAccount(o.value)"
-                                class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white"
-                                [class.pl-6]="o.isSub">
-                          {{ o.label }}
-                        </button>
-                      }
-                      @if (!incomeAccountOptions().length) {
-                        <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin cuentas de ingreso en el nomenclador</div>
-                      }
-                    </div>
-                  }
+                <input [(ngModel)]="incomeAccountQuery" name="incomeAccountQuery"
+                       (focus)="incomeAccountDrop.set(true)" (blur)="onIncomeAccountBlur()"
+                       placeholder="Filtrar cuenta de ingreso" autocomplete="off"
+                       class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                @if (incomeAccountDrop()) {
+                  <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                    @for (o of incomeAccountOptions(); track o.value) {
+                      <button type="button" (mousedown)="selectIncomeAccount(o.value)"
+                              class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white"
+                              [class.pl-6]="o.isSub">
+                        {{ o.label }}
+                      </button>
+                    }
+                    @if (!incomeAccountOptions().length) {
+                      <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin cuentas de ingreso en el nomenclador</div>
+                    }
+                  </div>
+                }
                 }
               </div>
               @if (isOnlinePayment) {
                 <div class="flex flex-col">
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta de la 835</label>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta de la 900</label>
                   <select [(ngModel)]="form.incomeSubaccount" name="incomeSubaccount"
                           class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">835 (sin subcuenta)</option>
+                    <option value="">900 (sin subcuenta)</option>
                     @for (o of incomeSubaccountOptions(); track o.value) {
                       <option [value]="o.value">{{ o.label }}</option>
                     }
@@ -295,24 +404,19 @@
               @if (isOnlinePayment) {
               <div class="relative flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta de gasto (comisión) *</label>
-                <input [(ngModel)]="feeAccountQuery" name="feeAccountQuery"
-                       (focus)="feeAccountDrop.set(true)" (blur)="onFeeAccountBlur()"
-                       placeholder="Filtrar cuenta de gasto" autocomplete="off"
-                       class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                @if (feeAccountDrop()) {
-                  <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
-                    @for (o of feeAccountOptions(); track o.value) {
-                      <button type="button" (mousedown)="selectFeeAccount(o.value)"
-                              class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white"
-                              [class.pl-6]="o.isSub">
-                        {{ o.label }}
-                      </button>
-                    }
-                    @if (!feeAccountOptions().length) {
-                      <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin cuentas de gasto en el nomenclador</div>
-                    }
-                  </div>
-                }
+                <!-- Concepto 19: la cuenta de gasto queda fijada en la 835 -->
+                <input value="835" readonly
+                       class="mt-auto w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-900/50 dark:text-white text-sm" />
+              </div>
+              <div class="flex flex-col">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta de la 835</label>
+                <select [(ngModel)]="form.feeSubaccount" name="feeSubaccount"
+                        class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">835 (sin subcuenta)</option>
+                  @for (o of feeSubaccountOptions(); track o.value) {
+                    <option [value]="o.value">{{ o.label }}</option>
+                  }
+                </select>
               </div>
               <div class="flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Comisión bancaria *</label>
@@ -376,6 +480,25 @@
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto CUP</label>
             <input [value]="formatCurrency(montoCup())" readonly
                    class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm text-slate-500 dark:text-slate-400" />
+          </div>
+        }
+
+        <!-- Concepto 26 (Cobros anticipados): la cuenta acreedora queda fijada en la 430 -->
+        @if (isAdvanceCollection) {
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta acreedora *</label>
+            <input value="430" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-900/50 dark:text-white text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta de la 430</label>
+            <select [(ngModel)]="form.incomeSubaccount" name="advanceSubaccount"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">430 (sin subcuenta)</option>
+              @for (o of advanceSubOptions(); track o.value) {
+                <option [value]="o.value">{{ o.label }}</option>
+              }
+            </select>
           </div>
         }
 
@@ -468,6 +591,171 @@
     </app-modal>
   }
 
+  <!-- Modal de selección de obligaciones de pago -->
+  @if (payablesModalOpen()) {
+    <app-modal [isOpen]="payablesModalOpen()" [title]="'Obligaciones de pago · ' + form.counterpartyName"
+               maxWidthClass="max-w-4xl" [showConfirm]="false" (closeEvent)="closePayablesModal()">
+      <div class="space-y-3">
+        <div class="relative">
+          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
+          <input [(ngModel)]="payableFilter" name="payableFilter" placeholder="Filtrar por número o factura..." autocomplete="off"
+                 class="w-full border border-slate-300 dark:border-slate-600 rounded-lg pl-9 pr-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        @if (loadingPayables()) {
+          <div class="py-10 text-center text-sm text-slate-500 dark:text-slate-400">Cargando obligaciones...</div>
+        } @else {
+          <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 dark:bg-slate-900/50">
+                <tr>
+                  <th class="text-left px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Número</th>
+                  <th class="text-left px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Factura/Compra</th>
+                  <th class="text-left px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Vencimiento</th>
+                  <th class="text-right px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Importe</th>
+                  <th class="text-right px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Pagado</th>
+                  <th class="text-right px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
+                  <th class="text-center px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
+                  <th class="px-3 py-2"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                @for (ap of filteredPayables(); track ap.id) {
+                  <tr class="transition-colors cursor-pointer hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+                      [class.bg-blue-50]="ap.id === selectedPayableId()"
+                      (click)="selectPayable(ap)">
+                    <td class="px-3 py-2 font-mono font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ ap.apNumber }}</td>
+                    <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ ap.invoiceNumber || ap.purchaseNumber || '—' }}</td>
+                    <td class="px-3 py-2 whitespace-nowrap text-slate-600 dark:text-slate-300">{{ ap.dueDate || '—' }}</td>
+                    <td class="px-3 py-2 text-right text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ formatCurrency(ap.originalAmount) }}</td>
+                    <td class="px-3 py-2 text-right text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ formatCurrency(ap.paidAmount) }}</td>
+                    <td class="px-3 py-2 text-right font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">{{ formatCurrency(ap.balanceAmount) }}</td>
+                    <td class="px-3 py-2 text-center">
+                      <span class="inline-block text-xs px-2 py-0.5 rounded-full font-medium" [class]="payableStatus(ap).css">{{ payableStatus(ap).label }}</span>
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      @if (ap.id === selectedPayableId()) {
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                      } @else {
+                        <span class="text-xs font-medium text-blue-600 dark:text-blue-400">Seleccionar</span>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="px-3 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                      {{ payables().length ? 'Ninguna obligación coincide con el filtro.' : 'El proveedor no tiene obligaciones de pago pendientes.' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </app-modal>
+  }
+
+  <!-- Modal de liquidación de anticipo -->
+  @if (advanceModalOpen(); as advOpen) {
+    <app-modal [isOpen]="true" [title]="'Liquidar anticipo · ' + (advanceTx()?.transactionNumber || '')"
+               maxWidthClass="max-w-4xl" [confirmText]="applyingAdvance() ? 'Aplicando...' : 'Aplicar'"
+               (closeEvent)="closeAdvanceModal()" (confirmEvent)="applyAdvance()">
+      @if (advanceTx(); as atx) {
+        <div class="space-y-4">
+          <div class="grid grid-cols-3 gap-3 text-sm">
+            <div><span class="text-slate-500 dark:text-slate-400">Tercero:</span> <span class="font-medium text-slate-900 dark:text-white">{{ atx.counterpartyName || '—' }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Importe:</span> <span class="font-medium text-slate-900 dark:text-white">{{ formatCurrency(atx.amount) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Pendiente:</span> <span class="font-semibold text-green-600 dark:text-green-400">{{ formatCurrency(advancePending(atx)) }}</span></div>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              Obligaciones de {{ atx.counterpartConceptCode === '26' ? 'cobro del cliente' : 'pago del proveedor' }}
+            </h3>
+            @if (loadingAdvanceData()) {
+              <div class="py-8 text-center text-sm text-slate-500 dark:text-slate-400">Cargando obligaciones...</div>
+            } @else {
+              <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg max-h-64 overflow-y-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
+                    <tr>
+                      <th class="text-left px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Número</th>
+                      <th class="text-left px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Documento</th>
+                      <th class="text-right px-3 py-2 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
+                      <th class="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                    @for (o of advanceObligations(); track o.id) {
+                      <tr class="transition-colors cursor-pointer hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+                          [class.bg-blue-50]="o.id === advanceObligationId()"
+                          (click)="selectAdvanceObligation(o)">
+                        <td class="px-3 py-2 font-mono font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ o.arNumber || o.apNumber }}</td>
+                        <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ o.invoiceNumber || o.purchaseNumber || '—' }}</td>
+                        <td class="px-3 py-2 text-right font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">{{ formatCurrency(o.balanceAmount) }}</td>
+                        <td class="px-3 py-2 text-right">
+                          @if (o.id === advanceObligationId()) {
+                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                          } @else {
+                            <span class="text-xs font-medium text-blue-600 dark:text-blue-400">Seleccionar</span>
+                          }
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4" class="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                          {{ atx.counterpartyName ? 'El tercero no tiene obligaciones pendientes.' : 'El anticipo no registra tercero; indique el cliente/proveedor en el comprobante.' }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
+          @if (selectedAdvanceObligation) {
+            <div class="flex items-end gap-3">
+              <div class="flex-1">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto a aplicar *</label>
+                <input type="number" step="0.01" min="0" [(ngModel)]="advanceAmount" name="advanceAmount"
+                       class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 pb-2">
+                Máximo: el menor entre el pendiente del anticipo y el saldo de la obligación.
+              </p>
+            </div>
+          }
+
+          @if (advanceApplications().length) {
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Liquidaciones realizadas</h3>
+              <div class="divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg">
+                @for (app of advanceApplications(); track app.id) {
+                  <div class="flex items-center gap-3 px-3 py-2 text-sm">
+                    <span class="font-mono text-slate-900 dark:text-white">{{ app.paymentNumber }}</span>
+                    <span class="text-slate-500 dark:text-slate-400 truncate">{{ app.description }}</span>
+                    <span class="ml-auto font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatCurrency(app.amount) }}</span>
+                    @if (app.status === 'cancelled') {
+                      <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Deshecha</span>
+                    } @else {
+                      <button (click)="undoAdvanceApplication(app)" [disabled]="undoingApplication() === app.id"
+                              title="Deshacer liquidación"
+                              class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xs font-medium disabled:opacity-50">
+                        Deshacer
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </app-modal>
+  }
+
   <ng-template #bankAccountField>
     <div class="relative sm:col-span-2">
       <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta Bancaria *</label>
@@ -494,4 +782,29 @@
       }
     </div>
   </ng-template>
+
+  <!-- Modal de detalle (solo lectura) -->
+  @if (isViewOpen(); as open) {
+    <app-modal [isOpen]="true" [title]="'Detalle · ' + typeLabel" [showConfirm]="false" (closeEvent)="closeViewTx()">
+      @if (viewTx(); as tx) {
+        <div class="space-y-3 text-sm">
+          <div class="grid grid-cols-2 gap-3">
+            <div><span class="text-slate-500 dark:text-slate-400">Número:</span> <span class="font-medium text-slate-900 dark:text-white">{{ tx.transactionNumber }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Tipo:</span> <span class="font-medium text-slate-900 dark:text-white">{{ tx.transactionCode || tx.description }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Banco:</span> <span class="font-medium text-slate-900 dark:text-white">{{ bankLabelFor(tx) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Fecha:</span> <span class="font-medium text-slate-900 dark:text-white">{{ tx.transactionDate | date:'dd/MM/yyyy' }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Monto:</span> <span class="font-semibold" [class]="isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ formatCurrency(tx.amount) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Moneda:</span> <span class="font-medium text-slate-900 dark:text-white">{{ tx.currency }} ({{ tx.exchangeRate }})</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Contrapartida:</span> <span class="font-medium text-slate-900 dark:text-white">{{ counterpartyDisplayLabel(tx) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Referencia:</span> <span class="font-medium text-slate-900 dark:text-white">{{ tx.referenceNumber || '-' }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Tercero:</span> <span class="font-medium text-slate-900 dark:text-white">{{ tx.counterpartyName || '-' }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Cuenta contrapartida:</span> <span class="font-medium text-slate-900 dark:text-white">{{ accountingAccountLabel(tx.counterpartyAccount) || '-' }}</span></div>
+          </div>
+          @if (tx.notes) {
+            <div><span class="text-slate-500 dark:text-slate-400">Comentario:</span> <span class="text-slate-900 dark:text-white">{{ tx.notes }}</span></div>
+          }
+        </div>
+      }
+    </app-modal>
+  }
 </div>

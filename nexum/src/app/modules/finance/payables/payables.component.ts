@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
+import { SuppliersService } from '../../../core/services/suppliers.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
@@ -44,6 +45,8 @@ export class PayablesComponent implements OnInit, OnDestroy {
   editPayable: any = {};
   paymentData: any = {};
   bankAccounts = signal<any[]>([]);
+  suppliers = signal<any[]>([]);
+  private suppliersService = inject(SuppliersService);
 
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
@@ -84,6 +87,10 @@ export class PayablesComponent implements OnInit, OnDestroy {
     this.loadData();
     this.loadStats();
     this.loadBankAccounts();
+    this.suppliersService.getAll().subscribe({
+      next: (data: any) => this.suppliers.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),
+      error: () => {},
+    });
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
       this.loadData();
       this.loadStats();
@@ -150,6 +157,11 @@ export class PayablesComponent implements OnInit, OnDestroy {
   closeCreate(): void {
     this.isCreateOpen.set(false);
     this.formError.set('');
+  }
+
+  onNewSupplierChange(): void {
+    const s = this.suppliers().find((x) => (x.supplierCode || x.code) === this.newPayable.supplierId);
+    this.newPayable.supplierName = s ? (s.businessName || s.tradeName || s.name || '') : '';
   }
 
   savePayable(): void {

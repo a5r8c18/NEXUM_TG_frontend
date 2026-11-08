@@ -156,6 +156,8 @@ export class SidebarComponent {
         { icon: 'Wallet', label: 'Cobros y Pagos', hasSubmenu: true, isExpanded: false, submenu: [
           { icon: 'TrendingUp', label: 'Cuentas por Cobrar', route: '/finance/receivables' },
           { icon: 'TrendingDown', label: 'Cuentas por Pagar', route: '/finance/payables' },
+          { icon: 'ArrowDownToLine', label: 'Cobros Anticipados', route: '/finance/advance-collections' },
+          { icon: 'ArrowUpFromLine', label: 'Pagos Anticipados', route: '/finance/advance-payments' },
         ] }
       ]
     },

@@ -43,6 +43,7 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
   editReceivable: any = {};
   paymentData: any = {};
   bankAccounts = signal<any[]>([]);
+  customers = signal<any[]>([]);
 
   private refreshSub!: Subscription;
   private toastSub!: Subscription;
@@ -83,6 +84,10 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
     this.loadData();
     this.loadStats();
     this.loadBankAccounts();
+    this.financeService.getCustomers().subscribe({
+      next: (data: any) => this.customers.set(Array.isArray(data) ? data : (data?.data ?? [])),
+      error: () => {},
+    });
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
       this.loadData();
       this.loadStats();
@@ -149,6 +154,11 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
   closeCreate(): void {
     this.isCreateOpen.set(false);
     this.formError.set('');
+  }
+
+  onNewCustomerChange(): void {
+    const c = this.customers().find((x) => x.code === this.newReceivable.customerId);
+    this.newReceivable.customerName = c?.name || '';
   }
 
   saveReceivable(): void {

@@ -34,7 +34,7 @@ export class PurchasesService {
     return this.http.post<any>(`${this.apiUrl}/${purchaseId}/reconcile`, data);
   }
 
-  updateReception(purchaseId: string, data: { document?: string; supplier?: string; entity?: string; transportista?: string; receivedBy?: string }): Observable<any> {
+  updateReception(purchaseId: string, data: { document?: string; supplier?: string; entity?: string; transportista?: string; receivedBy?: string; products?: any[]; totalAmount?: number }): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${purchaseId}`, data);
   }
 

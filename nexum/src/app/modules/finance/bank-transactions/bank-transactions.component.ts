@@ -37,11 +37,23 @@ export class BankTransactionsComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   type = this.route.snapshot.data['type'] as 'income' | 'expense';
+  /** Concepto de contrapartida fijado por la ruta (26 cobros anticipados, 27 pagos anticipados). */
+  fixedConcept = this.route.snapshot.data['concept'] as string | undefined;
   /** Comprobante a abrir al cargar (llega como `?open=<id>`, p. ej. desde el Historial contable). */
   private pendingOpenId: string | null = this.route.snapshot.queryParamMap.get('open');
   isIncome = this.type === 'income';
   transactionType = this.isIncome ? 'credit' : 'debit';
-  pageTitle = this.isIncome ? 'Banco - Ingreso' : 'Banco - Egreso';
+  /** Etiqueta singular del tipo de comprobante según la ruta. */
+  get typeLabel(): string {
+    if (this.fixedConcept === '26') return 'Cobro Anticipado';
+    if (this.fixedConcept === '27') return 'Pago Anticipado';
+    return this.isIncome ? 'Ingreso' : 'Egreso';
+  }
+  pageTitle = this.fixedConcept === '26'
+    ? 'Cobros Anticipados'
+    : this.fixedConcept === '27'
+      ? 'Pagos Anticipados'
+      : this.isIncome ? 'Banco - Ingreso' : 'Banco - Egreso';
 
   readonly voucherTypes = this.isIncome
     ? ['Carga Inicial', 'Transferencia Electrónica Recibida', 'Otros cobros']
@@ -55,6 +67,8 @@ export class BankTransactionsComponent implements OnInit {
   isLoading = signal(false);
   saving = signal(false);
   isModalOpen = signal(false);
+  isViewOpen = signal(false);
+  viewTx = signal<any | null>(null);
   editingTx = signal<any | null>(null);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -77,6 +91,7 @@ export class BankTransactionsComponent implements OnInit {
     notes: '',
     incomeAccount: '',
     incomeSubaccount: '',
+    feeSubaccount: '',
     incomeAmount: 0,
     feeAccount: '',
     feeAmount: 0,
@@ -120,6 +135,16 @@ export class BankTransactionsComponent implements OnInit {
     return this.isIncome && this.form.counterpartConceptCode === '20';
   }
 
+  /** Concepto "26" = Cobros anticipados: acredita la cuenta 430 fijada. */
+  get isAdvanceCollection(): boolean {
+    return this.isIncome && this.form.counterpartConceptCode === '26';
+  }
+
+  /** Concepto "27" = Pagos anticipados: debita la cuenta elegida por el usuario. */
+  get isAdvancePayment(): boolean {
+    return !this.isIncome && this.form.counterpartConceptCode === '27';
+  }
+
   get selectedReceivable(): any | null {
     return (
       this.receivables().find((r) => r.id === this.selectedReceivableId()) || null
@@ -158,6 +183,9 @@ export class BankTransactionsComponent implements OnInit {
     this.selectedReceivableId.set('');
     this.receivables.set([]);
     this.receivablesModalOpen.set(false);
+    this.selectedPayableId.set('');
+    this.payables.set([]);
+    this.payablesModalOpen.set(false);
     if (this.isOpeningEntry) {
       this.form.counterpartConceptCode = '';
       this.customerQuery = '';
@@ -172,13 +200,24 @@ export class BankTransactionsComponent implements OnInit {
     this.selectedReceivableId.set('');
     this.receivables.set([]);
     this.receivablesModalOpen.set(false);
-    this.form.incomeAccount = this.isOnlinePayment ? '835' : '';
+    this.selectedPayableId.set('');
+    this.payables.set([]);
+    this.payablesModalOpen.set(false);
+    this.form.incomeAccount = this.isOnlinePayment ? '900' : '';
     this.form.incomeSubaccount = '';
+    this.form.feeSubaccount = '';
     this.form.incomeAmount = 0;
-    this.form.feeAccount = '';
+    this.form.feeAccount = this.isOnlinePayment ? '835' : '';
     this.form.feeAmount = 0;
-    this.incomeAccountQuery = this.isOnlinePayment ? '835' : '';
-    this.feeAccountQuery = '';
+    this.incomeAccountQuery = this.isOnlinePayment ? '900' : '';
+    this.feeAccountQuery = this.isOnlinePayment ? '835' : '';
+    if (this.isAdvanceCollection) {
+      this.form.counterpartyAccount = '430';
+      this.accountQuery = '430';
+    } else if (this.form.counterpartyAccount === '430') {
+      this.form.counterpartyAccount = '';
+      this.accountQuery = '';
+    }
   }
 
   // ── Cuenta bancaria filtrable ──
@@ -266,6 +305,9 @@ export class BankTransactionsComponent implements OnInit {
     this.selectedReceivableId.set('');
     this.receivables.set([]);
     this.receivablesModalOpen.set(false);
+    this.selectedPayableId.set('');
+    this.payables.set([]);
+    this.payablesModalOpen.set(false);
   }
 
   createCustomerInline(): void {
@@ -379,6 +421,280 @@ export class BankTransactionsComponent implements OnInit {
     return { label: 'Pendiente', css: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' };
   }
 
+  // ── Obligaciones de pago (CxP) para concepto 21 en egresos ──
+  /**
+   * Concepto "21" = liquidación de obligación de pago (CxP).
+   * Aplica en creación y en edición de egresos.
+   */
+  get isPayableSettlement(): boolean {
+    return !this.isIncome && this.form.counterpartConceptCode === '21';
+  }
+
+  payables = signal<any[]>([]);
+  loadingPayables = signal(false);
+  payablesModalOpen = signal(false);
+  selectedPayableId = signal<string>('');
+  originalPayableId = '';
+  payableFilter = '';
+
+  get selectedPayable(): any | null {
+    return this.payables().find((p) => p.id === this.selectedPayableId()) || null;
+  }
+
+  openPayablesModal(): void {
+    const supplierName = this.form.counterpartyName?.trim();
+    if (!supplierName) {
+      this.showToast('Indique primero el proveedor', 'error');
+      return;
+    }
+    this.payableFilter = '';
+    this.loadingPayables.set(true);
+    this.payablesModalOpen.set(true);
+    this.financeService.getPayables({ supplierName }).subscribe({
+      next: (data) => {
+        const all = Array.isArray(data) ? data : [];
+        const filtered = all.filter((p) => !['paid', 'cancelled'].includes(p.status));
+        if (this.originalPayableId && !filtered.some((p) => p.id === this.originalPayableId)) {
+          const current = this.payables().find((p) => p.id === this.originalPayableId);
+          if (current) filtered.unshift(current);
+        }
+        this.payables.set(filtered);
+        this.loadingPayables.set(false);
+      },
+      error: () => {
+        this.loadingPayables.set(false);
+        this.showToast('Error cargando obligaciones de pago', 'error');
+      },
+    });
+  }
+
+  selectPayable(p: any): void {
+    this.selectedPayableId.set(p.id);
+    if (!this.form.amount || Number(this.form.amount) <= 0) {
+      this.form.amount = Number(p.balanceAmount);
+    }
+    this.payablesModalOpen.set(false);
+  }
+
+  clearSelectedPayable(): void {
+    this.selectedPayableId.set('');
+  }
+
+  /** Saldo pagable de la obligación seleccionada (mismo criterio que la CxC). */
+  payableAvailable(): number {
+    const p = this.selectedPayable;
+    if (!p) return 0;
+    const editing = this.editingTx();
+    const ownPayment = editing && p.id === this.originalPayableId ? Number(editing.amount || 0) : 0;
+    return Math.round((Number(p.balanceAmount) + ownPayment) * 100) / 100;
+  }
+
+  payableRemaining(): number {
+    return Math.round((this.payableAvailable() - Number(this.form.amount || 0)) * 100) / 100;
+  }
+
+  closePayablesModal(): void {
+    this.payablesModalOpen.set(false);
+  }
+
+  filteredPayables(): any[] {
+    const q = this.payableFilter.trim().toLowerCase();
+    const list = this.payables();
+    if (!q) return list;
+    return list.filter((p) =>
+      `${p.apNumber || ''} ${p.invoiceNumber || ''} ${p.purchaseNumber || ''}`.toLowerCase().includes(q),
+    );
+  }
+
+  payableStatus(p: any): { label: string; css: string } {
+    if (p.status === 'paid') return { label: 'Saldada', css: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' };
+    if (p.status === 'partial') return { label: 'Parcial', css: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+    if (p.status === 'overdue' ||
+        (!!p.dueDate && p.dueDate < new Date().toISOString().split('T')[0] && Number(p.balanceAmount) > 0)) {
+      return { label: 'Vencida', css: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' };
+    }
+    return { label: 'Pendiente', css: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' };
+  }
+
+  /** Carga la CxP ya vinculada al comprobante + las disponibles del proveedor. */
+  private loadPayablesForEdit(tx: any): void {
+    this.loadingPayables.set(true);
+    this.financeService.getLinkedPayable(tx.id).subscribe({
+      next: (linked) => {
+        const currentAp = linked?.accountPayable || null;
+        this.originalPayableId = currentAp?.id || '';
+        const query = tx.counterpartyName?.trim();
+        const all$ = query ? this.financeService.getPayables({ supplierName: query }) : of([]);
+        all$.subscribe({
+          next: (all) => {
+            const list = (Array.isArray(all) ? all : []).filter(
+              (p) => !['paid', 'cancelled'].includes(p.status),
+            );
+            if (currentAp && !list.some((p) => p.id === currentAp.id)) {
+              list.unshift(currentAp);
+            }
+            this.payables.set(list);
+            if (currentAp) this.selectedPayableId.set(currentAp.id);
+            this.loadingPayables.set(false);
+          },
+          error: () => {
+            if (currentAp) {
+              this.payables.set([currentAp]);
+              this.selectedPayableId.set(currentAp.id);
+            }
+            this.loadingPayables.set(false);
+          },
+        });
+      },
+      error: () => {
+        this.loadingPayables.set(false);
+      },
+    });
+  }
+
+  // ── Liquidación de anticipos (conceptos 26/27) ──
+  isAdvanceTx(tx: any): boolean {
+    return ['26', '27'].includes(tx.counterpartConceptCode);
+  }
+
+  /** Pendiente del anticipo por liquidar contra obligaciones del tercero. */
+  advancePending(tx: any): number {
+    return Math.max(
+      0,
+      Math.round((Number(tx.amount || 0) - Number(tx.advanceAppliedAmount || 0)) * 100) / 100,
+    );
+  }
+
+  /** El anticipo tiene saldo pendiente y puede liquidarse. */
+  canLiquidateAdvance(tx: any): boolean {
+    return this.isAdvanceTx(tx) && !this.isCancelled(tx) && this.advancePending(tx) > 0.009;
+  }
+
+  /** El anticipo ya tiene parte de su importe liquidado. */
+  hasAdvanceApplied(tx: any): boolean {
+    return Number(tx.advanceAppliedAmount || 0) > 0.009;
+  }
+
+  advanceModalOpen = signal(false);
+  advanceTx = signal<any | null>(null);
+  advanceObligations = signal<any[]>([]);
+  advanceApplications = signal<any[]>([]);
+  loadingAdvanceData = signal(false);
+  applyingAdvance = signal(false);
+  undoingApplication = signal<string | null>(null);
+  advanceObligationId = signal<string>('');
+  advanceAmount = 0;
+
+  get selectedAdvanceObligation(): any | null {
+    return this.advanceObligations().find((o) => o.id === this.advanceObligationId()) || null;
+  }
+
+  openAdvanceModal(tx: any): void {
+    this.advanceTx.set(tx);
+    this.advanceObligationId.set('');
+    this.advanceAmount = this.advancePending(tx);
+    this.advanceObligations.set([]);
+    this.advanceApplications.set([]);
+    this.advanceModalOpen.set(true);
+    this.loadingAdvanceData.set(true);
+
+    const isReceivable = tx.counterpartConceptCode === '26';
+    const name = (tx.counterpartyName || '').trim().toLowerCase();
+    const obligations$ = isReceivable
+      ? this.financeService.getReceivables({ customerName: tx.counterpartyName || undefined })
+      : this.financeService.getPayables({ supplierName: tx.counterpartyName || undefined });
+    obligations$.subscribe({
+      next: (data) => {
+        const all = Array.isArray(data) ? data : [];
+        const sameParty = (o: any) => {
+          if (!name) return true;
+          const party = (o.customerName || o.supplierName || '').trim().toLowerCase();
+          const nit = (o.customerNit || o.supplierNit || '').trim().toLowerCase();
+          return party === name || nit === name;
+        };
+        this.advanceObligations.set(
+          all.filter(
+            (o) => sameParty(o) && !['paid', 'written_off', 'cancelled'].includes(o.status),
+          ),
+        );
+        this.loadingAdvanceData.set(false);
+      },
+      error: () => {
+        this.loadingAdvanceData.set(false);
+        this.showToast('Error cargando obligaciones del tercero', 'error');
+      },
+    });
+    this.financeService.getAdvanceApplications(tx.id).subscribe({
+      next: (apps) => this.advanceApplications.set(Array.isArray(apps) ? apps : []),
+      error: () => {},
+    });
+  }
+
+  closeAdvanceModal(): void {
+    this.advanceModalOpen.set(false);
+    this.advanceTx.set(null);
+    this.advanceObligations.set([]);
+    this.advanceApplications.set([]);
+    this.advanceObligationId.set('');
+  }
+
+  selectAdvanceObligation(o: any): void {
+    this.advanceObligationId.set(o.id);
+    const tx = this.advanceTx();
+    const pending = tx ? this.advancePending(tx) : 0;
+    this.advanceAmount = Math.min(pending, Number(o.balanceAmount));
+  }
+
+  applyAdvance(): void {
+    const tx = this.advanceTx();
+    const ob = this.selectedAdvanceObligation;
+    if (!tx || !ob || !(Number(this.advanceAmount) > 0)) {
+      this.showToast('Seleccione la obligación y el monto a aplicar', 'error');
+      return;
+    }
+    const payload: any = { amount: Number(this.advanceAmount) };
+    if (tx.counterpartConceptCode === '26') payload.accountReceivableId = ob.id;
+    else payload.accountPayableId = ob.id;
+
+    this.applyingAdvance.set(true);
+    this.financeService.applyAdvance(tx.id, payload).subscribe({
+      next: () => {
+        this.applyingAdvance.set(false);
+        this.showToast('Anticipo aplicado a la obligación', 'success');
+        this.closeAdvanceModal();
+        this.loadTransactions();
+      },
+      error: (err) => {
+        this.applyingAdvance.set(false);
+        this.showToast(err?.error?.message || 'Error aplicando el anticipo', 'error');
+      },
+    });
+  }
+
+  async undoAdvanceApplication(app: any): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Deshacer liquidación',
+      message: `¿Deshacer la aplicación ${app.paymentNumber} por ${this.formatCurrency(app.amount)}? El saldo volverá al anticipo y a la obligación.`,
+      confirmText: 'Deshacer',
+      cancelText: 'Volver',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+    this.undoingApplication.set(app.id);
+    this.financeService.cancelAdvanceApplication(app.id).subscribe({
+      next: () => {
+        this.undoingApplication.set(null);
+        this.showToast('Liquidación deshecha', 'success');
+        this.closeAdvanceModal();
+        this.loadTransactions();
+      },
+      error: (err) => {
+        this.undoingApplication.set(null);
+        this.showToast(err?.error?.message || 'Error deshaciendo la liquidación', 'error');
+      },
+    });
+  }
+
   // ── Picker de cuentas contables (Carga Inicial) ──
   accountOptions = signal<any[]>([]);
   subaccounts = signal<any[]>([]);
@@ -442,9 +758,19 @@ export class BankTransactionsComponent implements OnInit {
     return this.typedAccountOptions('income', this.incomeAccountQuery);
   }
 
-  /** Subcuentas de la 835 (concepto 19 fija la cuenta y se elige la subcuenta). */
+  /** Subcuentas de la 900 (cuenta de ingreso fijada por el concepto 19). */
   incomeSubaccountOptions = computed(() =>
+    this.accountSelectOptions().filter((o) => o.isSub && o.parentCode === '900'),
+  );
+
+  /** Subcuentas de la 835 (cuenta de gasto/comisión fijada por el concepto 19). */
+  feeSubaccountOptions = computed(() =>
     this.accountSelectOptions().filter((o) => o.isSub && o.parentCode === '835'),
+  );
+
+  /** Subcuentas de la 430 (cuenta acreedora fijada por el concepto 26). */
+  advanceSubOptions = computed(() =>
+    this.accountSelectOptions().filter((o) => o.isSub && o.parentCode === '430'),
   );
 
   feeAccountOptions() {
@@ -547,7 +873,10 @@ export class BankTransactionsComponent implements OnInit {
     this.isLoading.set(true);
     this.financeService.getAllBankTransactions(this.transactionType).subscribe({
       next: (data) => {
-        this.transactions.set(Array.isArray(data) ? data : []);
+        const list = (Array.isArray(data) ? data : []).filter(
+          (t: any) => !this.fixedConcept || t.counterpartConceptCode === this.fixedConcept,
+        );
+        this.transactions.set(list);
         this.isLoading.set(false);
         if (this.pendingOpenId) {
           const tx = this.transactions().find((t) => t.id === this.pendingOpenId);
@@ -562,9 +891,82 @@ export class BankTransactionsComponent implements OnInit {
     });
   }
 
+  openViewTx(tx: any): void {
+    this.viewTx.set(tx);
+    this.isViewOpen.set(true);
+  }
+
+  closeViewTx(): void {
+    this.isViewOpen.set(false);
+    this.viewTx.set(null);
+  }
+
+  bankLabelFor(tx: any): string {
+    const b = this.banks().find((x) => x.id === tx.bankAccountId);
+    return b ? this.bankLabel(b) : tx.bankAccountId || '-';
+  }
+
+  isCancelled(tx: any): boolean {
+    return tx.operationStatus === 'cancelled';
+  }
+
+  /** Solo los comprobantes manuales y vigentes se editan. */
+  canEditTx(tx: any): boolean {
+    return (
+      (tx.sourceModule || 'manual') === 'manual' &&
+      !this.isCancelled(tx) &&
+      !tx.reconciled
+    );
+  }
+
+  /**
+   * Se anulan los registrados en Finanzas (manuales y los generados por un
+   * pago). Los anticipos (26/27) no: solo se cancelan al liquidarse contra
+   * una obligación del mismo cliente o proveedor.
+   */
+  canCancelTx(tx: any): boolean {
+    const source = tx.sourceModule || 'manual';
+    return (
+      (source === 'manual' || source === 'payment') &&
+      !this.isCancelled(tx) &&
+      !tx.reconciled &&
+      !['26', '27'].includes(tx.counterpartConceptCode)
+    );
+  }
+
+  /** Deshacer anulación: solo comprobantes anulados de origen financiero. */
+  canRestoreTx(tx: any): boolean {
+    const source = tx.sourceModule || 'manual';
+    return this.isCancelled(tx) && (source === 'manual' || source === 'payment');
+  }
+
+  /** Explica por qué un comprobante no se puede operar desde aquí. */
+  moduleSourceHint(tx: any): string {
+    if (this.isCancelled(tx)) return 'Anulado en la operación de origen';
+    if (tx.reconciled) return 'Comprobante conciliado en banco';
+    if (['26', '27'].includes(tx.counterpartConceptCode)) {
+      return 'Anticipo: se cancela al liquidarse contra una obligación del mismo cliente o proveedor';
+    }
+    const origins: Record<string, string> = {
+      payroll: 'un pago de nómina',
+      'fixed-assets': 'una operación de activos fijos',
+      transfer: 'una transferencia entre cuentas (espejo)',
+      reversal: 'un reverso de comprobante',
+      payment: 'un pago registrado',
+    };
+    return `Generado por ${origins[tx.sourceModule] || tx.sourceModule}: anule la operación de origen`;
+  }
+
   openModal(): void {
     this.editingTx.set(null);
     this.resetForm();
+    if (this.fixedConcept) {
+      this.form.counterpartConceptCode = this.fixedConcept;
+      if (this.fixedConcept === '26') {
+        this.form.counterpartyAccount = '430';
+        this.accountQuery = '430';
+      }
+    }
     this.isModalOpen.set(true);
   }
 
@@ -582,6 +984,7 @@ export class BankTransactionsComponent implements OnInit {
       notes: tx.notes || '',
       incomeAccount: tx.incomeAccount || '',
       incomeSubaccount: tx.incomeSubaccount || '',
+      feeSubaccount: tx.feeSubaccount || '',
       incomeAmount: Number(tx.incomeAmount || 0),
       feeAccount: tx.feeAccount || '',
       feeAmount: Number(tx.feeAmount || 0),
@@ -599,10 +1002,17 @@ export class BankTransactionsComponent implements OnInit {
     this.originalReceivableId = '';
     this.receivables.set([]);
     this.receivablesModalOpen.set(false);
+    this.selectedPayableId.set('');
+    this.originalPayableId = '';
+    this.payables.set([]);
+    this.payablesModalOpen.set(false);
     this.isModalOpen.set(true);
 
     if (this.isIncome && tx.counterpartConceptCode === '20') {
       this.loadReceivablesForEdit(tx);
+    }
+    if (!this.isIncome && tx.counterpartConceptCode === '21') {
+      this.loadPayablesForEdit(tx);
     }
   }
 
@@ -648,25 +1058,44 @@ export class BankTransactionsComponent implements OnInit {
 
   closeModal(): void {
     this.receivablesModalOpen.set(false);
+    this.payablesModalOpen.set(false);
     this.isModalOpen.set(false);
     this.editingTx.set(null);
   }
 
-  async deleteTransaction(tx: any): Promise<void> {
+  async cancelTransaction(tx: any): Promise<void> {
     const confirmed = await this.confirmDialog.confirm({
-      title: 'Eliminar comprobante',
-      message: `¿Eliminar el comprobante ${tx.transactionNumber}? Se revertirá su efecto en el saldo.`,
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      title: 'Anular comprobante',
+      message: `¿Anular el comprobante ${tx.transactionNumber}? Se revertirá su efecto en el saldo y podrá deshacerse después.`,
+      confirmText: 'Anular',
+      cancelText: 'Volver',
       type: 'danger',
     });
     if (!confirmed) return;
-    this.financeService.deleteBankTransaction(tx.id).subscribe({
+    this.financeService.cancelBankTransaction(tx.id).subscribe({
       next: () => {
-        this.showToast('Comprobante eliminado', 'success');
+        this.showToast('Comprobante anulado', 'success');
         this.loadTransactions();
       },
-      error: (err) => this.showToast(err?.error?.message || 'Error eliminando el comprobante', 'error'),
+      error: (err) => this.showToast(err?.error?.message || 'Error anulando el comprobante', 'error'),
+    });
+  }
+
+  async restoreAnnulment(tx: any): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Deshacer anulación',
+      message: `¿Deshacer la anulación del comprobante ${tx.transactionNumber}? Se restaurará su efecto en el saldo.`,
+      confirmText: 'Deshacer anulación',
+      cancelText: 'Volver',
+      type: 'info',
+    });
+    if (!confirmed) return;
+    this.financeService.restoreBankTransactionAnnulment(tx.id).subscribe({
+      next: () => {
+        this.showToast('Anulación deshecha', 'success');
+        this.loadTransactions();
+      },
+      error: (err) => this.showToast(err?.error?.message || 'Error deshaciendo la anulación', 'error'),
     });
   }
 
@@ -709,6 +1138,17 @@ export class BankTransactionsComponent implements OnInit {
       if (this.isReceivableSettlement && this.remainingAfterPayment() < -0.009) {
         this.showToast(
           `El monto excede el saldo pendiente de la obligación (${this.formatCurrency(this.receivableAvailable())})`,
+          'error',
+        );
+        return;
+      }
+      if (this.isPayableSettlement && !this.selectedPayableId()) {
+        this.showToast('Seleccione la obligación de pago a liquidar', 'error');
+        return;
+      }
+      if (this.isPayableSettlement && this.payableRemaining() < -0.009) {
+        this.showToast(
+          `El monto excede el saldo pendiente de la obligación (${this.formatCurrency(this.payableAvailable())})`,
           'error',
         );
         return;
@@ -767,12 +1207,21 @@ export class BankTransactionsComponent implements OnInit {
       basePayload.counterpartyName = null;
     } else {
       basePayload.counterpartConceptCode = this.form.counterpartConceptCode;
-      basePayload.counterpartyAccount = null;
+      // Conceptos anticipados (26/27): la contrapartida contable sí se envía
+      // (el 26 la fija en la 430 acreedora del cobro anticipado).
+      basePayload.counterpartyAccount = ['26', '27'].includes(this.form.counterpartConceptCode)
+        ? this.form.counterpartyAccount || null
+        : null;
       basePayload.counterpartyName = this.form.counterpartyName || null;
+
+      if (this.isAdvanceCollection) {
+        basePayload.incomeSubaccount = this.form.incomeSubaccount || null;
+      }
 
       if (this.isIncomeAccountConcept) {
         basePayload.incomeAccount = this.form.incomeAccount;
-        basePayload.incomeSubaccount = this.isOnlinePayment ? this.form.incomeSubaccount || null : null;
+        basePayload.incomeSubaccount = (this.isOnlinePayment || this.isAdvanceCollection) ? this.form.incomeSubaccount || null : null;
+        basePayload.feeSubaccount = this.isOnlinePayment ? this.form.feeSubaccount || null : null;
         basePayload.incomeAmount = Number(this.form.incomeAmount);
         basePayload.feeAccount = this.isOnlinePayment ? this.form.feeAccount : null;
         basePayload.feeAmount = this.isOnlinePayment ? Number(this.form.feeAmount) : null;
@@ -792,6 +1241,13 @@ export class BankTransactionsComponent implements OnInit {
       if (wasReceivable || isReceivableNow) {
         basePayload.accountReceivableId = isReceivableNow
           ? this.selectedReceivableId() || null
+          : null;
+      }
+      const wasPayable = editing?.counterpartConceptCode === '21';
+      const isPayableNow = this.isPayableSettlement;
+      if (wasPayable || isPayableNow) {
+        basePayload.accountPayableId = isPayableNow
+          ? this.selectedPayableId() || null
           : null;
       }
     }
@@ -842,6 +1298,7 @@ export class BankTransactionsComponent implements OnInit {
       notes: '',
       incomeAccount: '',
     incomeSubaccount: '',
+    feeSubaccount: '',
       incomeAmount: 0,
       feeAccount: '',
       feeAmount: 0,
@@ -855,6 +1312,10 @@ export class BankTransactionsComponent implements OnInit {
     this.originalReceivableId = '';
     this.receivables.set([]);
     this.receivablesModalOpen.set(false);
+    this.selectedPayableId.set('');
+    this.originalPayableId = '';
+    this.payables.set([]);
+    this.payablesModalOpen.set(false);
   }
 
   showToast(message: string, type: 'success' | 'error'): void {

@@ -204,7 +204,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   // ── Edición / cancelación de informes de recepción ──
   editingReport = signal<any | null>(null);
-  editForm = { document: '', supplier: '', entity: '', transportista: '', receivedBy: '' };
+  editForm: any = { document: '', supplier: '', entity: '', transportista: '', receivedBy: '', products: [] };
   cancelTarget = signal<any | null>(null);
   savingReport = signal(false);
   cancellingReport = signal(false);
@@ -231,8 +231,28 @@ export class ReportsComponent implements OnInit, OnDestroy {
       entity: report.entity || '',
       transportista: report.transportista || '',
       receivedBy: report.responsables?.recepcionadoPor || report.receivedBy || '',
+      products: (report.details?.products || []).map((p: any) => ({
+        productCode: p.productCode || p.code || '',
+        description: p.description || '',
+        quantity: Number(p.quantity) || 0,
+        unitPrice: Number(p.unitPrice ?? p.price) || 0,
+      })),
     };
     this.editingReport.set(report);
+  }
+
+  addEditProduct(): void {
+    this.editForm.products.push({ productCode: '', description: '', quantity: 0, unitPrice: 0 });
+  }
+
+  removeEditProduct(index: number): void {
+    this.editForm.products.splice(index, 1);
+  }
+
+  editTotal(): number {
+    return (this.editForm.products || []).reduce(
+      (s: number, p: any) => s + (Number(p.quantity) || 0) * (Number(p.unitPrice) || 0), 0,
+    );
   }
 
   closeEditReport(): void {
@@ -243,7 +263,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
     const r = this.editingReport();
     if (!r) return;
     this.savingReport.set(true);
-    this.purchasesService.updateReception(r.purchaseId, { ...this.editForm }).subscribe({
+    this.purchasesService.updateReception(r.purchaseId, { ...this.editForm, totalAmount: this.editTotal() }).subscribe({
       next: () => {
         this.savingReport.set(false);
         this.editingReport.set(null);

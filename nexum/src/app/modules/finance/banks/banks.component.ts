@@ -403,7 +403,7 @@ export class BanksComponent implements OnInit, OnDestroy {
   }
 
   getOperationStatusLabel(status: string | undefined): string {
-    const labels: Record<string, string> = { draft: 'Borrador', edited: 'Editado', confirmed: 'Confirmado' };
+    const labels: Record<string, string> = { draft: 'Borrador', edited: 'Editado', confirmed: 'Confirmado', cancelled: 'Anulado' };
     return labels[status || 'confirmed'] || 'Confirmado';
   }
 
@@ -412,6 +412,7 @@ export class BanksComponent implements OnInit, OnDestroy {
       draft: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
       edited: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
       confirmed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+      cancelled: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
     };
     return classes[status || 'confirmed'] || classes['confirmed'];
   }
