@@ -190,12 +190,18 @@ export class PayablesComponent implements OnInit, OnDestroy {
     this.supplierQuery = value;
     this.newPayable.supplierId = '';
     this.newPayable.supplierName = '';
+    this.newPayable.supplierNit = '';
     this.supplierDrop.set(true);
   }
 
   selectSupplier(s: any): void {
-    this.newPayable.supplierId = s.supplierCode || s.code;
+    // supplier_id de la CxP es el uuid del proveedor (no su código).
+    this.newPayable.supplierId = s.id;
     this.newPayable.supplierName = this.supplierLabel(s);
+    this.newPayable.supplierNit = s.nit || '';
+    this.newPayable.supplierPhone = s.contactPhone || undefined;
+    this.newPayable.supplierEmail = s.contactEmail || undefined;
+    this.newPayable.supplierAddress = s.address || undefined;
     this.supplierQuery = this.supplierLabel(s);
     this.supplierDrop.set(false);
   }

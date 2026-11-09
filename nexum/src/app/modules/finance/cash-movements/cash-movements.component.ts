@@ -39,8 +39,26 @@ export class CashMovementsComponent implements OnInit {
 
   selectedRegister = computed(() => this.registers().find(r => r.id === this.selectedRegisterId()) || null);
 
+  /** Conceptos de Caja - Ingreso: 24, 80 y 81. */
+  private static readonly CASH_INCOME_CONCEPTS = ['24', '80', '81'];
+  concepts = signal<any[]>([]);
+  incomeConcepts = computed(() =>
+    this.concepts().filter((c) => CashMovementsComponent.CASH_INCOME_CONCEPTS.includes(c.code)),
+  );
+
+  /** Muestra "código — nombre"; los conceptos antiguos en texto libre se muestran tal cual. */
+  conceptLabel(value: string | null | undefined): string {
+    if (!value) return '-';
+    const c = this.concepts().find((x) => x.code === value);
+    return c ? `${c.code} — ${c.name}` : value;
+  }
+
   ngOnInit(): void {
     this.loadRegisters();
+    this.financeService.getCounterpartConcepts().subscribe({
+      next: (data: any) => this.concepts.set(Array.isArray(data) ? data : []),
+      error: () => {},
+    });
     const parties$ = this.isIncome ? this.financeService.getCustomers() : this.suppliersService.getAll();
     parties$.subscribe({
       next: (data: any) => this.parties.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),

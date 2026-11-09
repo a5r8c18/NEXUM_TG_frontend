@@ -42,7 +42,7 @@
         <option value="pending">Pendiente</option>
         <option value="partial">Parcial</option>
         <option value="overdue">Vencida</option>
-        <option value="paid">Pagada</option>
+        <option value="paid">Cobrada</option>
       </select>
       <select [(ngModel)]="agingFilter" (ngModelChange)="onFilterChange()" class="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <option value="">Todas las categorías</option>
@@ -85,7 +85,7 @@
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">No.</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Cliente</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Monto Original</th>
-              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Pagado</th>
+              <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Cobrado</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
               <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Vencimiento</th>
               <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Creada</th>
@@ -279,7 +279,7 @@
               <option value="pending">Pendiente</option>
               <option value="partial">Parcial</option>
               <option value="overdue">Vencida</option>
-              <option value="paid">Pagada</option>
+              <option value="paid">Cobrada</option>
             </select>
           </div>
           <div>

@@ -181,12 +181,17 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
     this.customerQuery = value;
     this.newReceivable.customerId = '';
     this.newReceivable.customerName = '';
+    this.newReceivable.customerNit = '';
     this.customerDrop.set(true);
   }
 
   selectCustomer(c: any): void {
     this.newReceivable.customerId = c.code;
     this.newReceivable.customerName = c.name;
+    this.newReceivable.customerNit = c.taxId || undefined;
+    this.newReceivable.customerPhone = c.phone || undefined;
+    this.newReceivable.customerEmail = c.email || undefined;
+    this.newReceivable.customerAddress = c.address || undefined;
     this.customerQuery = c.name;
     this.customerDrop.set(false);
   }
@@ -340,7 +345,7 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
   }
 
   getStatusLabel(status: string): string {
-    const map: Record<string, string> = { pending: 'Pendiente', partial: 'Parcial', paid: 'Pagada', overdue: 'Vencida', written_off: 'Incobrable', disputed: 'Disputada' };
+    const map: Record<string, string> = { pending: 'Pendiente', partial: 'Parcial', paid: 'Cobrada', overdue: 'Vencida', written_off: 'Incobrable', disputed: 'Disputada' };
     return map[status] || status;
   }
 

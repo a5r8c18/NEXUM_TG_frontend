@@ -121,9 +121,17 @@ export class BankTransactionsComponent implements OnInit {
     return Math.round(net * 100) / 100;
   }
 
+  /** 28 se liquida desde Cobros anticipados; 80 y 81 son efectivo y van por Caja. */
+  private static readonly BANK_INCOME_EXCLUDED = ['28', '80', '81'];
+
   conceptOptions = computed(() =>
     this.counterpartConcepts().filter(
-      (c) => c.direction === 'both' || c.direction === (this.isIncome ? 'income' : 'expense'),
+      (c) =>
+        (c.direction === 'both' || c.direction === (this.isIncome ? 'income' : 'expense')) &&
+        // Al editar se conserva el concepto que ya tenía el comprobante.
+        !(this.isIncome &&
+          BankTransactionsComponent.BANK_INCOME_EXCLUDED.includes(c.code) &&
+          c.code !== this.editingTx()?.counterpartConceptCode),
     ),
   );
 

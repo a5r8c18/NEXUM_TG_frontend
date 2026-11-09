@@ -82,7 +82,17 @@
       </div>
       <div>
         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Concepto</label>
-        <input [(ngModel)]="form.concept" name="concept" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        @if (isIncome) {
+          <select [(ngModel)]="form.concept" name="concept"
+                  class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Seleccionar concepto</option>
+            @for (c of incomeConcepts(); track c.code) {
+              <option [value]="c.code">{{ c.code }} — {{ c.name }}</option>
+            }
+          </select>
+        } @else {
+          <input [(ngModel)]="form.concept" name="concept" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        }
       </div>
       <div class="sm:col-span-2 lg:col-span-2">
         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción *</label>
@@ -109,6 +119,7 @@
             <tr>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Número</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fecha</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Concepto</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Descripción</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Contraparte</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Monto</th>
@@ -120,13 +131,14 @@
               <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                 <td class="px-4 py-3 dark:text-slate-300 font-mono">{{ m.movementNumber }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ m.movementDate | date:'yyyy-MM-dd HH:mm' }}</td>
+                <td class="px-4 py-3 dark:text-slate-300">{{ conceptLabel(m.concept) }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ m.description }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ m.counterpartyName || '-' }}</td>
                 <td class="px-4 py-3 text-right dark:text-slate-300 font-semibold" [class]="isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ formatCurrency(m.amount) }}</td>
                 <td class="px-4 py-3 text-right dark:text-slate-300">{{ formatCurrency(m.balanceAfter) }}</td>
               </tr>
             } @empty {
-              <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay movimientos registrados</td></tr>
+              <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay movimientos registrados</td></tr>
             }
           </tbody>
         </table>
