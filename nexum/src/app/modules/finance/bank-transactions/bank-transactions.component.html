@@ -12,10 +12,13 @@
           {{ generatingOpening() ? 'Contabilizando...' : 'Contabilizar Cargas Iniciales' }}
         </button>
       }
-      <button (click)="openModal()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Nuevo Comprobante de {{ isIncome ? 'ingreso' : 'egreso' }}
-      </button>
+      <!-- Los anticipos se registran desde Banco o Caja; aquí solo se liquidan. -->
+      @if (!fixedConcept) {
+        <button (click)="openModal()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Nuevo Comprobante de {{ isIncome ? 'ingreso' : 'egreso' }}
+        </button>
+      }
     </div>
   </div>
 
@@ -209,7 +212,7 @@
           <!-- Cliente -->
           @if (selectedConcept?.requiresCustomer) {
             <div class="relative sm:col-span-2">
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }}</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }}{{ counterpartyRequired() ? ' *' : '' }}</label>
               <input [(ngModel)]="customerQuery" name="customerName" (focus)="customerDrop.set(true)" (blur)="onCustomerBlur()"
                      placeholder="Filtrar o crear cliente/entidad" autocomplete="off"
                      class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />

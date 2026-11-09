@@ -161,10 +161,15 @@ export class BankTransactionsComponent implements OnInit {
   }
 
   counterpartyRequired(): boolean {
-    // El campo se muestra siempre que el concepto lo defina, pero solo es
-    // obligatorio para proveedores y trabajadores. Con clientes es opcional.
+    // El campo se muestra siempre que el concepto lo defina. Es obligatorio
+    // para proveedores y trabajadores, y también con clientes cuando el
+    // comprobante liquida una CxC/CxP (20/21) o es un anticipo (26/27): el
+    // tercero es el que vincula el cobro o pago con su obligación.
     const c = this.selectedConcept;
-    return !!(c?.requiresSupplier || c?.requiresEmployee);
+    return (
+      !!(c?.requiresSupplier || c?.requiresEmployee) ||
+      ['20', '21', '26', '27'].includes(this.form.counterpartConceptCode)
+    );
   }
 
   conceptLabel(code: string | null | undefined): string {
@@ -565,9 +570,14 @@ export class BankTransactionsComponent implements OnInit {
     );
   }
 
-  /** El anticipo tiene saldo pendiente y puede liquidarse. */
+  /** Liquidación solo desde las vistas de anticipos, con saldo pendiente. */
   canLiquidateAdvance(tx: any): boolean {
-    return this.isAdvanceTx(tx) && !this.isCancelled(tx) && this.advancePending(tx) > 0.009;
+    return (
+      !!this.fixedConcept &&
+      this.isAdvanceTx(tx) &&
+      !this.isCancelled(tx) &&
+      this.advancePending(tx) > 0.009
+    );
   }
 
   /** El anticipo ya tiene parte de su importe liquidado. */
@@ -921,16 +931,17 @@ export class BankTransactionsComponent implements OnInit {
 
   /**
    * Se anulan los registrados en Finanzas (manuales y los generados por un
-   * pago). Los anticipos (26/27) no: solo se cancelan al liquidarse contra
-   * una obligación del mismo cliente o proveedor.
+   * pago). Los anticipos (26/27) se anulan desde Banco mientras no tengan
+   * liquidaciones aplicadas; en sus vistas propias solo se liquidan.
    */
   canCancelTx(tx: any): boolean {
     const source = tx.sourceModule || 'manual';
+    const advanceBlocked = this.isAdvanceTx(tx) && (!!this.fixedConcept || this.hasAdvanceApplied(tx));
     return (
       (source === 'manual' || source === 'payment') &&
       !this.isCancelled(tx) &&
       !tx.reconciled &&
-      !['26', '27'].includes(tx.counterpartConceptCode)
+      !advanceBlocked
     );
   }
 
@@ -944,8 +955,8 @@ export class BankTransactionsComponent implements OnInit {
   moduleSourceHint(tx: any): string {
     if (this.isCancelled(tx)) return 'Anulado en la operación de origen';
     if (tx.reconciled) return 'Comprobante conciliado en banco';
-    if (['26', '27'].includes(tx.counterpartConceptCode)) {
-      return 'Anticipo: se cancela al liquidarse contra una obligación del mismo cliente o proveedor';
+    if (this.isAdvanceTx(tx) && this.hasAdvanceApplied(tx)) {
+      return 'Anticipo con liquidaciones aplicadas: deshágalas desde Cobros/Pagos anticipados antes de anularlo';
     }
     const origins: Record<string, string> = {
       payroll: 'un pago de nómina',

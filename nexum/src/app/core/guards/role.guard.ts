@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivate, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 @Injectable({
@@ -11,7 +11,7 @@ export class RoleGuard implements CanActivate {
     private router: Router
   ) {}
 
-  canActivate(): boolean {
+  canActivate(route: ActivatedRouteSnapshot): boolean {
     const currentUser = this.authService.currentUser();
     
     if (!currentUser) {
@@ -21,6 +21,13 @@ export class RoleGuard implements CanActivate {
 
     // Superadmin, admin y facturador tienen acceso a facturación
     if (currentUser.role === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'facturador') {
+      return true;
+    }
+
+    // El usuario contable puede abrir el documento de origen de un
+    // comprobante (p. ej. desde el Historial de cuentas), incluidas las
+    // facturas eliminadas, igual que el administrador.
+    if (currentUser.role === 'user' && route.queryParamMap.has('open')) {
       return true;
     }
 
