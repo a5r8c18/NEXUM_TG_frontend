@@ -211,15 +211,32 @@
           </div>
         }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="sm:col-span-2">
+          <div class="relative sm:col-span-2">
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Proveedor *</label>
-            <select [(ngModel)]="newPayable.supplierId" (ngModelChange)="onNewSupplierChange()"
-                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Seleccione un proveedor</option>
-              @for (s of suppliers(); track s.id) {
-                <option [value]="s.supplierCode || s.code">{{ s.supplierCode || s.code }} — {{ s.businessName || s.tradeName || s.name }}</option>
-              }
-            </select>
+            <input [ngModel]="supplierQuery" (ngModelChange)="onSupplierInput($event)" name="newPayableSupplier"
+                   (focus)="supplierDrop.set(true)" (blur)="onSupplierBlur()"
+                   placeholder="Filtrar o crear proveedor" autocomplete="off"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            @if (supplierDrop()) {
+              <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                @for (s of filteredSuppliers(supplierQuery); track s.id) {
+                  <button type="button" (mousedown)="selectSupplier(s)"
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                    <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ s.supplierCode || s.code }}</span> {{ supplierLabel(s) }}
+                    @if (s.nit) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ s.nit }}</span> }
+                  </button>
+                }
+                @if (supplierQuery.trim() && !supplierExists(supplierQuery)) {
+                  <button type="button" (mousedown)="createSupplierInline()"
+                          class="w-full text-left px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors font-medium">
+                    + Crear "{{ supplierQuery.trim() }}"
+                  </button>
+                }
+                @if (!filteredSuppliers(supplierQuery).length && !supplierQuery.trim()) {
+                  <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin proveedores registrados</div>
+                }
+              </div>
+            }
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto Original *</label>
@@ -237,6 +254,10 @@
       </div>
     </app-modal>
   }
+
+  <!-- Alta rápida de proveedor desde el buscador -->
+  <app-supplier-quick-create [isOpen]="isSupplierCreateOpen()" [name]="supplierQuery"
+                             (created)="onSupplierCreated($event)" (closed)="isSupplierCreateOpen.set(false)" />
 
   <!-- Modal Editar -->
   @if (isEditOpen()) {

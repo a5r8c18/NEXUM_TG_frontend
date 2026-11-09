@@ -8,11 +8,12 @@ import { SuppliersService } from '../../../core/services/suppliers.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { SupplierQuickCreateComponent } from '../../../shared/components/quick-create/supplier-quick-create.component';
 
 @Component({
   selector: 'app-payables',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent, SupplierQuickCreateComponent],
   templateUrl: './payables.component.html',
 })
 export class PayablesComponent implements OnInit, OnDestroy {
@@ -150,6 +151,7 @@ export class PayablesComponent implements OnInit, OnDestroy {
 
   openCreate(): void {
     this.newPayable = { supplierName: '', supplierId: '', originalAmount: 0, dueDate: '', description: '' };
+    this.supplierQuery = '';
     this.formError.set('');
     this.isCreateOpen.set(true);
   }
@@ -159,9 +161,59 @@ export class PayablesComponent implements OnInit, OnDestroy {
     this.formError.set('');
   }
 
-  onNewSupplierChange(): void {
-    const s = this.suppliers().find((x) => (x.supplierCode || x.code) === this.newPayable.supplierId);
-    this.newPayable.supplierName = s ? (s.businessName || s.tradeName || s.name || '') : '';
+  // ── Buscador de proveedores con alta rápida ──
+  supplierQuery = '';
+  supplierDrop = signal(false);
+  isSupplierCreateOpen = signal(false);
+
+  supplierLabel(s: any): string {
+    return s?.businessName || s?.tradeName || s?.name || '';
+  }
+
+  filteredSuppliers(query: string): any[] {
+    const q = (query || '').toLowerCase();
+    const list = this.suppliers();
+    return q
+      ? list.filter((s) =>
+          [this.supplierLabel(s), s.tradeName, s.supplierCode, s.code, s.nit].some((v) => v?.toLowerCase().includes(q)),
+        )
+      : list;
+  }
+
+  supplierExists(query: string): boolean {
+    const q = (query || '').trim().toLowerCase();
+    return this.suppliers().some((s) => this.supplierLabel(s).toLowerCase() === q);
+  }
+
+  /** Al escribir se pierde la selección: el proveedor debe elegirse de la lista. */
+  onSupplierInput(value: string): void {
+    this.supplierQuery = value;
+    this.newPayable.supplierId = '';
+    this.newPayable.supplierName = '';
+    this.supplierDrop.set(true);
+  }
+
+  selectSupplier(s: any): void {
+    this.newPayable.supplierId = s.supplierCode || s.code;
+    this.newPayable.supplierName = this.supplierLabel(s);
+    this.supplierQuery = this.supplierLabel(s);
+    this.supplierDrop.set(false);
+  }
+
+  onSupplierBlur(): void {
+    setTimeout(() => this.supplierDrop.set(false), 150);
+  }
+
+  createSupplierInline(): void {
+    this.supplierDrop.set(false);
+    this.isSupplierCreateOpen.set(true);
+  }
+
+  onSupplierCreated(s: any): void {
+    this.suppliers.set([...this.suppliers(), s]);
+    this.selectSupplier(s);
+    this.isSupplierCreateOpen.set(false);
+    this.showToast(`Proveedor "${this.supplierLabel(s)}" creado`, 'success');
   }
 
   savePayable(): void {

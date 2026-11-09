@@ -3,15 +3,19 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { FinanceService } from '../../../core/services/finance.service';
+import { SuppliersService } from '../../../core/services/suppliers.service';
+import { CustomerQuickCreateComponent } from '../../../shared/components/quick-create/customer-quick-create.component';
+import { SupplierQuickCreateComponent } from '../../../shared/components/quick-create/supplier-quick-create.component';
 
 @Component({
   selector: 'app-cash-movements',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomerQuickCreateComponent, SupplierQuickCreateComponent],
   templateUrl: './cash-movements.component.html',
 })
 export class CashMovementsComponent implements OnInit {
   private financeService = inject(FinanceService);
+  private suppliersService = inject(SuppliersService);
   private route = inject(ActivatedRoute);
 
   type = this.route.snapshot.data['type'] as 'income' | 'expense';
@@ -37,6 +41,56 @@ export class CashMovementsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRegisters();
+    const parties$ = this.isIncome ? this.financeService.getCustomers() : this.suppliersService.getAll();
+    parties$.subscribe({
+      next: (data: any) => this.parties.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),
+      error: () => {},
+    });
+  }
+
+  // ── Buscador de contraparte: clientes en ingresos, proveedores en egresos ──
+  parties = signal<any[]>([]);
+  partyDrop = signal(false);
+  isPartyCreateOpen = signal(false);
+
+  partyName(p: any): string {
+    return p?.name || p?.businessName || p?.tradeName || '';
+  }
+
+  filteredParties(query: string): any[] {
+    const q = (query || '').toLowerCase();
+    const list = this.parties();
+    return q
+      ? list.filter((p) =>
+          [this.partyName(p), p.tradeName, p.code, p.supplierCode, p.taxId, p.nit].some((v) => v?.toLowerCase().includes(q)),
+        )
+      : list;
+  }
+
+  partyExists(query: string): boolean {
+    const q = (query || '').trim().toLowerCase();
+    return this.parties().some((p) => this.partyName(p).toLowerCase() === q);
+  }
+
+  selectParty(p: any): void {
+    this.form.counterpartyName = this.partyName(p);
+    this.partyDrop.set(false);
+  }
+
+  onPartyBlur(): void {
+    setTimeout(() => this.partyDrop.set(false), 150);
+  }
+
+  createPartyInline(): void {
+    this.partyDrop.set(false);
+    this.isPartyCreateOpen.set(true);
+  }
+
+  onPartyCreated(p: any): void {
+    this.parties.set([...this.parties(), p]);
+    this.selectParty(p);
+    this.isPartyCreateOpen.set(false);
+    this.showToast(`${this.isIncome ? 'Cliente' : 'Proveedor'} "${this.partyName(p)}" creado`, 'success');
   }
 
   loadRegisters(): void {

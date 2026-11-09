@@ -7,7 +7,10 @@ import { FinanceService } from '../../../core/services/finance.service';
 import { AccountingService } from '../../../core/services/accounting.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+import { SuppliersService } from '../../../core/services/suppliers.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { CustomerQuickCreateComponent } from '../../../shared/components/quick-create/customer-quick-create.component';
+import { SupplierQuickCreateComponent } from '../../../shared/components/quick-create/supplier-quick-create.component';
 
 interface CounterpartConcept {
   code: string;
@@ -26,10 +29,11 @@ interface CounterpartConcept {
 @Component({
   selector: 'app-bank-transactions',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, CustomerQuickCreateComponent, SupplierQuickCreateComponent],
   templateUrl: './bank-transactions.component.html',
 })
 export class BankTransactionsComponent implements OnInit {
+  private suppliersService = inject(SuppliersService);
   private financeService = inject(FinanceService);
   private accountingService = inject(AccountingService);
   private authService = inject(AuthService);
@@ -194,6 +198,7 @@ export class BankTransactionsComponent implements OnInit {
     if (this.isOpeningEntry) {
       this.form.counterpartConceptCode = '';
       this.customerQuery = '';
+      this.supplierQuery = '';
       this.form.counterpartyName = '';
     } else {
       this.form.counterpartyAccount = '';
@@ -315,21 +320,79 @@ export class BankTransactionsComponent implements OnInit {
     this.payablesModalOpen.set(false);
   }
 
+  /** Abre la ficha de alta de cliente con el nombre escrito en el buscador. */
+  isCustomerCreateOpen = signal(false);
   createCustomerInline(): void {
-    const name = this.customerQuery.trim();
-    if (!name) return;
-    this.financeService.createCustomer({ name }).subscribe({
-      next: (c) => {
-        this.customers.set([...this.customers(), c]);
-        this.selectCustomer(c);
-        this.showToast('Cliente creado', 'success');
-      },
-      error: () => this.showToast('Error creando el cliente', 'error'),
-    });
+    this.customerDrop.set(false);
+    this.isCustomerCreateOpen.set(true);
+  }
+
+  onCustomerCreated(c: any): void {
+    this.customers.set([...this.customers(), c]);
+    this.selectCustomer(c);
+    this.isCustomerCreateOpen.set(false);
+    this.showToast(`Cliente "${c.name}" creado`, 'success');
   }
 
   onCustomerBlur(): void {
     setTimeout(() => this.customerDrop.set(false), 150);
+  }
+
+  // ── Picker de proveedores ──
+  suppliers = signal<any[]>([]);
+  supplierQuery = '';
+  supplierDrop = signal(false);
+  isSupplierCreateOpen = signal(false);
+
+  supplierName(s: any): string {
+    return s?.businessName || s?.tradeName || s?.name || '';
+  }
+
+  filteredSuppliers(query: string) {
+    const q = (query || '').toLowerCase();
+    const list = this.suppliers();
+    return q
+      ? list.filter((s) =>
+          [this.supplierName(s), s.tradeName, s.supplierCode, s.nit].some((v) => v?.toLowerCase().includes(q)),
+        )
+      : list;
+  }
+
+  supplierExists(query: string): boolean {
+    const q = (query || '').trim().toLowerCase();
+    return this.suppliers().some((s) => this.supplierName(s).toLowerCase() === q);
+  }
+
+  selectSupplier(s: any): void {
+    const name = this.supplierName(s);
+    this.form.counterpartyName = name;
+    this.supplierQuery = name;
+    this.supplierDrop.set(false);
+    this.selectedPayableId.set('');
+    this.payables.set([]);
+    this.payablesModalOpen.set(false);
+  }
+
+  /** El texto libre también vale como proveedor (compatibilidad con registros previos). */
+  onSupplierInput(value: string): void {
+    this.form.counterpartyName = value;
+    this.supplierDrop.set(true);
+  }
+
+  createSupplierInline(): void {
+    this.supplierDrop.set(false);
+    this.isSupplierCreateOpen.set(true);
+  }
+
+  onSupplierCreated(s: any): void {
+    this.suppliers.set([...this.suppliers(), s]);
+    this.selectSupplier(s);
+    this.isSupplierCreateOpen.set(false);
+    this.showToast(`Proveedor "${this.supplierName(s)}" creado`, 'success');
+  }
+
+  onSupplierBlur(): void {
+    setTimeout(() => this.supplierDrop.set(false), 150);
   }
 
   // ── Obligaciones de cobro (CxC) para concepto 20 ──
@@ -844,6 +907,10 @@ export class BankTransactionsComponent implements OnInit {
       next: (data) => this.customers.set(Array.isArray(data) ? data : []),
       error: () => {},
     });
+    this.suppliersService.getAll().subscribe({
+      next: (data: any) => this.suppliers.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),
+      error: () => {},
+    });
   }
 
   loadCounterpartConcepts(): void {
@@ -1006,6 +1073,7 @@ export class BankTransactionsComponent implements OnInit {
     this.incomeAccountQuery = tx.incomeAccount ? this.accountingAccountLabel(tx.incomeAccount) : '';
     this.feeAccountQuery = tx.feeAccount ? this.accountingAccountLabel(tx.feeAccount) : '';
     this.customerQuery = tx.counterpartyName || '';
+    this.supplierQuery = tx.counterpartyName || '';
     this.selectedBankId.set(tx.bankAccountId);
     const bank = this.banks().find((b) => b.id === tx.bankAccountId);
     this.bankQuery = bank ? this.bankLabel(bank) : '';
@@ -1318,6 +1386,7 @@ export class BankTransactionsComponent implements OnInit {
     this.incomeAccountQuery = '';
     this.feeAccountQuery = '';
     this.customerQuery = '';
+    this.supplierQuery = '';
     this.bankQuery = '';
     this.selectedReceivableId.set('');
     this.originalReceivableId = '';

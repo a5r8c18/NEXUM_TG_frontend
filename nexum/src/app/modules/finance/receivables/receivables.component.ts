@@ -7,11 +7,12 @@ import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
+import { CustomerQuickCreateComponent } from '../../../shared/components/quick-create/customer-quick-create.component';
 
 @Component({
   selector: 'app-receivables',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ModalComponent, CustomerQuickCreateComponent],
   templateUrl: './receivables.component.html',
 })
 export class ReceivablesComponent implements OnInit, OnDestroy {
@@ -147,6 +148,7 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
 
   openCreate(): void {
     this.newReceivable = { customerName: '', customerId: '', originalAmount: 0, dueDate: '', description: '' };
+    this.customerQuery = '';
     this.formError.set('');
     this.isCreateOpen.set(true);
   }
@@ -156,9 +158,53 @@ export class ReceivablesComponent implements OnInit, OnDestroy {
     this.formError.set('');
   }
 
-  onNewCustomerChange(): void {
-    const c = this.customers().find((x) => x.code === this.newReceivable.customerId);
-    this.newReceivable.customerName = c?.name || '';
+  // ── Buscador de clientes con alta rápida ──
+  customerQuery = '';
+  customerDrop = signal(false);
+  isCustomerCreateOpen = signal(false);
+
+  filteredCustomers(query: string): any[] {
+    const q = (query || '').toLowerCase();
+    const list = this.customers();
+    return q
+      ? list.filter((c) => [c.name, c.code, c.taxId].some((v) => v?.toLowerCase().includes(q)))
+      : list;
+  }
+
+  customerExists(query: string): boolean {
+    const q = (query || '').trim().toLowerCase();
+    return this.customers().some((c) => c.name?.toLowerCase() === q);
+  }
+
+  /** Al escribir se pierde la selección: el cliente debe elegirse de la lista. */
+  onCustomerInput(value: string): void {
+    this.customerQuery = value;
+    this.newReceivable.customerId = '';
+    this.newReceivable.customerName = '';
+    this.customerDrop.set(true);
+  }
+
+  selectCustomer(c: any): void {
+    this.newReceivable.customerId = c.code;
+    this.newReceivable.customerName = c.name;
+    this.customerQuery = c.name;
+    this.customerDrop.set(false);
+  }
+
+  onCustomerBlur(): void {
+    setTimeout(() => this.customerDrop.set(false), 150);
+  }
+
+  createCustomerInline(): void {
+    this.customerDrop.set(false);
+    this.isCustomerCreateOpen.set(true);
+  }
+
+  onCustomerCreated(c: any): void {
+    this.customers.set([...this.customers(), c]);
+    this.selectCustomer(c);
+    this.isCustomerCreateOpen.set(false);
+    this.showToast(`Cliente "${c.name}" creado`, 'success');
   }
 
   saveReceivable(): void {
