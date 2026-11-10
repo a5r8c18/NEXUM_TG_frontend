@@ -110,9 +110,15 @@ export class BankTransactionsComponent implements OnInit {
     return this.isIncome && !this.isOpeningEntry && this.form.counterpartConceptCode === '19';
   }
 
-  /** Conceptos que piden cuenta de ingreso del nomenclador: 19 y 23 (cafetería). */
+  /** Conceptos que piden cuenta de ingreso del nomenclador: 19, 22 (comedores) y 23 (cafetería). */
   get isIncomeAccountConcept(): boolean {
-    return this.isIncome && !this.isOpeningEntry && ['19', '23'].includes(this.form.counterpartConceptCode);
+    return this.isIncome && !this.isOpeningEntry && ['19', '22', '23'].includes(this.form.counterpartConceptCode);
+  }
+
+  /** Cuenta de ingreso propuesta al elegir el concepto: 900 fija en el 19, 950 por defecto en el 22. */
+  private get defaultIncomeAccount(): string {
+    if (this.isOnlinePayment) return '900';
+    return this.isIncome && !this.isOpeningEntry && this.form.counterpartConceptCode === '22' ? '950' : '';
   }
 
   /** Lo que entra al banco: ingreso bruto menos la comisión. */
@@ -221,13 +227,13 @@ export class BankTransactionsComponent implements OnInit {
     this.selectedPayableId.set('');
     this.payables.set([]);
     this.payablesModalOpen.set(false);
-    this.form.incomeAccount = this.isOnlinePayment ? '900' : '';
+    this.form.incomeAccount = this.defaultIncomeAccount;
     this.form.incomeSubaccount = '';
     this.form.feeSubaccount = '';
     this.form.incomeAmount = 0;
     this.form.feeAccount = this.isOnlinePayment ? '835' : '';
     this.form.feeAmount = 0;
-    this.incomeAccountQuery = this.isOnlinePayment ? '900' : '';
+    this.incomeAccountQuery = this.isOnlinePayment ? '900' : this.accountingAccountLabel(this.form.incomeAccount);
     this.feeAccountQuery = this.isOnlinePayment ? '835' : '';
     if (this.isAdvanceCollection) {
       this.form.counterpartyAccount = '430';
@@ -835,14 +841,16 @@ export class BankTransactionsComponent implements OnInit {
     return q ? opts.filter((o) => o.label.toLowerCase().includes(q)) : opts;
   }
 
+  /** Solo cuentas de ingreso; la subcuenta se elige aparte. */
   incomeAccountOptions() {
-    return this.typedAccountOptions('income', this.incomeAccountQuery);
+    return this.typedAccountOptions('income', this.incomeAccountQuery).filter((o) => !o.isSub);
   }
 
-  /** Subcuentas de la 900 (cuenta de ingreso fijada por el concepto 19). */
-  incomeSubaccountOptions = computed(() =>
-    this.accountSelectOptions().filter((o) => o.isSub && o.parentCode === '900'),
-  );
+  /** Subcuentas de la cuenta de ingreso seleccionada (la 900 en el concepto 19). */
+  incomeSubaccountOptions() {
+    const parent = this.form.incomeAccount;
+    return parent ? this.accountSelectOptions().filter((o) => o.isSub && o.parentCode === parent) : [];
+  }
 
   /** Subcuentas de la 835 (cuenta de gasto/comisión fijada por el concepto 19). */
   feeSubaccountOptions = computed(() =>
@@ -859,6 +867,7 @@ export class BankTransactionsComponent implements OnInit {
   }
 
   selectIncomeAccount(value: string): void {
+    if (this.form.incomeAccount !== value) this.form.incomeSubaccount = '';
     this.form.incomeAccount = value;
     this.incomeAccountQuery = this.accountingAccountLabel(value);
     this.incomeAccountDrop.set(false);
@@ -1068,17 +1077,17 @@ export class BankTransactionsComponent implements OnInit {
       counterpartyName: tx.counterpartyName || '',
       exchangeRate: Number(tx.exchangeRate || 1),
       notes: tx.notes || '',
-      incomeAccount: tx.incomeAccount || '',
+      incomeAccount: tx.incomeAccount || (tx.counterpartConceptCode === '22' && tx.transactionType === 'credit' ? '950' : ''),
       incomeSubaccount: tx.incomeSubaccount || '',
       feeSubaccount: tx.feeSubaccount || '',
-      incomeAmount: Number(tx.incomeAmount || 0),
+      incomeAmount: Number(tx.incomeAmount || tx.amount || 0),
       feeAccount: tx.feeAccount || '',
       feeAmount: Number(tx.feeAmount || 0),
     };
     this.accountQuery = tx.counterpartyAccount
       ? this.accountingAccountLabel(tx.counterpartyAccount)
       : '';
-    this.incomeAccountQuery = tx.incomeAccount ? this.accountingAccountLabel(tx.incomeAccount) : '';
+    this.incomeAccountQuery = this.form.incomeAccount ? this.accountingAccountLabel(this.form.incomeAccount) : '';
     this.feeAccountQuery = tx.feeAccount ? this.accountingAccountLabel(tx.feeAccount) : '';
     this.customerQuery = tx.counterpartyName || '';
     this.supplierQuery = tx.counterpartyName || '';
@@ -1307,7 +1316,7 @@ export class BankTransactionsComponent implements OnInit {
 
       if (this.isIncomeAccountConcept) {
         basePayload.incomeAccount = this.form.incomeAccount;
-        basePayload.incomeSubaccount = (this.isOnlinePayment || this.isAdvanceCollection) ? this.form.incomeSubaccount || null : null;
+        basePayload.incomeSubaccount = this.form.incomeSubaccount || null;
         basePayload.feeSubaccount = this.isOnlinePayment ? this.form.feeSubaccount || null : null;
         basePayload.incomeAmount = Number(this.form.incomeAmount);
         basePayload.feeAccount = this.isOnlinePayment ? this.form.feeAccount : null;

@@ -63,14 +63,20 @@ import { FinanceService } from '../../core/services/finance.service';
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Saldo: {{ formatCurrency(dashboard()?.cash?.totalBalance) }}</p>
           </a>
 
-          <!-- Pagos -->
+          <!-- Cobros y Pagos -->
           <a routerLink="/finance/payments" class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
             <div class="flex items-center justify-between mb-3">
               <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Cobros y Pagos</span>
-              <span class="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-semibold px-2 py-1 rounded-full">Pagos</span>
+              <span class="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-semibold px-2 py-1 rounded-full">Cobros/Pagos</span>
             </div>
-            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ dashboard()?.payments?.total || 0 }}</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white">
+              {{ dashboard()?.payments?.receivedCount || 0 }}
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ dashboard()?.payments?.receivedCount === 1 ? 'cobro' : 'cobros' }}</span>
+              · {{ dashboard()?.payments?.paidCount || 0 }}
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ dashboard()?.payments?.paidCount === 1 ? 'pago' : 'pagos' }}</span>
+            </p>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Cobrado: {{ formatCurrency(dashboard()?.payments?.totalReceived) }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Pagado: {{ formatCurrency(dashboard()?.payments?.totalPaid) }}</p>
           </a>
         </div>
 

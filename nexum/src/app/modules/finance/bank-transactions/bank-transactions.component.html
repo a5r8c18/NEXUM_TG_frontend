@@ -376,7 +376,7 @@
             </div>
           }
 
-          <!-- Conceptos con cuenta de ingreso del nomenclador (19 con comisión, 23 sin ella) -->
+          <!-- Conceptos con cuenta de ingreso del nomenclador (19 con comisión, 22 y 23 sin ella) -->
           @if (isIncomeAccountConcept) {
             <div class="sm:col-span-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="relative flex flex-col">
@@ -406,18 +406,18 @@
                 }
                 }
               </div>
-              @if (isOnlinePayment) {
-                <div class="flex flex-col">
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta de la 900</label>
-                  <select [(ngModel)]="form.incomeSubaccount" name="incomeSubaccount"
-                          class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">900 (sin subcuenta)</option>
-                    @for (o of incomeSubaccountOptions(); track o.value) {
-                      <option [value]="o.value">{{ o.label }}</option>
-                    }
-                  </select>
-                </div>
-              }
+              <div class="flex flex-col">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Subcuenta{{ form.incomeAccount ? ' de la ' + form.incomeAccount : '' }}
+                </label>
+                <select [(ngModel)]="form.incomeSubaccount" name="incomeSubaccount" [disabled]="!form.incomeAccount"
+                        class="mt-auto w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+                  <option value="">{{ form.incomeAccount ? form.incomeAccount + ' (sin subcuenta)' : 'Seleccione la cuenta de ingreso' }}</option>
+                  @for (o of incomeSubaccountOptions(); track o.value) {
+                    <option [value]="o.value">{{ o.label }}</option>
+                  }
+                </select>
+              </div>
               <div class="flex flex-col">
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Importe del ingreso *</label>
                 <input type="number" step="0.01" min="0" [(ngModel)]="form.incomeAmount" name="incomeAmount"
