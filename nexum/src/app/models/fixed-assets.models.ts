@@ -9,7 +9,7 @@ export interface DepreciationGroup {
   subgroups: DepreciationSubgroup[];
 }
 
-export type AcquisitionConcept = 'compra' | 'donacion' | 'sobrante';
+export type AcquisitionConcept = 'compra' | 'donacion' | 'sobrante' | 'carga_inicial';
 
 export type DisposalConcept =
   | 'faltante'
@@ -39,6 +39,9 @@ export interface FixedAsset {
   acquisitionValue: number;
   acquisitionDate: string;
   acquisitionType?: AcquisitionConcept;
+  openingDate?: string | null;
+  openingAccumulatedDepreciation?: number;
+  accumulatedDepreciation?: number;
   disposalType?: DisposalConcept | null;
   disposalDate?: string | null;
   disposalReason?: string | null;
@@ -71,6 +74,8 @@ export interface CreateFixedAssetDto {
   acquisitionValue: number;
   acquisitionDate: string;
   acquisitionType?: AcquisitionConcept;
+  openingDate?: string;
+  openingAccumulatedDepreciation?: number;
   location?: string;
   areaId?: number;
   employeeId?: string;

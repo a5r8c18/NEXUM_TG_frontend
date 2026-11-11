@@ -359,6 +359,11 @@
             Genera obligación con el proveedor (Cuentas por Pagar).
           } @else if (acquisitionConcept() === 'donacion') {
             Se acredita a Donaciones Recibidas; no genera Cuentas por Pagar.
+          } @else if (acquisitionConcept() === 'carga_inicial') {
+            Registra un activo que ya existía con la depreciación que trae acumulada. El asiento debita la
+            cuenta del activo, acredita la 375 por la depreciación acumulada y la contrapartida (600 por
+            defecto) por el valor neto. No genera Cuentas por Pagar; la depreciación se procesa desde el mes
+            siguiente a la fecha de la carga.
           } @else {
             Se acredita a Sobrantes en Investigación; no genera Cuentas por Pagar.
           }
@@ -434,6 +439,38 @@
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               [class.bg-slate-50]="!!editingAsset">
       </div>
+
+      @if (!editingAsset && acquisitionConcept() === 'carga_inicial') {
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de la carga inicial *</label>
+          <input formControlName="openingDate" type="date"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Depreciación acumulada a la fecha</label>
+          <input formControlName="openingAccumulatedDepreciation" type="number" min="0" step="0.01"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="sm:col-span-2">
+          <p class="text-xs" [class.text-slate-500]="openingNetValue >= 0" [class.text-red-600]="openingNetValue < 0">
+            Valor neto en libros: <strong>{{ openingNetValue | number:'1.2-2' }}</strong>
+            @if (openingNetValue < 0) { — la depreciación acumulada supera el valor de adquisición }
+          </p>
+        </div>
+      } @else if (editingAsset?.acquisitionType === 'carga_inicial') {
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de la carga inicial</label>
+          <input [value]="editingAsset?.openingDate?.substring(0, 10) || ''" readonly
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Depreciación acumulada en la carga</label>
+          <input [value]="(editingAsset?.openingAccumulatedDepreciation || 0) | number:'1.2-2'" readonly
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50">
+        </div>
+      }
 
       <div>
         <label class="block text-xs font-semibold text-slate-600 mb-1">Área</label>

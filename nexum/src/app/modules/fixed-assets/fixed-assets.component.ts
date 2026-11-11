@@ -108,7 +108,15 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     { value: 'compra', label: 'Compra de AFT' },
     { value: 'donacion', label: 'Alta de AFT por donación' },
     { value: 'sobrante', label: 'Alta de AFT por sobrante' },
+    { value: 'carga_inicial', label: 'Carga inicial de AFT' },
   ];
+
+  /** Valor neto en libros a la fecha de la carga inicial (valor − depreciación acumulada). */
+  get openingNetValue(): number {
+    const value = Number(this.form?.value.acquisitionValue || 0);
+    const accumulated = Number(this.form?.value.openingAccumulatedDepreciation || 0);
+    return Math.round((value - accumulated) * 100) / 100;
+  }
 
   readonly disposalConcepts: { value: DisposalConcept; label: string }[] = [
     { value: 'faltante', label: 'Baja por faltante' },
@@ -216,6 +224,8 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
       subgroupDetail: [''],
       acquisitionValue: [null, [Validators.required, Validators.min(0.01)]],
       acquisitionDate: ['', Validators.required],
+      openingDate: [''],
+      openingAccumulatedDepreciation: [null, Validators.min(0)],
       location: [''],
       areaId: [null],
       employeeId: [''],
@@ -459,6 +469,13 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
     this.editingAsset = null;
     this.acquisitionConcept.set(concept);
     this.form.reset();
+    if (concept === 'carga_inicial') {
+      this.form.patchValue({
+        openingDate: new Date().toISOString().substring(0, 10),
+        openingAccumulatedDepreciation: 0,
+        counterpartAccountCode: '600',
+      });
+    }
     this.updateFormControlsState();
     this.showForm.set(true);
   }
@@ -486,6 +503,22 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
 
   async onSubmit() {
     if (this.form.invalid) return;
+    const isOpening = !this.editingAsset && this.acquisitionConcept() === 'carga_inicial';
+    if (isOpening) {
+      const { acquisitionDate, openingDate } = this.form.value;
+      if (!openingDate) {
+        this.showToast('Indique la fecha de la carga inicial', 'error');
+        return;
+      }
+      if (openingDate < acquisitionDate) {
+        this.showToast('La fecha de la carga inicial no puede ser anterior a la de adquisición', 'error');
+        return;
+      }
+      if (this.openingNetValue < 0) {
+        this.showToast('La depreciación acumulada no puede superar el valor de adquisición', 'error');
+        return;
+      }
+    }
 
     this.isLoading.set(true);
     try {
@@ -510,6 +543,10 @@ export class FixedAssetsComponent implements OnInit, OnDestroy {
           acquisitionValue: +this.form.value.acquisitionValue,
           acquisitionDate: this.form.value.acquisitionDate,
           acquisitionType: this.acquisitionConcept(),
+          openingDate: isOpening ? this.form.value.openingDate : undefined,
+          openingAccumulatedDepreciation: isOpening
+            ? Number(this.form.value.openingAccumulatedDepreciation || 0)
+            : undefined,
           location: this.form.value.location || undefined,
           areaId: this.form.value.areaId ? +this.form.value.areaId : undefined,
           employeeId: this.form.value.employeeId || undefined,
