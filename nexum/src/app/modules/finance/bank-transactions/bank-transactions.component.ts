@@ -229,7 +229,9 @@ export class BankTransactionsComponent implements OnInit {
     this.payablesModalOpen.set(false);
     this.form.incomeAccount = this.defaultIncomeAccount;
     this.form.incomeSubaccount = '';
-    this.form.feeSubaccount = '';
+    // La comisión del concepto 19 va por defecto a la 835-0010 (Gastos por comisiones bancarias).
+    this.form.feeSubaccount =
+      this.isOnlinePayment && this.feeSubaccountOptions().some((o) => o.value === '835-0010') ? '835-0010' : '';
     this.form.incomeAmount = 0;
     this.form.feeAccount = this.isOnlinePayment ? '835' : '';
     this.form.feeAmount = 0;
@@ -1048,6 +1050,7 @@ export class BankTransactionsComponent implements OnInit {
       transfer: 'una transferencia entre cuentas (espejo)',
       reversal: 'un reverso de comprobante',
       payment: 'un pago registrado',
+      cash: 'un depósito desde Caja',
     };
     return `Generado por ${origins[tx.sourceModule] || tx.sourceModule}: anule la operación de origen`;
   }

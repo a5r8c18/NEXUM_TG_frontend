@@ -241,4 +241,16 @@ export class FinanceService {
   createCashMovement(cashRegisterId: string, data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/finance/cash-registers/${cashRegisterId}/movements`, data);
   }
+
+  updateCashMovement(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/finance/cash-movements/${id}`, data);
+  }
+
+  cancelCashMovement(id: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-movements/${id}/cancel`, {});
+  }
+
+  restoreCashMovement(id: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/finance/cash-movements/${id}/restore-annulment`, {});
+  }
 }
