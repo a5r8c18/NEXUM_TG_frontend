@@ -8,6 +8,7 @@ import { AccountingService } from '../../../core/services/accounting.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { SuppliersService } from '../../../core/services/suppliers.service';
+import { HrService } from '../../../core/services/hr.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { CustomerQuickCreateComponent } from '../../../shared/components/quick-create/customer-quick-create.component';
 import { SupplierQuickCreateComponent } from '../../../shared/components/quick-create/supplier-quick-create.component';
@@ -34,6 +35,7 @@ interface CounterpartConcept {
 })
 export class BankTransactionsComponent implements OnInit {
   private suppliersService = inject(SuppliersService);
+  private hrService = inject(HrService);
   private financeService = inject(FinanceService);
   private accountingService = inject(AccountingService);
   private authService = inject(AuthService);
@@ -130,14 +132,17 @@ export class BankTransactionsComponent implements OnInit {
   /** 28 se liquida desde Cobros anticipados; 80 y 81 son efectivo y van por Caja. */
   private static readonly BANK_INCOME_EXCLUDED = ['28', '80', '81'];
 
+  /** Conceptos de caja que no se registran en Banco ni como ingreso ni como egreso. */
+  private static readonly BANK_EXCLUDED = ['100'];
+
   conceptOptions = computed(() =>
     this.counterpartConcepts().filter(
       (c) =>
         (c.direction === 'both' || c.direction === (this.isIncome ? 'income' : 'expense')) &&
         // Al editar se conserva el concepto que ya tenía el comprobante.
-        !(this.isIncome &&
-          BankTransactionsComponent.BANK_INCOME_EXCLUDED.includes(c.code) &&
-          c.code !== this.editingTx()?.counterpartConceptCode),
+        (c.code === this.editingTx()?.counterpartConceptCode ||
+          (!BankTransactionsComponent.BANK_EXCLUDED.includes(c.code) &&
+            !(this.isIncome && BankTransactionsComponent.BANK_INCOME_EXCLUDED.includes(c.code)))),
     ),
   );
 
@@ -169,12 +174,30 @@ export class BankTransactionsComponent implements OnInit {
     );
   }
 
+  /** En "Otros cobros" el tercero puede ser cliente o trabajador. */
+  thirdPartyType: 'customer' | 'employee' = 'customer';
+
+  get isOtrosCobros(): boolean {
+    return this.isIncome && this.form.voucherType === 'Otros cobros';
+  }
+
+  setThirdPartyType(kind: 'customer' | 'employee'): void {
+    if (this.thirdPartyType === kind) return;
+    this.thirdPartyType = kind;
+    this.form.counterpartyName = '';
+    this.customerQuery = '';
+    this.employeeQuery = '';
+  }
+
   counterpartyLabel(): string {
     const c = this.selectedConcept;
     if (!c) return 'Cliente/Entidad';
-    if (c.requiresCustomer) return 'Cliente/Entidad';
     if (c.requiresSupplier) return 'Proveedor';
     if (c.requiresEmployee) return 'Trabajador';
+    if (this.isOtrosCobros && c.requiresCustomer && this.thirdPartyType === 'employee') {
+      return 'Trabajador';
+    }
+    if (c.requiresCustomer) return 'Cliente/Entidad';
     return 'Cliente/Entidad';
   }
 
@@ -183,10 +206,12 @@ export class BankTransactionsComponent implements OnInit {
     // para proveedores y trabajadores, y también con clientes cuando el
     // comprobante liquida una CxC/CxP (20/21) o es un anticipo (26/27): el
     // tercero es el que vincula el cobro o pago con su obligación.
+    // En "Otros cobros" el tercero (cliente o trabajador) siempre se exige.
     const c = this.selectedConcept;
     return (
       !!(c?.requiresSupplier || c?.requiresEmployee) ||
-      ['20', '21', '26', '27'].includes(this.form.counterpartConceptCode)
+      ['20', '21', '26', '27'].includes(this.form.counterpartConceptCode) ||
+      (this.isOtrosCobros && !!c?.requiresCustomer)
     );
   }
 
@@ -409,6 +434,44 @@ export class BankTransactionsComponent implements OnInit {
 
   onSupplierBlur(): void {
     setTimeout(() => this.supplierDrop.set(false), 150);
+  }
+
+  // ── Picker de trabajadores ──
+  employees = signal<any[]>([]);
+  employeeQuery = '';
+  employeeDrop = signal(false);
+
+  employeeName(e: any): string {
+    return `${e?.firstName || ''} ${e?.lastName || ''}`.trim();
+  }
+
+  filteredEmployees(query: string) {
+    const q = (query || '').toLowerCase();
+    const list = this.employees();
+    return q
+      ? list.filter(
+          (e) =>
+            this.employeeName(e).toLowerCase().includes(q) ||
+            (e.employeeCode || '').toLowerCase().includes(q),
+        )
+      : list;
+  }
+
+  selectEmployee(e: any): void {
+    const name = this.employeeName(e);
+    this.form.counterpartyName = name;
+    this.employeeQuery = name;
+    this.employeeDrop.set(false);
+  }
+
+  /** El texto libre también vale (compatibilidad con registros previos). */
+  onEmployeeInput(value: string): void {
+    this.form.counterpartyName = value;
+    this.employeeDrop.set(true);
+  }
+
+  onEmployeeBlur(): void {
+    setTimeout(() => this.employeeDrop.set(false), 150);
   }
 
   // ── Obligaciones de cobro (CxC) para concepto 20 ──
@@ -930,6 +993,10 @@ export class BankTransactionsComponent implements OnInit {
       next: (data: any) => this.suppliers.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),
       error: () => {},
     });
+    this.hrService.getEmployees({ status: 'active' }).subscribe({
+      next: (data) => this.employees.set(Array.isArray(data) ? data : []),
+      error: () => {},
+    });
   }
 
   loadCounterpartConcepts(): void {
@@ -1094,6 +1161,12 @@ export class BankTransactionsComponent implements OnInit {
     this.feeAccountQuery = tx.feeAccount ? this.accountingAccountLabel(tx.feeAccount) : '';
     this.customerQuery = tx.counterpartyName || '';
     this.supplierQuery = tx.counterpartyName || '';
+    this.employeeQuery = tx.counterpartyName || '';
+    this.thirdPartyType = this.employees().some(
+      (e) => this.employeeName(e) === tx.counterpartyName,
+    )
+      ? 'employee'
+      : 'customer';
     this.selectedBankId.set(tx.bankAccountId);
     const bank = this.banks().find((b) => b.id === tx.bankAccountId);
     this.bankQuery = bank ? this.bankLabel(bank) : '';
@@ -1407,6 +1480,8 @@ export class BankTransactionsComponent implements OnInit {
     this.feeAccountQuery = '';
     this.customerQuery = '';
     this.supplierQuery = '';
+    this.employeeQuery = '';
+    this.thirdPartyType = 'customer';
     this.bankQuery = '';
     this.selectedReceivableId.set('');
     this.originalReceivableId = '';

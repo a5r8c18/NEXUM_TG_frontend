@@ -209,10 +209,50 @@
             }
           </div>
 
-          <!-- Cliente -->
+          <!-- Cliente (en Otros cobros el tercero también puede ser un trabajador) -->
           @if (selectedConcept?.requiresCustomer) {
             <div class="relative sm:col-span-2">
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }}{{ counterpartyRequired() ? ' *' : '' }}</label>
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{{ counterpartyLabel() }}{{ counterpartyRequired() ? ' *' : '' }}</label>
+                @if (isOtrosCobros) {
+                  <div class="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0">
+                    <button type="button" (click)="setThirdPartyType('customer')"
+                            [class]="(thirdPartyType === 'customer'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600')
+                              + ' px-2.5 py-1 text-xs font-medium transition-colors'">
+                      Cliente
+                    </button>
+                    <button type="button" (click)="setThirdPartyType('employee')"
+                            [class]="(thirdPartyType === 'employee'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600')
+                              + ' px-2.5 py-1 text-xs font-medium transition-colors'">
+                      Trabajador
+                    </button>
+                  </div>
+                }
+              </div>
+              @if (isOtrosCobros && thirdPartyType === 'employee') {
+                <input [ngModel]="employeeQuery" (ngModelChange)="employeeQuery = $event; onEmployeeInput($event)" name="employeeName"
+                       (focus)="employeeDrop.set(true)" (blur)="onEmployeeBlur()"
+                       placeholder="Filtrar trabajador" autocomplete="off"
+                       class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                @if (employeeDrop()) {
+                  <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                    @for (e of filteredEmployees(employeeQuery); track e.id) {
+                      <button type="button" (mousedown)="selectEmployee(e)"
+                              class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                        {{ employeeName(e) }}
+                        @if (e.employeeCode) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ e.employeeCode }}</span> }
+                      </button>
+                    }
+                    @if (!filteredEmployees(employeeQuery).length) {
+                      <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin trabajadores que coincidan</div>
+                    }
+                  </div>
+                }
+              } @else {
               <input [(ngModel)]="customerQuery" name="customerName" (focus)="customerDrop.set(true)" (blur)="onCustomerBlur()"
                      placeholder="Filtrar o crear cliente/entidad" autocomplete="off"
                      class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -235,6 +275,7 @@
                     <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin clientes registrados</div>
                   }
                 </div>
+              }
               }
             </div>
           }
@@ -365,14 +406,26 @@
 
           <!-- Trabajador -->
           @if (selectedConcept?.requiresEmployee) {
-            <div class="sm:col-span-2">
+            <div class="relative sm:col-span-2">
               <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }} *</label>
-              <input [(ngModel)]="form.counterpartyName" name="employeeName"
-                     placeholder="Nombre del trabajador"
+              <input [ngModel]="employeeQuery" (ngModelChange)="employeeQuery = $event; onEmployeeInput($event)" name="employeeName"
+                     (focus)="employeeDrop.set(true)" (blur)="onEmployeeBlur()"
+                     placeholder="Filtrar trabajador" autocomplete="off"
                      class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Próximamente se podrá seleccionar desde el catálogo de trabajadores.
-              </p>
+              @if (employeeDrop()) {
+                <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                  @for (e of filteredEmployees(employeeQuery); track e.id) {
+                    <button type="button" (mousedown)="selectEmployee(e)"
+                            class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                      {{ employeeName(e) }}
+                      @if (e.employeeCode) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ e.employeeCode }}</span> }
+                    </button>
+                  }
+                  @if (!filteredEmployees(employeeQuery).length) {
+                    <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin trabajadores que coincidan</div>
+                  }
+                </div>
+              }
             </div>
           }
 
