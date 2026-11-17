@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AccountingService } from '../../../core/services/accounting.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -16,6 +17,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 export class CashComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
   private notificationService = inject(NotificationService);
+  private accountingService = inject(AccountingService);
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -34,7 +36,58 @@ export class CashComponent implements OnInit, OnDestroy {
   formError = signal('');
   auditResult = signal<any>(null);
 
-  newCashRegister: any = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0 };
+  newCashRegister: any = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0, fondo: '', accountingAccount: '' };
+  isEditOpen = signal(false);
+  editCashRegister: any = {};
+
+  // ── Cuenta contable de la caja (Efectivo en Caja 101-108 y sus subcuentas) ──
+  accountOptions = signal<any[]>([]);
+  subaccounts = signal<any[]>([]);
+  accountQuery = '';
+  accountDrop = signal(false);
+
+  cashAccountOptions = computed(() => {
+    const opts: { value: string; label: string; isSub: boolean; parentCode?: string }[] = [];
+    const subs = this.subaccounts();
+    for (const a of this.accountOptions()) {
+      if (a.code?.includes('-') || Number(a.level) >= 4) continue;
+      const num = parseInt(a.code, 10);
+      if (isNaN(num) || num < 101 || num > 108) continue;
+      const children = subs.filter(s => s.parentCode === a.code || s.code?.startsWith(`${a.code}-`));
+      if (!a.allowsMovements && children.length === 0) continue;
+      opts.push({ value: a.code, label: `${a.code} - ${a.name}`, isSub: false });
+      for (const s of children) {
+        const value = s.code?.includes('-') ? s.code : `${a.code}-${s.code}`;
+        opts.push({ value, label: `${s.code} - ${s.name}`, isSub: true, parentCode: a.code });
+      }
+    }
+    return opts;
+  });
+
+  filteredCashAccounts(query: string) {
+    const q = (query || '').toLowerCase();
+    const opts = this.cashAccountOptions();
+    return q ? opts.filter(o => o.label.toLowerCase().includes(q)) : opts;
+  }
+
+  accountingAccountLabel(value: string): string {
+    if (!value) return '';
+    const opt = this.cashAccountOptions().find(o => o.value === value);
+    if (!opt) return value;
+    if (!opt.isSub) return opt.label;
+    const parent = this.cashAccountOptions().find(o => o.value === opt.parentCode);
+    return parent ? `${parent.label} → ${opt.label}` : opt.label;
+  }
+
+  selectCashAccount(target: any, value: string): void {
+    target.accountingAccount = value;
+    this.accountQuery = this.accountingAccountLabel(value);
+    this.accountDrop.set(false);
+  }
+
+  onAccountBlur(): void {
+    setTimeout(() => this.accountDrop.set(false), 150);
+  }
   openingBalance = 0;
   physicalBalance = 0;
   depositBankAccountId = '';
@@ -68,6 +121,14 @@ export class CashComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadData();
     this.loadBanks();
+    this.accountingService.getAccounts({ activeOnly: 'true' }).subscribe({
+      next: (accounts: any) => this.accountOptions.set(Array.isArray(accounts) ? accounts : []),
+      error: () => {},
+    });
+    this.accountingService.getSubaccounts().subscribe({
+      next: (subs: any) => this.subaccounts.set(Array.isArray(subs) ? subs : []),
+      error: () => {},
+    });
     this.refreshSub = this.notificationService.refresh$.subscribe(() => {
       this.loadData();
       this.loadBanks();
@@ -105,9 +166,51 @@ export class CashComponent implements OnInit, OnDestroy {
   }
 
   openCreate(): void {
-    this.newCashRegister = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0 };
+    this.newCashRegister = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0, fondo: '', accountingAccount: '' };
+    this.accountQuery = '';
     this.formError.set('');
     this.isCreateOpen.set(true);
+  }
+
+  openEdit(cr: any): void {
+    this.editCashRegister = {
+      id: cr.id,
+      registerCode: cr.registerCode,
+      registerName: cr.registerName || '',
+      responsibleName: cr.responsibleName || '',
+      fondo: cr.fondo || '',
+      accountingAccount: cr.accountingAccount || '',
+    };
+    this.accountQuery = this.accountingAccountLabel(cr.accountingAccount || '');
+    this.formError.set('');
+    this.isEditOpen.set(true);
+  }
+
+  closeEdit(): void {
+    this.isEditOpen.set(false);
+    this.formError.set('');
+  }
+
+  saveEdit(): void {
+    const e = this.editCashRegister;
+    if (!e.registerName?.trim() || !e.responsibleName?.trim()) {
+      this.formError.set('Nombre y responsable son obligatorios');
+      return;
+    }
+    this.formError.set('');
+    this.financeService.updateCashRegister(e.id, {
+      registerName: e.registerName,
+      responsibleName: e.responsibleName,
+      fondo: e.fondo || null,
+      accountingAccount: e.accountingAccount || null,
+    }).subscribe({
+      next: () => {
+        this.closeEdit();
+        this.loadData();
+        this.showToast('Caja actualizada', 'success');
+      },
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al actualizar la caja'),
+    });
   }
 
   closeCreate(): void {

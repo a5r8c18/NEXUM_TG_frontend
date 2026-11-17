@@ -4,10 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { FinanceService } from '../../../core/services/finance.service';
 import { SuppliersService } from '../../../core/services/suppliers.service';
+import { HrService } from '../../../core/services/hr.service';
+import { AccountingService } from '../../../core/services/accounting.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { CustomerQuickCreateComponent } from '../../../shared/components/quick-create/customer-quick-create.component';
 import { SupplierQuickCreateComponent } from '../../../shared/components/quick-create/supplier-quick-create.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+
+type DocumentKind = 'recibo_ingreso' | 'otros_cobros' | 'liquidacion_cobro' | 'liquidacion_pago';
+type ThirdPartyType = 'customer' | 'supplier' | 'employee';
 
 @Component({
   selector: 'app-cash-movements',
@@ -18,6 +24,9 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
 export class CashMovementsComponent implements OnInit {
   private financeService = inject(FinanceService);
   private suppliersService = inject(SuppliersService);
+  private hrService = inject(HrService);
+  private accountingService = inject(AccountingService);
+  private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
   private confirmDialog = inject(ConfirmDialogService);
 
@@ -32,16 +41,227 @@ export class CashMovementsComponent implements OnInit {
   saving = signal(false);
   toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  form = {
-    documentType: '',
-    movementDate: new Date().toISOString().split('T')[0],
-    amount: 0,
-    description: '',
-    counterpartyName: '',
-    concept: '',
-  };
+  form = this.emptyForm();
+
+  private emptyForm() {
+    return {
+      documentType: '',
+      movementDate: new Date().toISOString().split('T')[0],
+      amount: 0,
+      description: '',
+      counterpartyName: '',
+      concept: '',
+      ...this.emptyReceipt(),
+    };
+  }
+
+  private emptyReceipt() {
+    return {
+      exchangeRate: 1,
+      receiptNumber: '',
+      deliveredBy: '',
+      issueDate: new Date().toISOString().split('T')[0],
+      receivedBy: '',
+      performedBy: '',
+      counterpartAccount: '',
+      counterpartSubaccount: '',
+    };
+  }
 
   selectedRegister = computed(() => this.registers().find(r => r.id === this.selectedRegisterId()) || null);
+
+  // ── Recibo de ingreso y Liquidación de documentos de cobro ──
+  get isReceipt(): boolean {
+    return this.isIncome && this.form.documentType === 'recibo_ingreso';
+  }
+
+  get isCollection(): boolean {
+    return this.isIncome && this.form.documentType === 'liquidacion_cobro';
+  }
+
+  get isOtherCollection(): boolean {
+    return this.isIncome && this.form.documentType === 'otros_cobros';
+  }
+
+  get isPaymentSettlement(): boolean {
+    return !this.isIncome && this.form.documentType === 'liquidacion_pago';
+  }
+
+  /** Liquidación de documentos (cobro o pago): pide moneda y muestra la cuenta de la caja. */
+  get isDocumentSettlement(): boolean {
+    return this.isCollection || this.isPaymentSettlement;
+  }
+
+  /** Tipos con datos de documento y cuenta de contrapartida. */
+  get hasDocumentFields(): boolean {
+    return this.isReceipt || this.isOtherCollection || this.isDocumentSettlement;
+  }
+
+  /** Tipo de documento del formulario, para validar con las reglas de cada uno. */
+  private documentKind(type: string): DocumentKind {
+    return ['liquidacion_cobro', 'liquidacion_pago', 'otros_cobros'].includes(type)
+      ? (type as DocumentKind)
+      : 'recibo_ingreso';
+  }
+
+  /** Usuario actual, propuesto como "Elaborado por". */
+  private currentUserName(): string {
+    const u: any = this.authService.currentUser();
+    if (!u) return '';
+    return `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || '';
+  }
+
+  /** Cuenta de efectivo que se debita: la de la caja o, sin ella, la de Tesorería. */
+  cashAccountLabel(): string {
+    const code = this.selectedRegister()?.accountingAccount;
+    if (!code) return '101 - Efectivo en Caja (Tesorería)';
+    const sub = this.subaccounts().find((s) => s.code === code);
+    return sub ? `${code} - ${sub.name}` : this.accountLabel(code);
+  }
+
+  /** La tasa solo aplica en cajas en USD; en el resto es 1. */
+  isUsdRegister(): boolean {
+    return this.selectedRegister()?.currency === 'USD';
+  }
+
+  montoCup(amount: number, rate: number): number {
+    return Math.round(Number(amount || 0) * (this.isUsdRegister() ? Number(rate || 0) : 1) * 100) / 100;
+  }
+
+  /**
+   * Tercero de los comprobantes con documento: en ingresos cliente o
+   * trabajador; en la liquidación de pago proveedor, cliente o trabajador.
+   */
+  thirdPartyType: ThirdPartyType = this.defaultThirdParty();
+  employees = signal<any[]>([]);
+  /** Clientes en Caja - Egreso (en ingresos ya están en `parties`). */
+  customers = signal<any[]>([]);
+
+  private defaultThirdParty(): ThirdPartyType {
+    return this.isIncome ? 'customer' : 'supplier';
+  }
+
+  thirdPartyOptions(): { value: ThirdPartyType; label: string }[] {
+    return this.isIncome
+      ? [{ value: 'customer', label: 'Cliente' }, { value: 'employee', label: 'Empleado' }]
+      : [{ value: 'supplier', label: 'Proveedor' }, { value: 'customer', label: 'Cliente' }, { value: 'employee', label: 'Empleado' }];
+  }
+
+  setThirdPartyType(kind: ThirdPartyType): void {
+    if (this.thirdPartyType === kind) return;
+    this.thirdPartyType = kind;
+    this.form.counterpartyName = '';
+    this.selectedObligationId = '';
+    this.obligations.set([]);
+  }
+
+  /** Tipo de tercero efectivo: el elegido en los comprobantes con documento, o el del sentido. */
+  private get partyKind(): ThirdPartyType {
+    return this.hasDocumentFields ? this.thirdPartyType : this.defaultThirdParty();
+  }
+
+  /** Lista del buscador según el tipo de tercero. */
+  activeParties(): any[] {
+    const kind = this.partyKind;
+    if (kind === 'employee') {
+      return this.employees().map((e) => ({ id: e.id, name: `${e.firstName || ''} ${e.lastName || ''}`.trim(), code: e.employeeCode }));
+    }
+    return kind === 'customer' && !this.isIncome ? this.customers() : this.parties();
+  }
+
+  partyLabel(): string {
+    return { employee: 'Trabajador', supplier: 'Proveedor', customer: 'Cliente/Entidad' }[this.partyKind];
+  }
+
+  /** Ficha de alta rápida que corresponde al tipo de tercero (no hay alta de trabajadores). */
+  partyCreateKind(): 'customer' | 'supplier' | null {
+    const kind = this.partyKind;
+    return kind === 'employee' ? null : kind;
+  }
+
+  // Cuenta de contrapartida y su subcuenta.
+  accountOptions = signal<any[]>([]);
+  subaccounts = signal<any[]>([]);
+  counterpartQuery = '';
+  counterpartDrop = signal(false);
+  editCounterpartQuery = '';
+  editCounterpartDrop = signal(false);
+
+  /** Cuentas postables o con subcuentas (las subcuentas se eligen aparte). */
+  private postableAccounts = computed(() => {
+    const subs = this.subaccounts();
+    return this.accountOptions().filter((a) => {
+      if (a.code?.includes('-') || Number(a.level) >= 4) return false;
+      return a.allowsMovements || subs.some((s) => s.parentCode === a.code || s.code?.startsWith(`${a.code}-`));
+    });
+  });
+
+  counterpartOptions(query: string): any[] {
+    const q = (query || '').toLowerCase();
+    const list = this.postableAccounts();
+    return q ? list.filter((a) => `${a.code} - ${a.name}`.toLowerCase().includes(q)) : list;
+  }
+
+  counterpartSubOptions(parent: string): { value: string; label: string }[] {
+    if (!parent) return [];
+    return this.subaccounts()
+      .filter((s) => s.parentCode === parent || s.code?.startsWith(`${parent}-`))
+      .map((s) => ({ value: s.code?.includes('-') ? s.code : `${parent}-${s.code}`, label: `${s.code} - ${s.name}` }));
+  }
+
+  accountLabel(code: string): string {
+    if (!code) return '';
+    const a = this.accountOptions().find((x) => x.code === code);
+    return a ? `${a.code} - ${a.name}` : code;
+  }
+
+  selectCounterpart(target: any, code: string, which: 'form' | 'edit'): void {
+    if (target.counterpartAccount !== code) target.counterpartSubaccount = '';
+    target.counterpartAccount = code;
+    if (which === 'form') {
+      this.counterpartQuery = this.accountLabel(code);
+      this.counterpartDrop.set(false);
+    } else {
+      this.editCounterpartQuery = this.accountLabel(code);
+      this.editCounterpartDrop.set(false);
+    }
+  }
+
+  onCounterpartBlur(which: 'form' | 'edit'): void {
+    setTimeout(() => (which === 'form' ? this.counterpartDrop : this.editCounterpartDrop).set(false), 150);
+  }
+
+  /** Valida los datos del recibo o de la liquidación; devuelve el mensaje de error o null. */
+  private receiptError(r: any, kind: DocumentKind = 'recibo_ingreso'): string | null {
+    const isReceipt = kind === 'recibo_ingreso';
+    if (!r.counterpartyName?.trim()) {
+      return kind === 'liquidacion_pago' ? 'Indique el proveedor, cliente o trabajador' : 'Indique el cliente o trabajador';
+    }
+    if (this.isUsdRegister() && !(Number(r.exchangeRate) > 1)) return 'La caja es en USD: indique la tasa de cambio';
+    if (!r.receiptNumber?.trim()) return isReceipt ? 'Indique el número de recibo' : 'Indique el número de documento';
+    if (isReceipt && !r.deliveredBy?.trim()) return 'Indique quién entrega el efectivo';
+    if (kind === 'otros_cobros' && !r.performedBy?.trim()) return 'Indique quién elabora el documento';
+    if (!r.issueDate) return 'Indique la fecha de emisión';
+    if (isReceipt && !r.receivedBy?.trim()) return 'Indique quién recibe el efectivo';
+    if (!r.counterpartAccount) return 'Seleccione la cuenta de contrapartida';
+    if (!r.counterpartSubaccount && this.counterpartSubOptions(r.counterpartAccount).length) {
+      return `La cuenta ${r.counterpartAccount} tiene subcuentas: seleccione una`;
+    }
+    return null;
+  }
+
+  private receiptPayload(r: any) {
+    return {
+      exchangeRate: this.isUsdRegister() ? Number(r.exchangeRate) : 1,
+      receiptNumber: r.receiptNumber,
+      deliveredBy: r.deliveredBy,
+      issueDate: r.issueDate,
+      receivedBy: r.receivedBy,
+      performedBy: r.performedBy,
+      counterpartAccount: r.counterpartAccount,
+      counterpartSubaccount: r.counterpartSubaccount || null,
+    };
+  }
 
   /** Tipos de comprobante de caja por sentido. */
   private static readonly DOCUMENT_TYPES: Record<'income' | 'expense', { value: string; label: string }[]> = {
@@ -137,6 +357,16 @@ export class CashMovementsComponent implements OnInit {
 
   onDocumentTypeChange(): void {
     this.depositBankAccountId = '';
+    if (this.hasDocumentFields) {
+      this.form.concept = '';
+      if (this.isReceipt && !this.form.receivedBy) this.form.receivedBy = this.selectedRegister()?.responsibleName || '';
+      if (this.isOtherCollection && !this.form.performedBy) this.form.performedBy = this.currentUserName();
+    } else {
+      Object.assign(this.form, this.emptyReceipt());
+      this.counterpartQuery = '';
+      if (this.thirdPartyType !== this.defaultThirdParty()) this.form.counterpartyName = '';
+      this.thirdPartyType = this.defaultThirdParty();
+    }
     this.loadObligations();
   }
 
@@ -171,6 +401,24 @@ export class CashMovementsComponent implements OnInit {
       next: (data: any) => this.parties.set(Array.isArray(data) ? data : (data?.data ?? data?.items ?? [])),
       error: () => {},
     });
+    if (!this.isIncome) {
+      this.financeService.getCustomers().subscribe({
+        next: (data: any) => this.customers.set(Array.isArray(data) ? data : []),
+        error: () => {},
+      });
+    }
+    this.hrService.getEmployees({ status: 'active' }).subscribe({
+      next: (data) => this.employees.set(Array.isArray(data) ? data : []),
+      error: () => {},
+    });
+    this.accountingService.getAccounts({ activeOnly: 'true' }).subscribe({
+      next: (accounts: any) => this.accountOptions.set(Array.isArray(accounts) ? accounts : []),
+      error: () => {},
+    });
+    this.accountingService.getSubaccounts().subscribe({
+      next: (subs: any) => this.subaccounts.set(Array.isArray(subs) ? subs : []),
+      error: () => {},
+    });
   }
 
   // ── Buscador de contraparte: clientes en ingresos, proveedores en egresos ──
@@ -184,7 +432,7 @@ export class CashMovementsComponent implements OnInit {
 
   filteredParties(query: string): any[] {
     const q = (query || '').toLowerCase();
-    const list = this.parties();
+    const list = this.activeParties();
     return q
       ? list.filter((p) =>
           [this.partyName(p), p.tradeName, p.code, p.supplierCode, p.taxId, p.nit].some((v) => v?.toLowerCase().includes(q)),
@@ -194,12 +442,18 @@ export class CashMovementsComponent implements OnInit {
 
   partyExists(query: string): boolean {
     const q = (query || '').trim().toLowerCase();
-    return this.parties().some((p) => this.partyName(p).toLowerCase() === q);
+    return this.activeParties().some((p) => this.partyName(p).toLowerCase() === q);
+  }
+
+  /** El alta rápida solo existe para clientes y proveedores. */
+  canCreateParty(): boolean {
+    return this.partyCreateKind() !== null;
   }
 
   selectParty(p: any): void {
     this.form.counterpartyName = this.partyName(p);
     this.partyDrop.set(false);
+    if (this.isReceipt && !this.form.deliveredBy.trim()) this.form.deliveredBy = this.form.counterpartyName;
     this.loadObligations();
   }
 
@@ -223,10 +477,12 @@ export class CashMovementsComponent implements OnInit {
   }
 
   onPartyCreated(p: any): void {
-    this.parties.set([...this.parties(), p]);
+    const isCustomer = this.partyCreateKind() === 'customer';
+    const list = isCustomer && !this.isIncome ? this.customers : this.parties;
+    list.set([...list(), p]);
     this.selectParty(p);
     this.isPartyCreateOpen.set(false);
-    this.showToast(`${this.isIncome ? 'Cliente' : 'Proveedor'} "${this.partyName(p)}" creado`, 'success');
+    this.showToast(`${isCustomer ? 'Cliente' : 'Proveedor'} "${this.partyName(p)}" creado`, 'success');
   }
 
   loadRegisters(): void {
@@ -293,6 +549,13 @@ export class CashMovementsComponent implements OnInit {
       this.showToast('Seleccione la cuenta bancaria donde se deposita', 'error');
       return;
     }
+    if (this.hasDocumentFields) {
+      const error = this.receiptError(this.form, this.documentKind(this.form.documentType));
+      if (error) {
+        this.showToast(error, 'error');
+        return;
+      }
+    }
 
     this.saving.set(true);
     this.financeService.createCashMovement(id, {
@@ -309,6 +572,7 @@ export class CashMovementsComponent implements OnInit {
           : { accountPayableId: this.selectedObligationId }
         : {}),
       ...(this.isDeposit ? { bankAccountId: this.depositBankAccountId } : {}),
+      ...(this.hasDocumentFields ? this.receiptPayload(this.form) : {}),
     }).subscribe({
       next: () => {
         this.saving.set(false);
@@ -328,14 +592,9 @@ export class CashMovementsComponent implements OnInit {
     this.selectedObligationId = '';
     this.obligations.set([]);
     this.depositBankAccountId = '';
-    this.form = {
-      documentType: '',
-      movementDate: new Date().toISOString().split('T')[0],
-      amount: 0,
-      description: '',
-      counterpartyName: '',
-      concept: '',
-    };
+    this.form = this.emptyForm();
+    this.counterpartQuery = '';
+    this.thirdPartyType = this.defaultThirdParty();
   }
 
   // ── Edición y anulación de comprobantes ──
@@ -351,7 +610,27 @@ export class CashMovementsComponent implements OnInit {
   }
 
   editingMovement = signal<any | null>(null);
-  editForm = { documentType: '', movementDate: '', amount: 0, counterpartyName: '', concept: '', description: '' };
+  editForm = {
+    documentType: '', movementDate: '', amount: 0, counterpartyName: '', concept: '', description: '',
+    ...this.emptyReceipt(),
+  };
+
+  get isEditReceipt(): boolean {
+    return this.editForm.documentType === 'recibo_ingreso';
+  }
+
+  /** Liquidación de documentos de cobro o de pago. */
+  get isEditCollection(): boolean {
+    return ['liquidacion_cobro', 'liquidacion_pago'].includes(this.editForm.documentType);
+  }
+
+  get isEditOther(): boolean {
+    return this.editForm.documentType === 'otros_cobros';
+  }
+
+  get isEditDocument(): boolean {
+    return this.isEditReceipt || this.isEditCollection || this.isEditOther;
+  }
 
   openEdit(m: any): void {
     this.editingMovement.set(m);
@@ -362,13 +641,29 @@ export class CashMovementsComponent implements OnInit {
       counterpartyName: m.counterpartyName || '',
       concept: m.concept || '',
       description: m.description || '',
+      exchangeRate: Number(m.exchangeRate || 1),
+      receiptNumber: m.receiptNumber || '',
+      deliveredBy: m.deliveredBy || '',
+      issueDate: m.issueDate ? String(m.issueDate).substring(0, 10) : '',
+      receivedBy: m.receivedBy || '',
+      performedBy: m.performedBy || '',
+      counterpartAccount: m.counterpartAccount || '',
+      counterpartSubaccount: m.counterpartSubaccount || '',
     };
+    this.editCounterpartQuery = this.accountLabel(this.editForm.counterpartAccount);
   }
 
-  /** Tipos disponibles al editar: el actual (aunque sea de los anteriores) y los del mismo sentido. */
+  /**
+   * Tipos disponibles al editar: el actual (aunque sea de los anteriores) y los del mismo sentido.
+   * El Recibo de ingreso y Otros cobros llevan asiento propio y no se convierten en otro tipo (ni al revés).
+   */
   editDocumentTypes(): { value: string; label: string }[] {
     const current = this.editForm.documentType;
-    const list = this.documentTypes.filter((t) => !CashMovementsComponent.LINKED_TYPES.includes(t.value));
+    const ownVoucher = ['recibo_ingreso', 'otros_cobros'];
+    if (ownVoucher.includes(current)) return [{ value: current, label: this.documentTypeLabel(current) }];
+    const list = this.documentTypes.filter(
+      (t) => !CashMovementsComponent.LINKED_TYPES.includes(t.value) && !ownVoucher.includes(t.value),
+    );
     return current && !list.some((t) => t.value === current)
       ? [{ value: current, label: this.documentTypeLabel(current) }, ...list]
       : list;
@@ -381,6 +676,15 @@ export class CashMovementsComponent implements OnInit {
       this.showToast('Monto y descripción son obligatorios', 'error');
       return;
     }
+    // Los recibos y liquidaciones anteriores sin contrapartida pueden seguir editándose sin ella.
+    const receiptWithVoucher = this.isEditDocument && !!this.editForm.counterpartAccount;
+    if (receiptWithVoucher) {
+      const error = this.receiptError(this.editForm, this.documentKind(this.editForm.documentType));
+      if (error) {
+        this.showToast(error, 'error');
+        return;
+      }
+    }
     this.saving.set(true);
     const linked = this.isLinkedMovement(m);
     // La fecha solo se envía si cambió el día, para no perder la hora original.
@@ -391,6 +695,7 @@ export class CashMovementsComponent implements OnInit {
       description: this.editForm.description,
       concept: this.editForm.concept || null,
       ...(linked ? {} : { documentType: this.editForm.documentType, counterpartyName: this.editForm.counterpartyName || null }),
+      ...(receiptWithVoucher ? this.receiptPayload(this.editForm) : {}),
     }).subscribe({
       next: () => {
         this.saving.set(false);

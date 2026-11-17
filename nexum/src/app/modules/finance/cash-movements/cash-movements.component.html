@@ -7,9 +7,9 @@
   </div>
 
   <!-- Alta rápida de cliente/proveedor desde el buscador -->
-  <app-customer-quick-create [isOpen]="isPartyCreateOpen() && isIncome" [name]="form.counterpartyName"
+  <app-customer-quick-create [isOpen]="isPartyCreateOpen() && partyCreateKind() === 'customer'" [name]="form.counterpartyName"
                              (created)="onPartyCreated($event)" (closed)="isPartyCreateOpen.set(false)" />
-  <app-supplier-quick-create [isOpen]="isPartyCreateOpen() && !isIncome" [name]="form.counterpartyName"
+  <app-supplier-quick-create [isOpen]="isPartyCreateOpen() && partyCreateKind() === 'supplier'" [name]="form.counterpartyName"
                              (created)="onPartyCreated($event)" (closed)="isPartyCreateOpen.set(false)" />
 
   <!-- Edición de un movimiento -->
@@ -48,6 +48,77 @@
                  [class.bg-slate-50]="isLinkedMovement(m)"
                  class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
+        @if (isEditDocument) {
+          @if (!isEditOther || isUsdRegister()) {
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tasa{{ isUsdRegister() ? ' *' : '' }}</label>
+            <input type="number" step="0.0001" min="0" [(ngModel)]="editForm.exchangeRate" name="editExchangeRate" [readOnly]="!isUsdRegister()"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          }
+          @if (isEditOther) {
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Elaborado por *</label>
+              <input [(ngModel)]="editForm.performedBy" name="editPerformedBy"
+                     class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          }
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ isEditReceipt ? 'Nro. de recibo' : 'Nro. de documento' }} *</label>
+            <input [(ngModel)]="editForm.receiptNumber" name="editReceiptNumber"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          @if (isEditReceipt) {
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Entregado por *</label>
+              <input [(ngModel)]="editForm.deliveredBy" name="editDeliveredBy"
+                     class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          }
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha de emisión *</label>
+            <input type="date" [(ngModel)]="editForm.issueDate" name="editIssueDate"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          @if (isEditReceipt) {
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Recibido por *</label>
+              <input [(ngModel)]="editForm.receivedBy" name="editReceivedBy"
+                     class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          }
+          <div class="relative">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta de contrapartida</label>
+            <input [(ngModel)]="editCounterpartQuery" name="editCounterpartQuery" (focus)="editCounterpartDrop.set(true)" (blur)="onCounterpartBlur('edit')"
+                   placeholder="Filtrar cuenta" autocomplete="off"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            @if (editCounterpartDrop()) {
+              <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+                @for (a of counterpartOptions(editCounterpartQuery); track a.code) {
+                  <button type="button" (mousedown)="selectCounterpart(editForm, a.code, 'edit')"
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                    {{ a.code }} - {{ a.name }}
+                  </button>
+                } @empty {
+                  <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin resultados</div>
+                }
+              </div>
+            }
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcuenta</label>
+            <select [(ngModel)]="editForm.counterpartSubaccount" name="editCounterpartSubaccount"
+                    [disabled]="!counterpartSubOptions(editForm.counterpartAccount).length"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+              <option value="">
+                {{ !editForm.counterpartAccount ? 'Seleccione la cuenta' : counterpartSubOptions(editForm.counterpartAccount).length ? 'Seleccionar subcuenta' : 'La cuenta no tiene subcuentas' }}
+              </option>
+              @for (s of counterpartSubOptions(editForm.counterpartAccount); track s.value) {
+                <option [value]="s.value">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+        } @else {
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Concepto</label>
           @if (isIncome) {
@@ -63,8 +134,9 @@
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           }
         </div>
+        }
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción *</label>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ isEditDocument ? 'Comentario' : 'Descripción' }} *</label>
           <input [(ngModel)]="editForm.description" name="editDescription"
                  class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
@@ -75,6 +147,11 @@
             } @else {
               Al cambiar el monto o la fecha se ajusta también el ingreso que generó en Banco.
             }
+          </p>
+        }
+        @if (isEditReceipt || isEditOther) {
+          <p class="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+            Si cambian los datos contables se regenera el comprobante (débito a la cuenta de la caja, crédito a la contrapartida).
           </p>
         }
       </div>
@@ -129,14 +206,26 @@
         <input type="date" [(ngModel)]="form.movementDate" name="movementDate" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto *</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ hasDocumentFields ? 'Importe' : 'Monto' }} *</label>
         <input type="number" step="0.01" [(ngModel)]="form.amount" name="amount" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div class="relative">
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ isIncome ? 'Cliente/Entidad' : 'Proveedor' }}{{ isSettlement ? ' *' : '' }}</label>
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{{ partyLabel() }}{{ isSettlement || isReceipt ? ' *' : '' }}</label>
+          @if (hasDocumentFields) {
+            <div class="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0">
+              @for (opt of thirdPartyOptions(); track opt.value) {
+                <button type="button" (click)="setThirdPartyType(opt.value)"
+                        [class]="(thirdPartyType === opt.value ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600') + ' px-2.5 py-1 text-xs font-medium transition-colors'">
+                  {{ opt.label }}
+                </button>
+              }
+            </div>
+          }
+        </div>
         <input [ngModel]="form.counterpartyName" (ngModelChange)="onPartyInput($event)" name="counterpartyName"
                (focus)="partyDrop.set(true)" (blur)="onPartyBlur()" autocomplete="off"
-               [placeholder]="isIncome ? 'Filtrar o crear cliente/entidad' : 'Filtrar o crear proveedor'"
+               [placeholder]="partyCreateKind() === 'supplier' ? 'Filtrar o crear proveedor' : partyCreateKind() === 'customer' ? 'Filtrar o crear cliente/entidad' : 'Filtrar trabajador'"
                class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         @if (partyDrop()) {
           <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
@@ -144,21 +233,120 @@
               <button type="button" (mousedown)="selectParty(p)"
                       class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
                 {{ partyName(p) }}
-                @if (p.taxId || p.nit) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ p.taxId || p.nit }}</span> }
+                @if (p.taxId || p.nit || p.code) { <span class="text-xs text-slate-500 dark:text-slate-400">· {{ p.taxId || p.nit || p.code }}</span> }
               </button>
             }
-            @if (form.counterpartyName.trim() && !partyExists(form.counterpartyName)) {
+            @if (canCreateParty() && form.counterpartyName.trim() && !partyExists(form.counterpartyName)) {
               <button type="button" (mousedown)="createPartyInline()"
                       class="w-full text-left px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors font-medium">
                 + Crear "{{ form.counterpartyName.trim() }}"
               </button>
             }
             @if (!filteredParties(form.counterpartyName).length && !form.counterpartyName.trim()) {
-              <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{{ isIncome ? 'Sin clientes registrados' : 'Sin proveedores registrados' }}</div>
+              <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{{ partyCreateKind() === 'supplier' ? 'Sin proveedores registrados' : partyCreateKind() === 'customer' ? 'Sin clientes registrados' : 'Sin trabajadores registrados' }}</div>
             }
           </div>
         }
       </div>
+      @if (hasDocumentFields) {
+        @if (isReceipt) {
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fondo en efectivo</label>
+            <input [value]="selectedRegister()?.fondo || '—'" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+          </div>
+        } @else {
+          @if (isDocumentSettlement) {
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Moneda</label>
+              <input [value]="selectedRegister()?.currency || 'CUP'" readonly
+                     class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+            </div>
+          }
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ isOtherCollection ? 'Cuenta a debitar' : 'Cuenta' }}</label>
+            <input [value]="cashAccountLabel()" readonly [title]="'Cuenta de efectivo de la caja que se ' + (isIncome ? 'debita' : 'acredita')"
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+          </div>
+        }
+        @if (!isOtherCollection || isUsdRegister()) {
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tasa{{ isUsdRegister() ? ' *' : '' }}</label>
+          @if (isUsdRegister()) {
+            <input type="number" step="0.0001" min="0" [(ngModel)]="form.exchangeRate" name="exchangeRate"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Importe en CUP: {{ formatCurrency(montoCup(form.amount, form.exchangeRate)) }}</p>
+          } @else {
+            <input value="1" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+          }
+        </div>
+        }
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ isReceipt ? 'Nro. de recibo' : 'Nro. de documento' }} *</label>
+          <input [(ngModel)]="form.receiptNumber" name="receiptNumber"
+                 class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        @if (isOtherCollection) {
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Elaborado por *</label>
+            <input [(ngModel)]="form.performedBy" name="performedBy"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        }
+        @if (isReceipt) {
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Entregado por *</label>
+            <input [(ngModel)]="form.deliveredBy" name="deliveredBy"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        }
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha de emisión *</label>
+          <input type="date" [(ngModel)]="form.issueDate" name="issueDate"
+                 class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        @if (isReceipt) {
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Recibido por *</label>
+            <input [(ngModel)]="form.receivedBy" name="receivedBy"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        }
+        <div class="relative">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta de contrapartida *</label>
+          <input [(ngModel)]="counterpartQuery" name="counterpartQuery" (focus)="counterpartDrop.set(true)" (blur)="onCounterpartBlur('form')"
+                 placeholder="Filtrar cuenta" autocomplete="off"
+                 class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          @if (counterpartDrop()) {
+            <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+              @for (a of counterpartOptions(counterpartQuery); track a.code) {
+                <button type="button" (mousedown)="selectCounterpart(form, a.code, 'form')"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors text-slate-900 dark:text-white">
+                  {{ a.code }} - {{ a.name }}
+                </button>
+              } @empty {
+                <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Sin resultados</div>
+              }
+            </div>
+          }
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Subcuenta{{ counterpartSubOptions(form.counterpartAccount).length ? ' *' : '' }}
+          </label>
+          <select [(ngModel)]="form.counterpartSubaccount" name="counterpartSubaccount"
+                  [disabled]="!counterpartSubOptions(form.counterpartAccount).length"
+                  class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+            <option value="">
+              {{ !form.counterpartAccount ? 'Seleccione la cuenta' : counterpartSubOptions(form.counterpartAccount).length ? 'Seleccionar subcuenta' : 'La cuenta no tiene subcuentas' }}
+            </option>
+            @for (s of counterpartSubOptions(form.counterpartAccount); track s.value) {
+              <option [value]="s.value">{{ s.label }}</option>
+            }
+          </select>
+        </div>
+      }
       @if (isSettlement) {
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -192,6 +380,7 @@
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Genera el ingreso en Banco (concepto 24 — Depósito de efectivo).</p>
         </div>
       }
+      @if (!hasDocumentFields) {
       <div>
         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Concepto</label>
         @if (isIncome) {
@@ -206,8 +395,9 @@
           <input [(ngModel)]="form.concept" name="concept" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         }
       </div>
+      }
       <div class="sm:col-span-2 lg:col-span-2">
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción *</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ hasDocumentFields ? 'Comentario' : 'Descripción' }} *</label>
         <input [(ngModel)]="form.description" name="description" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
