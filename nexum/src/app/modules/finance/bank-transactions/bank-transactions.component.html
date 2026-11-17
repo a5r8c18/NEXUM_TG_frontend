@@ -211,28 +211,26 @@
 
           <!-- Cliente (en Otros cobros el tercero también puede ser un trabajador) -->
           @if (selectedConcept?.requiresCustomer) {
-            <div class="relative sm:col-span-2">
-              <div class="flex items-center justify-between gap-2 mb-1">
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{{ counterpartyLabel() }}{{ counterpartyRequired() ? ' *' : '' }}</label>
-                @if (isOtrosCobros) {
-                  <div class="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0">
-                    <button type="button" (click)="setThirdPartyType('customer')"
-                            [class]="(thirdPartyType === 'customer'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600')
-                              + ' px-2.5 py-1 text-xs font-medium transition-colors'">
-                      Cliente
-                    </button>
-                    <button type="button" (click)="setThirdPartyType('employee')"
-                            [class]="(thirdPartyType === 'employee'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600')
-                              + ' px-2.5 py-1 text-xs font-medium transition-colors'">
-                      Trabajador
-                    </button>
-                  </div>
-                }
-              </div>
+            <div class="relative sm:col-span-2 min-w-0">
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ counterpartyLabel() }}{{ counterpartyRequired() ? ' *' : '' }}</label>
+              @if (isOtrosCobros) {
+                <div class="grid grid-cols-2 mb-2 w-full rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden divide-x divide-slate-300 dark:divide-slate-600">
+                  <button type="button" (click)="setThirdPartyType('customer')"
+                          [class]="(thirdPartyType === 'customer'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600')
+                            + ' w-full min-w-0 truncate px-2 py-1.5 text-xs font-medium transition-colors'">
+                    Cliente
+                  </button>
+                  <button type="button" (click)="setThirdPartyType('employee')"
+                          [class]="(thirdPartyType === 'employee'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600')
+                            + ' w-full min-w-0 truncate px-2 py-1.5 text-xs font-medium transition-colors'">
+                    Trabajador
+                  </button>
+                </div>
+              }
               @if (isOtrosCobros && thirdPartyType === 'employee') {
                 <input [ngModel]="employeeQuery" (ngModelChange)="employeeQuery = $event; onEmployeeInput($event)" name="employeeName"
                        (focus)="employeeDrop.set(true)" (blur)="onEmployeeBlur()"

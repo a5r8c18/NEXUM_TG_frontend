@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -485,16 +486,13 @@ export class CashMovementsComponent implements OnInit {
     this.showToast(`${isCustomer ? 'Cliente' : 'Proveedor'} "${this.partyName(p)}" creado`, 'success');
   }
 
+  /** Carga las cajas y, con ellas, los comprobantes de todas (como Banco con sus cuentas). */
   loadRegisters(): void {
     this.isLoading.set(true);
     this.financeService.getCashRegisters().subscribe({
       next: (data) => {
         this.registers.set(Array.isArray(data) ? data : []);
-        this.isLoading.set(false);
-        if (this.registers().length > 0 && !this.selectedRegisterId()) {
-          this.selectedRegisterId.set(this.registers()[0].id);
-          this.loadMovements();
-        }
+        this.loadMovements();
       },
       error: () => {
         this.isLoading.set(false);
@@ -504,12 +502,18 @@ export class CashMovementsComponent implements OnInit {
   }
 
   loadMovements(): void {
-    const id = this.selectedRegisterId();
-    if (!id) return;
+    const registers = this.registers();
+    if (!registers.length) {
+      this.movements.set([]);
+      this.isLoading.set(false);
+      return;
+    }
     this.isLoading.set(true);
-    this.financeService.getCashMovements(id, { movementType: this.type }).subscribe({
-      next: (data) => {
-        this.movements.set(Array.isArray(data) ? data : []);
+    forkJoin(registers.map((r) => this.financeService.getCashMovements(r.id, { movementType: this.type }))).subscribe({
+      next: (lists: any[]) => {
+        const all = lists.flatMap((l) => (Array.isArray(l) ? l : []));
+        all.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        this.movements.set(all);
         this.isLoading.set(false);
       },
       error: () => {
@@ -519,13 +523,77 @@ export class CashMovementsComponent implements OnInit {
     });
   }
 
-  onRegisterChange(): void {
-    this.loadMovements();
+  registerLabel(cr: any): string {
+    return cr ? `${cr.registerName} (${cr.registerCode}) · ${cr.currency || 'CUP'}` : '';
+  }
+
+  registerLabelFor(m: any): string {
+    const cr = this.registers().find((r) => r.id === m.cashRegisterId);
+    return cr ? `${cr.registerName} (${cr.registerCode})` : '-';
+  }
+
+  // ── Modal de nuevo comprobante (como Banco) ──
+  isModalOpen = signal(false);
+  registerQuery = '';
+  registerDrop = signal(false);
+
+  filteredRegisters(query: string): any[] {
+    const q = (query || '').toLowerCase();
+    const list = this.registers();
+    return q ? list.filter((r) => this.registerLabel(r).toLowerCase().includes(q)) : list;
+  }
+
+  selectRegister(cr: any): void {
+    if (this.selectedRegisterId() !== cr.id) {
+      this.depositBankAccountId = '';
+      if (cr.currency !== 'USD') this.form.exchangeRate = 1;
+    }
+    this.selectedRegisterId.set(cr.id);
+    this.registerQuery = this.registerLabel(cr);
+    this.registerDrop.set(false);
+    if (this.isReceipt && !this.form.receivedBy) this.form.receivedBy = cr.responsibleName || '';
+  }
+
+  onRegisterBlur(): void {
+    setTimeout(() => this.registerDrop.set(false), 150);
+  }
+
+  openModal(): void {
+    this.resetForm();
+    // Caja propuesta: la predeterminada abierta, o la primera abierta.
+    const open = this.registers().filter((r) => r.status === 'open');
+    const preferred = open.find((r) => r.isDefault) || open[0];
+    this.selectedRegisterId.set('');
+    this.registerQuery = '';
+    if (preferred) this.selectRegister(preferred);
+    this.isModalOpen.set(true);
+  }
+
+  closeModal(): void {
+    this.isModalOpen.set(false);
+  }
+
+  // ── Detalle (solo lectura) ──
+  viewMovement = signal<any | null>(null);
+
+  openView(m: any): void {
+    this.viewMovement.set(m);
+  }
+
+  counterpartLabel(m: any): string {
+    if (m.counterpartAccount) {
+      const sub = m.counterpartSubaccount ? this.subaccounts().find((s) => s.code === m.counterpartSubaccount) : null;
+      return sub ? `${this.accountLabel(m.counterpartAccount)} → ${sub.code} - ${sub.name}` : this.accountLabel(m.counterpartAccount);
+    }
+    return m.concept ? this.conceptLabel(m.concept) : '-';
   }
 
   submit(): void {
     const id = this.selectedRegisterId();
-    if (!id) return;
+    if (!id) {
+      this.showToast('Seleccione la caja', 'error');
+      return;
+    }
     if (!this.form.documentType) {
       this.showToast('Seleccione el tipo de comprobante', 'error');
       return;
@@ -577,9 +645,9 @@ export class CashMovementsComponent implements OnInit {
       next: () => {
         this.saving.set(false);
         this.showToast(this.isIncome ? 'Ingreso registrado' : 'Egreso registrado', 'success');
+        this.closeModal();
         this.resetForm();
         this.loadRegisters();
-        this.loadMovements();
       },
       error: (err) => {
         this.saving.set(false);
@@ -633,6 +701,9 @@ export class CashMovementsComponent implements OnInit {
   }
 
   openEdit(m: any): void {
+    this.viewMovement.set(null);
+    // La moneda y la tasa del movimiento son las de su caja.
+    this.selectedRegisterId.set(m.cashRegisterId);
     this.editingMovement.set(m);
     this.editForm = {
       documentType: m.documentType || '',
