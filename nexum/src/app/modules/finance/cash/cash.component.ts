@@ -197,6 +197,10 @@ export class CashComponent implements OnInit, OnDestroy {
       this.formError.set('Nombre y responsable son obligatorios');
       return;
     }
+    if (!e.accountingAccount) {
+      this.formError.set('Seleccione la cuenta contable del fondo');
+      return;
+    }
     this.formError.set('');
     this.financeService.updateCashRegister(e.id, {
       registerName: e.registerName,
@@ -221,6 +225,10 @@ export class CashComponent implements OnInit, OnDestroy {
   saveCashRegister(): void {
     if (!this.newCashRegister.registerCode?.trim() || !this.newCashRegister.registerName?.trim() || !this.newCashRegister.responsibleName?.trim()) {
       this.formError.set('Código, nombre y responsable son obligatorios');
+      return;
+    }
+    if (!this.newCashRegister.accountingAccount) {
+      this.formError.set('Seleccione la cuenta contable del fondo');
       return;
     }
     this.formError.set('');

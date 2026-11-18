@@ -112,10 +112,10 @@ export class CashMovementsComponent implements OnInit {
     return `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || '';
   }
 
-  /** Cuenta de efectivo que se debita: la de la caja o, sin ella, la de Tesorería. */
+  /** Cuenta de efectivo de la caja: la que el usuario vinculó al fondo. */
   cashAccountLabel(): string {
     const code = this.selectedRegister()?.accountingAccount;
-    if (!code) return '101 - Efectivo en Caja (Tesorería)';
+    if (!code) return 'Sin cuenta asignada (asígnela en Cajas)';
     const sub = this.subaccounts().find((s) => s.code === code);
     return sub ? `${code} - ${sub.name}` : this.accountLabel(code);
   }
@@ -618,6 +618,10 @@ export class CashMovementsComponent implements OnInit {
       return;
     }
     if (this.hasDocumentFields) {
+      if (!this.selectedRegister()?.accountingAccount) {
+        this.showToast('La caja no tiene cuenta contable asignada. Asígnela en Cajas.', 'error');
+        return;
+      }
       const error = this.receiptError(this.form, this.documentKind(this.form.documentType));
       if (error) {
         this.showToast(error, 'error');
