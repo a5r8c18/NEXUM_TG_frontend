@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { FinanceService } from '../../../core/services/finance.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AccountingService } from '../../../core/services/accounting.service';
+import { ContextService } from '../../../core/services/context.service';
 import { PaginationComponent, PaginationConfig } from '../../../shared/components/pagination/pagination.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
@@ -18,6 +19,19 @@ export class CashComponent implements OnInit, OnDestroy {
   private financeService = inject(FinanceService);
   private notificationService = inject(NotificationService);
   private accountingService = inject(AccountingService);
+  private contextService = inject(ContextService);
+
+  /** Unidad contable: la empresa activa. */
+  companyName = computed(() => this.contextService.currentCompany()?.name || '');
+
+  /** Único tipo de fondo. */
+  static readonly FUND_TYPE = 'apertura';
+
+  /** Los fondos antiguos pueden tener el tipo en texto libre: se muestra tal cual. */
+  fundTypeLabel(value: string | null | undefined): string {
+    if (!value) return '—';
+    return value === CashComponent.FUND_TYPE ? 'Apertura' : value;
+  }
 
   items = signal<any[]>([]);
   stats = signal<any>(null);
@@ -36,7 +50,7 @@ export class CashComponent implements OnInit, OnDestroy {
   formError = signal('');
   auditResult = signal<any>(null);
 
-  newCashRegister: any = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0, fondo: '', accountingAccount: '' };
+  newCashRegister: any = this.emptyFund();
   isEditOpen = signal(false);
   editCashRegister: any = {};
 
@@ -46,43 +60,62 @@ export class CashComponent implements OnInit, OnDestroy {
   accountQuery = '';
   accountDrop = signal(false);
 
-  cashAccountOptions = computed(() => {
-    const opts: { value: string; label: string; isSub: boolean; parentCode?: string }[] = [];
-    const subs = this.subaccounts();
-    for (const a of this.accountOptions()) {
-      if (a.code?.includes('-') || Number(a.level) >= 4) continue;
-      const num = parseInt(a.code, 10);
-      if (isNaN(num) || num < 101 || num > 108) continue;
-      const children = subs.filter(s => s.parentCode === a.code || s.code?.startsWith(`${a.code}-`));
-      if (!a.allowsMovements && children.length === 0) continue;
-      opts.push({ value: a.code, label: `${a.code} - ${a.name}`, isSub: false });
-      for (const s of children) {
-        const value = s.code?.includes('-') ? s.code : `${a.code}-${s.code}`;
-        opts.push({ value, label: `${s.code} - ${s.name}`, isSub: true, parentCode: a.code });
-      }
-    }
-    return opts;
-  });
-
-  filteredCashAccounts(query: string) {
-    const q = (query || '').toLowerCase();
-    const opts = this.cashAccountOptions();
-    return q ? opts.filter(o => o.label.toLowerCase().includes(q)) : opts;
+  private childrenOf(code: string): any[] {
+    return this.subaccounts().filter(s => s.parentCode === code || s.code?.startsWith(`${code}-`));
   }
 
+  /** Cuentas de Efectivo en Caja (101-108) postables o con subcuentas. */
+  cashAccounts = computed(() =>
+    this.accountOptions().filter(a => {
+      if (a.code?.includes('-') || Number(a.level) >= 4) return false;
+      const num = parseInt(a.code, 10);
+      if (isNaN(num) || num < 101 || num > 108) return false;
+      return a.allowsMovements || this.childrenOf(a.code).length > 0;
+    }),
+  );
+
+  filteredCashAccounts(query: string): any[] {
+    const q = (query || '').toLowerCase();
+    const list = this.cashAccounts();
+    return q ? list.filter(a => `${a.code} - ${a.name}`.toLowerCase().includes(q)) : list;
+  }
+
+  /** Subcuentas de la cuenta elegida, con su código completo `<cuenta>-<subcuenta>`. */
+  cashSubOptions(parent: string): { value: string; label: string }[] {
+    if (!parent) return [];
+    return this.childrenOf(parent).map(s => ({
+      value: s.code?.includes('-') ? s.code : `${parent}-${s.code}`,
+      label: `${s.code} - ${s.name}`,
+    }));
+  }
+
+  private accountLabel(code: string): string {
+    const a = this.accountOptions().find(x => x.code === code);
+    return a ? `${a.code} - ${a.name}` : code;
+  }
+
+  /** Cuenta y subcuenta para mostrar en la tabla. */
   accountingAccountLabel(value: string): string {
     if (!value) return '';
-    const opt = this.cashAccountOptions().find(o => o.value === value);
-    if (!opt) return value;
-    if (!opt.isSub) return opt.label;
-    const parent = this.cashAccountOptions().find(o => o.value === opt.parentCode);
-    return parent ? `${parent.label} → ${opt.label}` : opt.label;
+    const sub = this.subaccounts().find(s => s.code === value);
+    if (!sub && !value.includes('-')) return this.accountLabel(value);
+    const parent = sub?.parentCode || value.split('-')[0];
+    return `${this.accountLabel(parent)} → ${sub ? `${sub.code} - ${sub.name}` : value}`;
   }
 
-  selectCashAccount(target: any, value: string): void {
-    target.accountingAccount = value;
-    this.accountQuery = this.accountingAccountLabel(value);
+  selectCashAccount(target: any, code: string): void {
+    target.account = code;
+    target.subaccount = '';
+    this.accountQuery = this.accountLabel(code);
     this.accountDrop.set(false);
+  }
+
+  /** Separa la cuenta guardada (cuenta o subcuenta completa) en los dos campos. */
+  private splitAccount(value: string | null | undefined): { account: string; subaccount: string } {
+    if (!value) return { account: '', subaccount: '' };
+    const sub = this.subaccounts().find(s => s.code === value);
+    if (sub || value.includes('-')) return { account: sub?.parentCode || value.split('-')[0], subaccount: value };
+    return { account: value, subaccount: '' };
   }
 
   onAccountBlur(): void {
@@ -165,8 +198,34 @@ export class CashComponent implements OnInit, OnDestroy {
     });
   }
 
+  private emptyFund(): any {
+    return {
+      registerCode: '', registerName: '', currency: 'CUP', exchangeRate: 1, fondo: CashComponent.FUND_TYPE,
+      account: '', subaccount: '',
+      openingDate: new Date().toISOString().split('T')[0],
+      cashBalanceCup: 0, bookOpeningBalance: 0, bookBalance: 0,
+    };
+  }
+
+  /** En CUP la tasa es siempre 1. */
+  onCurrencyChange(target: any): void {
+    if (target.currency === 'CUP') target.exchangeRate = 1;
+  }
+
+  /** Errores comunes de alta y edición del fondo. */
+  private fundError(f: any): string {
+    if (!f.registerName?.trim()) return 'El nombre es obligatorio';
+    if (!f.account) return 'Seleccione la cuenta contable del fondo';
+    if (this.cashSubOptions(f.account).length && !f.subaccount) return 'Seleccione la subcuenta de la cuenta contable';
+    if (f.currency === 'USD' && !(Number(f.exchangeRate) > 1)) return 'La tasa de cambio en USD debe ser mayor que 1';
+    if (['cashBalanceCup', 'bookOpeningBalance', 'bookBalance'].some(k => f[k] !== undefined && Number(f[k]) < 0)) {
+      return 'Los saldos no pueden ser negativos';
+    }
+    return '';
+  }
+
   openCreate(): void {
-    this.newCashRegister = { registerCode: '', registerName: '', responsibleName: '', openingBalance: 0, fondo: '', accountingAccount: '' };
+    this.newCashRegister = this.emptyFund();
     this.accountQuery = '';
     this.formError.set('');
     this.isCreateOpen.set(true);
@@ -177,11 +236,14 @@ export class CashComponent implements OnInit, OnDestroy {
       id: cr.id,
       registerCode: cr.registerCode,
       registerName: cr.registerName || '',
-      responsibleName: cr.responsibleName || '',
-      fondo: cr.fondo || '',
-      accountingAccount: cr.accountingAccount || '',
+      currency: cr.currency || 'CUP',
+      exchangeRate: Number(cr.exchangeRate) || 1,
+      fondo: cr.fondo || CashComponent.FUND_TYPE,
+      ...this.splitAccount(cr.accountingAccount),
+      bookOpeningBalance: Number(cr.bookOpeningBalance) || 0,
+      bookBalance: Number(cr.bookBalance) || 0,
     };
-    this.accountQuery = this.accountingAccountLabel(cr.accountingAccount || '');
+    this.accountQuery = this.editCashRegister.account ? this.accountLabel(this.editCashRegister.account) : '';
     this.formError.set('');
     this.isEditOpen.set(true);
   }
@@ -193,27 +255,26 @@ export class CashComponent implements OnInit, OnDestroy {
 
   saveEdit(): void {
     const e = this.editCashRegister;
-    if (!e.registerName?.trim() || !e.responsibleName?.trim()) {
-      this.formError.set('Nombre y responsable son obligatorios');
-      return;
-    }
-    if (!e.accountingAccount) {
-      this.formError.set('Seleccione la cuenta contable del fondo');
+    const error = this.fundError(e);
+    if (error) {
+      this.formError.set(error);
       return;
     }
     this.formError.set('');
     this.financeService.updateCashRegister(e.id, {
       registerName: e.registerName,
-      responsibleName: e.responsibleName,
-      fondo: e.fondo || null,
-      accountingAccount: e.accountingAccount || null,
+      fondo: e.fondo,
+      accountingAccount: e.subaccount || e.account,
+      exchangeRate: Number(e.exchangeRate) || 1,
+      bookOpeningBalance: Number(e.bookOpeningBalance) || 0,
+      bookBalance: Number(e.bookBalance) || 0,
     }).subscribe({
       next: () => {
         this.closeEdit();
         this.loadData();
-        this.showToast('Caja actualizada', 'success');
+        this.showToast('Fondo actualizado', 'success');
       },
-      error: (err: any) => this.formError.set(err?.error?.message || 'Error al actualizar la caja'),
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al actualizar el fondo'),
     });
   }
 
@@ -223,22 +284,28 @@ export class CashComponent implements OnInit, OnDestroy {
   }
 
   saveCashRegister(): void {
-    if (!this.newCashRegister.registerCode?.trim() || !this.newCashRegister.registerName?.trim() || !this.newCashRegister.responsibleName?.trim()) {
-      this.formError.set('Código, nombre y responsable son obligatorios');
-      return;
-    }
-    if (!this.newCashRegister.accountingAccount) {
-      this.formError.set('Seleccione la cuenta contable del fondo');
+    const f = this.newCashRegister;
+    const error = !f.registerCode?.trim() ? 'El código es obligatorio' : !f.openingDate ? 'La fecha de apertura es obligatoria' : this.fundError(f);
+    if (error) {
+      this.formError.set(error);
       return;
     }
     this.formError.set('');
-    this.financeService.createCashRegister(this.newCashRegister).subscribe({
+    const { account, subaccount, ...fund } = f;
+    this.financeService.createCashRegister({
+      ...fund,
+      accountingAccount: subaccount || account,
+      exchangeRate: Number(f.exchangeRate) || 1,
+      cashBalanceCup: Number(f.cashBalanceCup) || 0,
+      bookOpeningBalance: Number(f.bookOpeningBalance) || 0,
+      bookBalance: Number(f.bookBalance) || 0,
+    }).subscribe({
       next: () => {
         this.closeCreate();
         this.loadData();
-        this.showToast('Caja creada exitosamente', 'success');
+        this.showToast('Fondo creado exitosamente', 'success');
       },
-      error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear caja'),
+      error: (err: any) => this.formError.set(err?.error?.message || 'Error al crear el fondo'),
     });
   }
 

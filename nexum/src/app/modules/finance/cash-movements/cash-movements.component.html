@@ -365,9 +365,10 @@
                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
             <option value="">
               {{ !form.counterpartyName.trim()
-                  ? (isIncome ? 'Seleccione primero el cliente' : 'Seleccione primero el proveedor')
+                  ? 'Seleccione primero el ' + partyLabel().toLowerCase()
                   : loadingObligations() ? 'Cargando...'
-                  : obligations().length ? 'Seleccionar obligación' : 'Sin obligaciones pendientes' }}
+                  : obligations().length ? 'Seleccionar obligación'
+                  : (isIncome ? 'Sin cuentas por cobrar pendientes con ' : 'Sin cuentas por pagar pendientes con ') + form.counterpartyName.trim() }}
             </option>
             @for (o of obligations(); track o.id) {
               <option [value]="o.id">{{ obligationNumber(o) }} — saldo {{ formatCurrency(o.balanceAmount) }}</option>

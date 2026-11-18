@@ -57,8 +57,8 @@
             <tr>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Código</th>
               <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Nombre</th>
-              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Responsable</th>
-              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Fondo / Cuenta</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Moneda</th>
+              <th class="text-left px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Tipo Fondo / Cuenta</th>
               <th class="text-right px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Saldo</th>
               <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Estado</th>
               <th class="text-center px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Acciones</th>
@@ -69,9 +69,12 @@
               <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                 <td class="px-4 py-3 dark:text-slate-300 font-medium">{{ cr.registerCode }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">{{ cr.registerName }}</td>
-                <td class="px-4 py-3 dark:text-slate-300">{{ cr.responsibleName }}</td>
                 <td class="px-4 py-3 dark:text-slate-300">
-                  <div>{{ cr.fondo || '—' }}</div>
+                  {{ cr.currency || 'CUP' }}
+                  @if (cr.currency === 'USD') { <span class="text-xs text-slate-500 dark:text-slate-400">· tasa {{ cr.exchangeRate }}</span> }
+                </td>
+                <td class="px-4 py-3 dark:text-slate-300">
+                  <div>{{ fundTypeLabel(cr.fondo) }}</div>
                   @if (cr.accountingAccount) {
                     <div class="text-xs text-slate-500 dark:text-slate-400">{{ accountingAccountLabel(cr.accountingAccount) }}</div>
                   } @else {
@@ -94,7 +97,7 @@
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay cajas registradas</td></tr>
+              <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400 text-sm">No hay fondos registrados</td></tr>
             }
           </tbody>
         </table>
@@ -109,7 +112,7 @@
 
   <!-- Modal Crear -->
   @if (isCreateOpen()) {
-    <app-modal [isOpen]="isCreateOpen()" [title]="'Nuevo Fondo'" [confirmText]="'Guardar'" (closeEvent)="closeCreate()" (confirmEvent)="saveCashRegister()">
+    <app-modal [isOpen]="isCreateOpen()" [title]="'Nuevo Fondo'" [confirmText]="'Guardar'" maxWidthClass="max-w-2xl" (closeEvent)="closeCreate()" (confirmEvent)="saveCashRegister()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -117,6 +120,11 @@
           </div>
         }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Unidad contable</label>
+            <input [value]="companyName() || '—'" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+          </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Código *</label>
             <input [(ngModel)]="newCashRegister.registerCode" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -126,35 +134,75 @@
             <input [(ngModel)]="newCashRegister.registerName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Responsable *</label>
-            <input [(ngModel)]="newCashRegister.responsibleName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Moneda *</label>
+            <select [(ngModel)]="newCashRegister.currency" (ngModelChange)="onCurrencyChange(newCashRegister)"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="CUP">CUP</option>
+              <option value="USD">USD</option>
+            </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fondo de Caja</label>
-            <input type="number" [(ngModel)]="newCashRegister.openingBalance" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fondo en efectivo</label>
-            <input [(ngModel)]="newCashRegister.fondo" placeholder="Ej. Pagos menores"
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tasa de cambio{{ newCashRegister.currency === 'USD' ? ' *' : '' }}</label>
+            <input type="number" step="0.0001" min="0" [(ngModel)]="newCashRegister.exchangeRate" [readOnly]="newCashRegister.currency === 'CUP'"
+                   [class.bg-slate-50]="newCashRegister.currency === 'CUP'"
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-          <div class="relative">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo Fondo</label>
+            <input value="Apertura" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fecha de apertura *</label>
+            <input type="date" [(ngModel)]="newCashRegister.openingDate"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta contable *</label>
             <input [(ngModel)]="accountQuery" (focus)="accountDrop.set(true)" (blur)="onAccountBlur()"
-                   placeholder="Efectivo en Caja (101-108)" autocomplete="off"
+                   placeholder="Filtrar cuenta (101-108)" autocomplete="off"
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             @if (accountDrop()) {
-              <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg">
-                @for (opt of filteredCashAccounts(accountQuery); track opt.value) {
-                  <button type="button" (mousedown)="selectCashAccount(newCashRegister, opt.value)"
-                          class="w-full text-left py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-600 {{ opt.isSub ? 'pl-7 pr-3' : 'px-3 font-medium' }}">
-                    {{ opt.label }}
+              <div class="mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg">
+                @for (a of filteredCashAccounts(accountQuery); track a.code) {
+                  <button type="button" (mousedown)="selectCashAccount(newCashRegister, a.code)"
+                          class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-600">
+                    {{ a.code }} - {{ a.name }}
                   </button>
                 } @empty {
                   <p class="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">Sin resultados</p>
                 }
               </div>
             }
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Subcuenta{{ cashSubOptions(newCashRegister.account).length ? ' *' : '' }}
+            </label>
+            <select [(ngModel)]="newCashRegister.subaccount" [disabled]="!cashSubOptions(newCashRegister.account).length"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+              <option value="">
+                {{ !newCashRegister.account ? 'Seleccione la cuenta' : cashSubOptions(newCashRegister.account).length ? 'Seleccionar subcuenta' : 'La cuenta no tiene subcuentas' }}
+              </option>
+              @for (s of cashSubOptions(newCashRegister.account); track s.value) {
+                <option [value]="s.value">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo de caja (CUP)</label>
+            <input type="number" step="0.01" min="0" [(ngModel)]="newCashRegister.cashBalanceCup"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo inicial libros CUP</label>
+            <input type="number" step="0.01" min="0" [(ngModel)]="newCashRegister.bookOpeningBalance"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo libros CUP</label>
+            <input type="number" step="0.01" min="0" [(ngModel)]="newCashRegister.bookBalance"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
       </div>
@@ -163,7 +211,7 @@
 
   <!-- Modal Editar -->
   @if (isEditOpen()) {
-    <app-modal [isOpen]="isEditOpen()" [title]="'Editar caja ' + editCashRegister.registerCode" [confirmText]="'Guardar'" (closeEvent)="closeEdit()" (confirmEvent)="saveEdit()">
+    <app-modal [isOpen]="isEditOpen()" [title]="'Editar fondo ' + editCashRegister.registerCode" [confirmText]="'Guardar'" maxWidthClass="max-w-2xl" (closeEvent)="closeEdit()" (confirmEvent)="saveEdit()">
       <div class="space-y-4">
         @if (formError()) {
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
@@ -171,36 +219,72 @@
           </div>
         }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Unidad contable</label>
+            <input [value]="companyName() || '—'" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+          </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre *</label>
             <input [(ngModel)]="editCashRegister.registerName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Responsable *</label>
-            <input [(ngModel)]="editCashRegister.responsibleName" class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Moneda</label>
+            <input [value]="editCashRegister.currency" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fondo en efectivo</label>
-            <input [(ngModel)]="editCashRegister.fondo" placeholder="Ej. Pagos menores"
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tasa de cambio{{ editCashRegister.currency === 'USD' ? ' *' : '' }}</label>
+            <input type="number" step="0.0001" min="0" [(ngModel)]="editCashRegister.exchangeRate" [readOnly]="editCashRegister.currency === 'CUP'"
+                   [class.bg-slate-50]="editCashRegister.currency === 'CUP'"
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-          <div class="relative">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo Fondo</label>
+            <input [value]="fundTypeLabel(editCashRegister.fondo)" readonly
+                   class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-900/50 dark:text-white text-sm" />
+          </div>
+          <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cuenta contable *</label>
             <input [(ngModel)]="accountQuery" (focus)="accountDrop.set(true)" (blur)="onAccountBlur()"
-                   placeholder="Efectivo en Caja (101-108)" autocomplete="off"
+                   placeholder="Filtrar cuenta (101-108)" autocomplete="off"
                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             @if (accountDrop()) {
-              <div class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg">
-                @for (opt of filteredCashAccounts(accountQuery); track opt.value) {
-                  <button type="button" (mousedown)="selectCashAccount(editCashRegister, opt.value)"
-                          class="w-full text-left py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-600 {{ opt.isSub ? 'pl-7 pr-3' : 'px-3 font-medium' }}">
-                    {{ opt.label }}
+              <div class="mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg">
+                @for (a of filteredCashAccounts(accountQuery); track a.code) {
+                  <button type="button" (mousedown)="selectCashAccount(editCashRegister, a.code)"
+                          class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-600">
+                    {{ a.code }} - {{ a.name }}
                   </button>
                 } @empty {
                   <p class="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">Sin resultados</p>
                 }
               </div>
             }
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Subcuenta{{ cashSubOptions(editCashRegister.account).length ? ' *' : '' }}
+            </label>
+            <select [(ngModel)]="editCashRegister.subaccount" [disabled]="!cashSubOptions(editCashRegister.account).length"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60">
+              <option value="">
+                {{ !editCashRegister.account ? 'Seleccione la cuenta' : cashSubOptions(editCashRegister.account).length ? 'Seleccionar subcuenta' : 'La cuenta no tiene subcuentas' }}
+              </option>
+              @for (s of cashSubOptions(editCashRegister.account); track s.value) {
+                <option [value]="s.value">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo inicial libros CUP</label>
+            <input type="number" step="0.01" min="0" [(ngModel)]="editCashRegister.bookOpeningBalance"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Saldo libros CUP</label>
+            <input type="number" step="0.01" min="0" [(ngModel)]="editCashRegister.bookBalance"
+                   class="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
       </div>

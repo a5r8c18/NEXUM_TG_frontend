@@ -314,20 +314,38 @@ export class CashMovementsComponent implements OnInit {
     return o?.arNumber || o?.apNumber || '';
   }
 
-  /** Carga las CxC del cliente o CxP del proveedor con saldo pendiente. */
+  private normName(v: string | null | undefined): string {
+    return (v || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  /**
+   * Carga las CxC (ingreso) o CxP (egreso) pendientes del tercero elegido.
+   * El backend busca por coincidencia parcial; aquí se dejan solo las del tercero exacto.
+   */
   loadObligations(): void {
     this.selectedObligationId = '';
     this.obligations.set([]);
+    this.loadingObligations.set(false);
     const name = this.form.counterpartyName?.trim();
     if (!this.isSettlement || !name) return;
     this.loadingObligations.set(true);
+    const target = this.normName(name);
     const obs$ = this.isIncome
       ? this.financeService.getReceivables({ customerName: name })
       : this.financeService.getPayables({ supplierName: name });
     obs$.subscribe({
       next: (data: any) => {
+        // Respuesta de un tercero anterior: se descarta.
+        if (this.normName(this.form.counterpartyName) !== target) return;
         const all = Array.isArray(data) ? data : [];
-        this.obligations.set(all.filter((o) => !['paid', 'written_off', 'cancelled'].includes(o.status)));
+        this.obligations.set(
+          all.filter(
+            (o) =>
+              this.normName(this.isIncome ? o.customerName : o.supplierName) === target &&
+              !['paid', 'written_off', 'cancelled'].includes(o.status) &&
+              Number(o.balanceAmount) > 0,
+          ),
+        );
         this.loadingObligations.set(false);
       },
       error: () => {
@@ -470,6 +488,8 @@ export class CashMovementsComponent implements OnInit {
       this.selectedObligationId = '';
       this.obligations.set([]);
     }
+    // Nombre escrito completo de un tercero existente: se cargan sus obligaciones.
+    if (this.isSettlement && this.partyExists(value)) this.loadObligations();
   }
 
   createPartyInline(): void {
